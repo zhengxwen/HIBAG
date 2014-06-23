@@ -13,7 +13,6 @@
 
 	The component \code{value} includes:
 	\item{sample.id}{sample ID}
-	\item{types}{the format is an unordered pair of "allele 1 / allele 2", e.g., "0512/0102"}
 	\item{allele1}{HLA allele}
 	\item{allele2}{HLA allele}
 	\item{prob}{the posterior probability}

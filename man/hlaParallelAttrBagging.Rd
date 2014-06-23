@@ -7,8 +7,9 @@
 	To build an attribute bagging model for predicting HLA types via parallel computation
 }
 \usage{
-hlaParallelAttrBagging(cl, hla, genotype, nclassifier=100, mtry=c("sqrt", "all", "one"),
-	prune=TRUE, rm.na=TRUE, verbose=TRUE, verbose.detail=FALSE)
+hlaParallelAttrBagging(cl, hla, genotype, nclassifier=100,
+	mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE, ptype=c("LB", "none"),
+	verbose=TRUE, verbose.detail=FALSE)
 }
 \arguments{
 	\item{cl}{a cluster object, created by this package or by the package
@@ -21,6 +22,7 @@ hlaParallelAttrBagging(cl, hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 	\item{prune}{if TRUE, to perform a parsimonious forward variable selection, otherwise,
 		exhaustive forward variable selection. See details}
 	\item{rm.na}{if TRUE, remove the samples with missing HLA types}
+	\item{ptype}{if "LB" load balancing}
 	\item{verbose}{if TRUE, show information}
 	\item{verbose.detail}{if TRUE, show more information}
 }

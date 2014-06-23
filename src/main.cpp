@@ -6,17 +6,17 @@
 // _/_/_/   _/_/_/  _/_/_/_/_/     _/     _/_/_/   _/_/
 // ===========================================================
 //
-// main.cpp: the Imputation of HLA types
+// main.cpp: HLA Genotype Imputation with Attribute Bagging
 //
-// Copyright (C) 2011	Xiuwen Zheng
+// Copyright (C) 2012	Xiuwen Zheng
 //
-// This file is part of CoreArray.
+// This file is part of HIBAG package.
 //
-// CoreArray is free software: you can redistribute it and/or modify it
+// HIBAG is free software: you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License Version 3 as
 // published by the Free Software Foundation.
 //
-// CoreArray is distributed in the hope that it will be useful, but
+// HIBAG is distributed in the hope that it will be useful, but
 // WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
@@ -27,11 +27,12 @@
 
 #include <R.h>
 #include <string>
-#include <map>
 #include <memory>
+#include <limits>
+#include <map>
+#include <algorithm>
 #include <fstream>
 #include <LibHLA.h>
-
 
 namespace HLA_LIB
 {
@@ -80,36 +81,192 @@ inline static void RStrAgn(const char *Text, char **rstr)
 // the public functions
 // ===========================================================
 
-// ********************************************************************************
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+//
+// The functions for HLA alleles
+//
+
+struct TAlleleItem
+{
+	vector<int> Index;
+	vector<string> Idx_Suffix;
+	
+	TAlleleItem(const char *str)
+	{
+		string num, suffix;
+		bool prefix_num = true;
+		while (true)
+		{
+			char ch = *str++;
+			if (prefix_num)
+			{
+				if (('0' <= ch) && (ch <= '9'))
+					num.push_back(ch);
+				else
+					prefix_num = false;
+			}
+			if (!prefix_num)
+			{
+				if ((ch == ':') || (ch == 0))
+				{
+					int m = numeric_limits<int>::max();
+					if (!num.empty()) m = atoi(num.c_str());
+					Index.push_back(m);
+					Idx_Suffix.push_back(suffix);
+					num.clear(); suffix.clear();
+					prefix_num = true;
+					if (ch == 0) break;
+				} else {
+					suffix.push_back(ch);
+				}
+			}
+		}
+	}
+};
+
+static bool sortfn(const pair<TAlleleItem*, int> &I1, const pair<TAlleleItem*, int> &I2)
+{
+	const TAlleleItem &p1 = *I1.first;
+	const TAlleleItem &p2 = *I2.first;
+
+	int smin = min((int)p1.Index.size(), (int)p2.Index.size());
+	for (int i=0; i < smin; i++)
+	{
+		if (p1.Index[i] < p2.Index[i])
+		{
+			return true;
+		} else if (p1.Index[i] > p2.Index[i])
+		{
+			return false;
+		} else {
+			if (p1.Idx_Suffix[i] < p2.Idx_Suffix[i])
+			{
+				return true;
+			} else if (p1.Idx_Suffix[i] > p2.Idx_Suffix[i])
+			{
+				return false;
+			}		
+		}
+	}
+
+	return (p1.Index.size() <= p2.Index.size());
+}
+
+/**
+ *  to sort the HLA alleles
+ *
+ *  \param n_hla      the number of HLA alleles
+ *  \param hlastr     the pointer to HLA allele strings
+ *  \param outstr     the pointer to output allele strings
+ *  \param out_err    output the error information, 0 -- no error, 1 -- an error exists
+**/
+DLLEXPORT void hlaSortAlleleStr(int *n_hla, char *const hlastr[], char *outstr[],
+	LongBool *out_err)
+{
+	CORETRY
+		// HLA alleles
+		vector<TAlleleItem> HLA;
+		for (int i=0; i < *n_hla; i++)
+			HLA.push_back(TAlleleItem(hlastr[i]));
+
+		vector< pair<TAlleleItem*, int> > list;
+		for (int i=0; i < *n_hla; i++)
+			list.push_back(pair<TAlleleItem*, int>(&HLA[i], i));
+
+		// sort
+		sort(list.begin(), list.end(), sortfn);
+
+		// output
+		for (int i=0; i < *n_hla; i++)
+			RStrAgn(hlastr[list[i].second], &outstr[i]);
+
+		*out_err = 0;
+	CORECATCH(*out_err = 1)
+}
+
+
+
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //
 //  SNP functions
 //
 
-
 /// to detect strand problem
 
 static inline bool ATGC(char ch)
-	{ return (ch=='A') || (ch=='T') || (ch=='G') || (ch=='C'); }
+{
+	return (ch=='A') || (ch=='T') || (ch=='G') || (ch=='C');
+}
+static inline bool ATGC_atgc(char ch)
+{
+	return (ch=='A') || (ch=='T') || (ch=='G') || (ch=='C') ||
+		(ch=='a') || (ch=='t') || (ch=='g') || (ch=='c');
+}
 static inline int ALLELE_MINOR(double freq)
-	{ return (freq <= 0.5) ? 0 : 1; }
+{
+	return (freq <= 0.5) ? 0 : 1;
+}
+static inline void split_allele(const char *txt, char &allele1, char &allele2)
+{
+	const char *p = strchr(txt, '/');
+	if (p != NULL)
+	{
+		// the first allele
+		if ((p == (txt+1)) && ATGC_atgc(*txt))
+			allele1 = toupper(*txt);
+		else
+			allele1 = '.';
+
+		// the second allele	
+		txt = p + 1;
+		if ((strlen(txt) == 1) && ATGC_atgc(*txt))
+			allele2 = toupper(*txt);
+		else
+			allele2 = '.';
+	} else {
+		// no a second allele
+		if ((strlen(txt) == 1) && ATGC_atgc(*txt))
+			allele1 = toupper(*txt);
+		else
+			allele1 = '.';
+		allele2 = '.';
+	}
+}
 
 DLLEXPORT void hlaAlleleStrand(char *allele1[], double afreq1[], int I1[],
 	char *allele2[], double afreq2[], int I2[], int *n,
-	LongBool out_flag[], LongBool *out_err)
+	LongBool out_flag[], int *out_n_stand_amb, int *out_n_mismatch,
+	LongBool *out_err)
 {
 	CORETRY
-		// init, A-T pair, C-G pair
+		// initialize: A-T pair, C-G pair
 		map<char, char> MAP;
 		MAP['A'] = 'T'; MAP['C'] = 'G'; MAP['G'] = 'C'; MAP['T'] = 'A';
+
+		*out_n_stand_amb = 0;
+		*out_n_mismatch = 0;
 
 		// loop for each SNP
 		for (int i=0; i < *n; i++)
 		{
-			bool switch_flag = false; // if true, need switch strand
+			// if true, need switch strand
+			bool switch_flag = false;
+
+			// if true, need to compare the allele frequencies
+			//   0 -- no switch detect
+			//   1 -- detect whether switch or not for stand ambiguity
+			//   2 -- detect whether switch or not for mismatching alleles
+			int switch_freq_detect = 0;
 
 			// ``ref / nonref alleles''
-			char s1=allele1[I1[i]-1][0], s2=allele1[I1[i]-1][2];
-			char p1=allele2[I2[i]-1][0], p2=allele2[I2[i]-1][2];
+			char s1, s2;
+			char p1, p2;
+			split_allele(allele1[I1[i]-1], s1, s2);
+			split_allele(allele2[I2[i]-1], p1, p2);
+
+			// allele frequency
 			double F1=afreq1[I1[i]-1], F2=afreq2[I2[i]-1];
 
 			if (ATGC(s1) && ATGC(s2) && ATGC(p1) && ATGC(p2))
@@ -119,111 +276,55 @@ DLLEXPORT void hlaAlleleStrand(char *allele1[], double afreq1[], int I1[],
 				{
 					// for example, + C/G <---> - C/G, strand ambi
 					if (s1 == MAP[p2])
-						switch_flag = (ALLELE_MINOR(F1) != ALLELE_MINOR(F2));
+						switch_freq_detect = 1;
 				} else if ( (s1 == p2) && (s2 == p1) )
 				{
-					// for example, + C/G <---> - G/C
+					// for example, + C/G <---> - G/C, strand ambi
 					if (s1 == MAP[p1])
-						switch_flag = (ALLELE_MINOR(F1) != ALLELE_MINOR(F2));
+						switch_freq_detect = 1;
 					else
 						switch_flag = true;
 				} else if ( (s1 == MAP[p1]) && (s2 == MAP[p2]) )
 				{
-					// for example, + C/G <---> - G/C
+					// for example, + C/G <---> - G/C, strand ambi
 					if (s1 == p2)
-						switch_flag = (ALLELE_MINOR(F1) != ALLELE_MINOR(F2));
+						switch_freq_detect = 1;
 				} else if ( (s1 == MAP[p2]) && (s2 == MAP[p1]) )
 				{
 					switch_flag = true;
 				} else {
-					throw ErrHLA("Invalid strand in SNP %d: %c/%c <--> %c/%c",
-						i+1, s1, s2, p1, p2);
+					switch_freq_detect = 2;
+					// throw ErrHLA("Invalid strand in SNP %d: %c/%c <--> %c/%c",
+					//	i+1, s1, s2, p1, p2);
 				}
 			} else {
-				throw ErrHLA("Invalid alleles in the sample: %d", i+1);
+				switch_freq_detect = 2;
+				// throw ErrHLA("Invalid alleles in the sample: %d", i+1);
 			}
+
+			if (switch_freq_detect != 0)
+			{
+				switch_flag = (ALLELE_MINOR(F1) != ALLELE_MINOR(F2));
+				if (switch_freq_detect == 1)
+					(*out_n_stand_amb) ++;
+				else
+					(*out_n_mismatch) ++;
+			}
+
 			out_flag[i] = switch_flag;
 		}
+
 		*out_err = 0;
+
 	CORECATCH(*out_err = 1)
 }
 
 
 
-
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
 //
-// Hidden Markov model (HMM) method
-//
-
-/**
- *  To calculate the probability of mosaic sequence from HMM model (\pi(h | \alpha))
- *
- *  target -- target of haplotype, a vector of 0 and 1
- *  haplotype -- training haplotypes, a matrix of 0 and 1, one column each haplotype
- *  pos.Morgan -- pos.Morgan of each snps, genetic pos.Morgan
- *  Ne -- the effective population size, by default 15000
-**/
-DLLEXPORT void hlaHMMProb(int *nsnp, int *nhaplo, int *target, int *haplotype,
-	double *posMorgan, double *Ne,
-	double *out_prob, double *tmp_cur_prob, double *tmp_next_prob)
-{
-	// The number of SNP markers
-	const int n_snp = *nsnp;
-	// The number of training haplotypes
-	const int n_haplo = *nhaplo;
-
-	// population mutation rate
-	double theta = 0;
-	if (n_haplo > 1)
-	{
-		for (int i=1; i < n_haplo; i++) theta += 1.0 / i;
-		theta = 1.0 / theta;
-	} else
-		theta = 1.0;
-
-	// mutation prob
-	double mut_prob[2] = { 0.5*theta/(theta + n_haplo), 1.0 - 0.5*theta/(theta + n_haplo) };
-
-	// current status in forward algorithm
-	const double _p = 1.0 / n_haplo;
-	for (int i=0; i < n_haplo; i++) tmp_cur_prob[i] = _p;
-
-	// Forward algorithm
-	for (int i_snp=1; i_snp < n_snp; i_snp++)
-	{
-		double p = 1 - exp(-4.0 * (*Ne) * (posMorgan[i_snp] - posMorgan[i_snp-1]) / n_haplo);
-		double prRecom[2] = { p / n_haplo, 1 - p + p / n_haplo };
-
-		for (int x=0; x < n_haplo; x++)
-		{
-			// transition probability
-			double sum = 0;
-			for (int i=0; i < n_haplo; i++)
-				sum += tmp_cur_prob[i] * ((i==x) ? prRecom[1] : prRecom[0]);
-			sum *=
-				(target[i_snp] == haplotype[x*n_snp + i_snp]) ? mut_prob[1] : mut_prob[0];
-			tmp_next_prob[x] = sum;
-		}
-
-		// let tmp_cur_prob <- tmp_next_prob
-		memcpy(tmp_cur_prob, tmp_next_prob, sizeof(double)*n_haplo);
-	}
-
-	// sum final probs
-	*out_prob = 0;
-	for (int i=0; i < n_haplo; i++)
-		*out_prob += tmp_cur_prob[i];
-}
-
-
-
-
-// -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
-//
-// Attribute Bagging (AB) method
+// HIBAG: Attribute Bagging method
 //
 
 /// the number of attribute bagging models allowed

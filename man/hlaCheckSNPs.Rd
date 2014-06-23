@@ -8,13 +8,15 @@
 the model and SNP genotypes.
 }
 \usage{
-hlaCheckSNPs(model, object, verbose=TRUE)
+hlaCheckSNPs(model, object, match.pos=TRUE, verbose=TRUE)
 }
 \arguments{
 	\item{model}{an object of \code{\link{hlaAttrBagClass}}, or an object of
 		\code{\link{hlaAttrBagObj}}}
 	\item{object}{a genotype object of \code{\link{hlaSNPGenoClass}}, or a character
 		vector like c("rs2523442", "rs9257863", ...)}
+	\item{match.pos}{if \code{TRUE}, it uses both SNP ID and position to match SNPs;
+		otherwise, it uses SNP ID only; calling \code{hlaSNPID(, with.pos=match.pos)}}
 	\item{verbose}{if TRUE, show information}
 }
 \value{

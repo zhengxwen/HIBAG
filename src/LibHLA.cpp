@@ -5,12 +5,31 @@
 //    _/    _/       _/             _/    _/    _/   _/
 // _/_/_/   _/_/_/  _/_/_/_/_/     _/     _/_/_/   _/_/
 // ===========================================================
+//
+// Copyright (C) 2012	Xiuwen Zheng
+//
+// This file is part of HIBAG package.
+//
+// HIBAG is free software: you can redistribute it and/or modify it
+// under the terms of the GNU Lesser General Public License Version 3 as
+// published by the Free Software Foundation.
+//
+// HIBAG is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with CoreArray.
+// If not, see <http://www.gnu.org/licenses/>.
+
+// ===========================================================
 // Name        : LibHLA
 // Author      : Xiuwen Zheng
-// Version     : 1.0.0.0
+// Version     : 0.9.3.0
 // Copyright   : Xiuwen Zheng (GPL v3.0)
-// Created     : 06/21/2012
-// Description : An Attribute Bagging Method for Imputing HLA Types with SNP Data
+// Created     : 10/13/2012
+// Description : HLA Genotype Imputation with Attribute Bagging
 // ===========================================================
 
 #include <LibHLA.h>
@@ -1016,11 +1035,14 @@ void CAlg_Prediction::InitSumPostProb()
 
 void CAlg_Prediction::AddProbToSum(const double weight)
 {
-	double *p = &_PostProb[0];
-	double *s = &_SumPostProb[0];
-	for (size_t n = _SumPostProb.size(); n > 0; n--, s++, p++)
-		*s += (*p) * weight;
-	_Sum_Weight += weight;
+	if (weight > 0)
+	{
+		double *p = &_PostProb[0];
+		double *s = &_SumPostProb[0];
+		for (size_t n = _SumPostProb.size(); n > 0; n--, s++, p++)
+			*s += (*p) * weight;
+		_Sum_Weight += weight;
+	}
 }
 
 void CAlg_Prediction::NormalizeSumPostProb()
@@ -1116,6 +1138,7 @@ THLAType CAlg_Prediction::MaxProb()
 THLAType CAlg_Prediction::MaxSumProb()
 {
 	THLAType rv;
+	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double *p = &_SumPostProb[0];
 	double max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
@@ -1509,9 +1532,15 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int OutH1[], int
 	for (int i=0; i < n_samp; i++, genomat+=nSNP())
 	{
 		_PredictHLA(genomat, &Weight[0]);
+
 		THLAType HLA = _Predict.MaxSumProb();
 		OutH1[i] = HLA.Allele1; OutH2[i] = HLA.Allele2;
-		OutProb[i] = _Predict.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
+
+		if ((HLA.Allele1 != NA_INTEGER) && (HLA.Allele2 != NA_INTEGER))
+			OutProb[i] = _Predict.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
+		else
+			OutProb[i] = 0;
+
 		Progress.Forward(1, ShowInfo);
 	}
 }
@@ -1554,11 +1583,12 @@ void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[])
 			if ((0 <= geno[k]) && (geno[k] <= 2))
 				nWeight += weights[k];
 		}
-		double weight = double(nWeight) / SumWeight;
-
-		Geno.IntToSNP(n, geno, &(it->_SNPIndex[0]));
-		_Predict.Predict(it->_Haplo, Geno);
-		_Predict.AddProbToSum(weight);
+		if (nWeight > 0)
+		{
+			Geno.IntToSNP(n, geno, &(it->_SNPIndex[0]));
+			_Predict.Predict(it->_Haplo, Geno);
+			_Predict.AddProbToSum(double(nWeight) / SumWeight);
+		}
 	}
 
 	_Predict.NormalizeSumPostProb();

@@ -7,23 +7,28 @@
 	To combine two genotype datasets into one dataset.
 }
 \usage{
-hlaGenoCombine(geno1, geno2, allele.check=TRUE)
+hlaGenoCombine(geno1, geno2, match.pos=TRUE, allele.check=TRUE)
 }
 \arguments{
 	\item{geno1}{the first genotype object of \code{\link{hlaSNPGenoClass}}}
 	\item{geno2}{the second genotype object of \code{\link{hlaSNPGenoClass}}}
-	\item{allele.check}{if TRUE, call \code{\link{hlaGenoSwitchStrand}} to check the alleles of two datasets}
+	\item{match.pos}{if \code{TRUE}, it uses both SNP ID and position to match SNPs;
+		otherwise, it uses SNP ID only; calling \code{hlaSNPID(, with.pos=match.pos)}}
+	\item{allele.check}{if \code{TRUE}, call \code{\link{hlaGenoSwitchStrand}} to check
+		and then switch allele pairs if needed}
 }
 \details{
-	The A/B pairs of \code{target} are determined using the information from \code{template}.
+	The function merges two SNP dataset \code{geno1} and \code{geno2}, and returns a SNP
+data consisting of the SNP intersect between \code{geno1} and \code{geno2}, and having
+the same SNP information (allele and position) as \code{geno1}.
 }
 \value{
-	Return a \code{\link{hlaSNPGenoClass}} object.
+	A \code{\link{hlaSNPGenoClass}} object.
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
-\code{\link{hlaGenoSubset}}
+	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
+	\code{\link{hlaHaploSubset}}, \code{\link{hlaGenoSubset}}
 }
 
 \examples{

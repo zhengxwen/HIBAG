@@ -10,8 +10,8 @@
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 0.9.2\cr
-		Date:    \tab 2012-08-04\cr
+		Version: \tab 0.9.3\cr
+		Date:    \tab 2012-10-20\cr
 		License: \tab GPL version 3\cr
 	}
 }
@@ -19,8 +19,8 @@
 	\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}
 
 	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.,
-	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Oral Talk);
-	Presented at the 62nd Annual Meeting of The American Society of Human Genetics,
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
+	Present at the 62nd Annual Meeting of The American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}

@@ -7,18 +7,21 @@
 	Determine the ordered pair of A and B alleles, using the allele information provided by \code{template}.
 }
 \usage{
-hlaGenoSwitchStrand(target, template, verbose=TRUE)
+hlaGenoSwitchStrand(target, template, match.pos=TRUE, verbose=TRUE)
 }
 \arguments{
 	\item{target}{a genotype object of \code{\link{hlaSNPGenoClass}}}
 	\item{template}{a genotype object of \code{\link{hlaSNPGenoClass}}}
+	\item{match.pos}{if TRUE, it uses both SNP ID and position to match SNPs; otherwise,
+		it uses SNP ID only; calling \code{hlaSNPID(, with.pos=match.pos)}}
 	\item{verbose}{show information, if TRUE}
 }
 \details{
 	The A/B pairs of \code{target} are determined using the information from \code{template}.
 }
 \value{
-	Return a \code{\link{hlaSNPGenoClass}} object.
+	Return a \code{\link{hlaSNPGenoClass}} object consisting of the SNP intersect
+between \code{target} and \code{template}.
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 \seealso{
