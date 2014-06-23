@@ -4,7 +4,7 @@
 	Load a model object from files
 }
 \description{
-	To load a HIBAG model from a list of files
+	To load HIBAG models from a list of files, and merge all together.
 }
 \usage{
 hlaModelFiles(fn.list, action.missingfile=c("ignore", "stop"))

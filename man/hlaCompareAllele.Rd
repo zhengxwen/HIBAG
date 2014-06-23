@@ -1,7 +1,7 @@
 \name{hlaCompareAllele}
 \alias{hlaCompareAllele}
 \title{
-	Evaluate the prediction accuracies of HLA types
+	Evaluate prediction accuracies of HLA types
 }
 \description{
 	To evaluate the overall accuracy, sensitivity, specificity, positive predictive value,

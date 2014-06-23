@@ -4,7 +4,7 @@
 	Get a subset of genotypes
 }
 \description{
-	To get a subset of genotypes from a ``hlaSNPGenoClass'' object
+	To get a subset of genotypes from a \code{\link{hlaSNPGenoClass}} object.
 }
 \usage{
 hlaGenoSubset(genoobj, samp.sel=NULL, snp.sel=NULL)

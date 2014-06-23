@@ -1,0 +1,16 @@
+citHeader("To cite HIBAG in publications use:")
+
+citEntry(entry="Article",
+	title = "HIBAG -- HLA Genotype Imputation with Attribute Bagging",
+	author = personList(as.person("Xiuwen Zheng"), as.person("Judong Shen"),
+		as.person("Charles Cox"), as.person("Jonathan C. Wakefield"),
+		as.person("Margaret G. Ehm"), as.person("Matthew R. Nelson"),
+		as.person("Bruce S. Weir")),
+	journal = {"the Pharmacogenomics Journal"},
+	year = "2013",
+
+	textVersion =
+		paste("X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.",
+			"HIBAG -- HLA Genotype Imputation with Attribute Bagging.",
+			"To appear in the Pharmacogenomics Journal")
+)

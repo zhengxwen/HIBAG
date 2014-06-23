@@ -2,7 +2,7 @@
 \alias{hlaAlleleClass}
 \title{Class of HLA Type}
 \description{
-	The definition of a class for HLA types
+	The definition of a class for HLA types.
 }
 \value{
 	There are following components:

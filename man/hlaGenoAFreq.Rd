@@ -4,7 +4,7 @@
 	Allele Frequency
 }
 \description{
-	To calculate the allele frequencies from genotypes or haplotypes
+	To calculate the allele frequencies from genotypes or haplotypes.
 }
 \usage{
 hlaGenoAFreq(obj)

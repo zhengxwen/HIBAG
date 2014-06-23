@@ -10,20 +10,45 @@
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 0.9.4\cr
-		Date:    \tab 2012-12-21\cr
+		Version: \tab 1.0.0\cr
+		Date:    \tab 2013-03-26\cr
 		License: \tab GPL version 3\cr
 	}
+
+	HIBAG is a state of the art software package for imputing HLA types using SNP data,
+and it uses the R statistical programming language. HIBAG is highly accurate,
+computationally tractable, and can be used by researchers with published parameter
+estimates instead of requiring access to large training sample datasets. It combines
+the concepts of attribute bagging, an ensemble classifier method, with haplotype
+inference for SNPs and HLA types. Attribute bagging is a technique which improves the
+accuracy and stability of classifier ensembles deduced using bootstrap aggregating and
+random variable selection.
+
+\tabular{l}{
+	\bold{Features:} \cr
+	1) HIBAG can be used by researchers with published parameter estimates
+		(\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of requiring
+		access to large training sample datasets. \cr
+	2) A typical HIBAG parameter file contains only haplotype frequencies at
+		different SNP subsets rather than individual training genotypes. \cr
+	3) SNPs within the xMHC region (chromosome 6) are used for imputation. \cr
+	4) HIBAG employs unphased genotypes of unrelated individuals as a training set. \cr
+}
 }
 \references{
-	\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}
-
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.,
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
-	Present at the 62nd Annual Meeting of The American Society of Human Genetics,
+	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
+
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
+	To appear in the Pharmacogenomics Journal.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{
+	Xiuwen Zheng \email{zhengx@u.washington.edu},
+	Bruce Weir \email{bsweir@u.washington.edu}
+}
 
 \examples{
 # load HLA types and SNP genotypes
@@ -41,28 +66,6 @@ hla.id <- "A"
 hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
 	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
 summary(hla)
-
-
-# plot linkage disequilibrium
-ymax <- 0.16
-plot(NaN, NaN, xlab="SNP Position (in KB)", ylab="Linkage Disequilibrium",
-	xlim=range(hla.snp.geno$snp.position)/1000, ylim=c(0, ymax),
-	main="Major Histocompatibility Complex")
-# for-loop
-for (i in 1:3)
-{
-	hla.id <- c("A", "C", "DQA1")[i]
-	# make a "hlaAlleleClass" object
-	hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-		hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
-	# linkage disequilibrium between HLA locus and SNP markers
-	ld <- hlaGenoLD(hla, hla.snp.geno)
-	# draw
-	points(hla.snp.geno$snp.position/1000, ld, pch="*", col=i)
-	x <- (hla$pos.start/1000 + hla$pos.end/1000)/2
-	abline(v=x, col=i, lty=3)
-	text(x, ymax-(i-1)*0.005, hla.id, adj=1, col=i)
-}
 
 
 
@@ -92,10 +95,10 @@ train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.
 test.geno <- hlaGenoSubset(hla.snp.geno,
 	samp.sel=match(hlatab$validation$value$sample.id, hla.snp.geno$sample.id))
 
-# train an attribute bagging model
+# train a HIBAG model
 set.seed(100)
 # please try "nclassifier=25" or "nclassifier=100" when you use HIBAG for real data
-model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=2, verbose.detail=TRUE)
+model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4, verbose.detail=TRUE)
 summary(model)
 
 # validation
@@ -103,12 +106,8 @@ pred <- predict(model, test.geno)
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
 	call.threshold=0))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          23            49 0.8846154 0.9423077              0     26         1
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
 	call.threshold=0.5))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          20            42 0.9090909 0.9545455            0.5     22 0.8461538
 
 
 # save the parameter file
@@ -136,8 +135,6 @@ pred <- predict(model, test.geno)
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
 	call.threshold=0.5))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          20            42 0.9090909 0.9545455            0.5     22 0.8461538
 
 
 #########################################################################
@@ -155,11 +152,9 @@ hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn)
 pred <- predict(model, hapmap.ceu, type="response")
 pred$value
 #    sample.id allele1 allele2      prob
-# 1    NA10859   01:01   03:01 0.5000786
-# 2    NA11882   01:01   29:02 0.4999865
+# 1    NA10859   01:01   03:01 0.9374860
+# 2    NA11882   01:01   29:02 0.9999835
 # ...
-# 89   NA12892   02:01   11:01 0.9999992
-# 90   NA12891   01:01   24:02 0.8888880
 }
 
 \keyword{HLA}

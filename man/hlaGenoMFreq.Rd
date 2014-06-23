@@ -4,7 +4,7 @@
 	Minor Allele Frequency
 }
 \description{
-	To calculate the minor allele frequencies from genotypes or haplotypes
+	To calculate the minor allele frequencies from genotypes or haplotypes.
 }
 \usage{
 hlaGenoMFreq(obj)

@@ -4,8 +4,8 @@
 	Dispose a model object
 }
 \description{
-	Release all resources stored in the "hlaAttrBagClass" object. HIBAG allows up to 256
-"hlaAttrBagClass" objects.
+	Release all resources stored in the \code{\link{hlaAttrBagClass}} object.
+HIBAG allows up to 256 \code{\link{hlaAttrBagClass}} objects.
 }
 \usage{
 hlaClose(model)

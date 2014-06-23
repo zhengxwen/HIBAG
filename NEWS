@@ -1,19 +1,27 @@
+Changes in 1.0.0:
+
+	* use 'useDynLib()' in NAMESPACE instead of 'library.dynam()'
+	* increase the limit of the possible number of SNPs in a single classifier up to 256
+	* update citation information
+	* add a vignette
+
+
 Changes in 0.9.4:
 
-	* improve documents
+	* document improvements
 	* bug fix: passing only one individual to 'predict.hlaAttrBagClass'
 
 
 Changes in 0.9.3:
 
-	* add a load balancing function to 'hlaParallelAttrBagging'
-	* add 'hlaUniqueAllele'
-	* add an argument 'match.pos' to the functions 'predict.hlaAttrBagClass', 'hlaGenoCombine', 'hlaGenoSwitchStrand'
-	* add an argument 'with.pos' to the function 'hlaSNPID'
-	* give more warnings about missing SNPs in 'predict.hlaAttrBagClass'
-	* avoid segmentation fault in 'predict.hlaAttrBagClass' when all SNPs are missing.
+	* adds a load balancing function to 'hlaParallelAttrBagging'
+	* adds 'hlaUniqueAllele'
+	* adds an argument 'match.pos' to the functions 'predict.hlaAttrBagClass', 'hlaGenoCombine', 'hlaGenoSwitchStrand'
+	* adds an argument 'with.pos' to the function 'hlaSNPID'
+	* gives more warnings about missing SNPs in 'predict.hlaAttrBagClass'
+	* avoids segmentation fault in 'predict.hlaAttrBagClass' when all SNPs are missing.
 	* a warning is given for strand mismatching when calling 'hlaGenoSwitchStrand'
-	* improve documents
+	* document improvements
 
 
 Changes in 0.9.2:

@@ -4,7 +4,7 @@
 	Summarize the haplotype dataset
 }
 \description{
-	Summarize the haplotype dataset
+	Summarize the haplotype dataset.
 }
 \usage{
 \method{summary}{hlaSNPHaploClass}(object, show=TRUE, ...)

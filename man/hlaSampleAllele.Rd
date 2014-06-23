@@ -4,7 +4,7 @@
 	Get sample IDs from HLA types
 }
 \description{
-	Get sample IDs from HLA types limited to a set of HLA alleles
+	Get sample IDs from HLA types limited to a set of HLA alleles.
 }
 \usage{
 hlaSampleAllele(TrueHLA, allele.limit=NULL, max.resolution="")

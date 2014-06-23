@@ -4,7 +4,7 @@
 	A list of HLA types
 }
 \description{
-	Return an object of "hlaAlleleClass", which contains HLA types.
+	Return an object of \code{\link{hlaAlleleClass}}, which contains HLA types.
 }
 \usage{
 hlaAllele(sample.id, H1, H2, max.resolution="", locus="any",

@@ -4,7 +4,7 @@
 	Build a HIBAG model via parallel computation
 }
 \description{
-	To build an attribute bagging model for predicting HLA types via parallel computation
+	To build a HIBAG model for predicting HLA types via parallel computation.
 }
 \usage{
 hlaParallelAttrBagging(cl, hla, genotype, nclassifier=100,
@@ -54,6 +54,16 @@ times of non-informative SNP markers.
 	\item{hla.allele}{the HLA alleles used in the model}
 	\item{hla.freq}{the HLA allele frequencies}
 	\item{model}{internal use}
+}
+\references{
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.;
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
+	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
+	November 9, 2012 in San Francisco, California.
+
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
+	To appear in the Pharmacogenomics Journal.
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 \seealso{
@@ -105,11 +115,7 @@ summary(model)
 # validation
 pred <- predict(model, test.geno)
 # compare
-comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0.5)
-comp
-# total.num.ind crt.num.ind crt.num.haplo  acc.ind acc.haplo call.threshold n.call call.rate
-#            26          20            41 0.952381 0.9761905            0.5     21 0.8076923
+(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele))
 
 # stop parallel nodes
 stopCluster(cl)

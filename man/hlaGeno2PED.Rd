@@ -4,7 +4,7 @@
 	Convert to PLINK PED format
 }
 \description{
-	Convert an object of hlaSNPGenoClass to a file of PLINK PED format
+	Convert an object of \code{\link{hlaSNPGenoClass}} to a file of PLINK PED format.
 }
 \usage{
 hlaGeno2PED(geno, out.fn)

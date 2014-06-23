@@ -4,7 +4,7 @@
 	Summarize the genotype dataset
 }
 \description{
-	Summarize the genotype dataset
+	Summarize the genotype dataset.
 }
 \usage{
 \method{summary}{hlaSNPGenoClass}(object, show=TRUE, ...)

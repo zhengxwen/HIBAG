@@ -4,7 +4,7 @@
 	Get a subset of HLA types
 }
 \description{
-	Get a subset of HLA types from an object of "hlaAlleleClass".
+	Get a subset of HLA types from an object of \code{\link{hlaAlleleClass}}.
 }
 \usage{
 hlaAlleleSubset(hla, samp.sel=NULL)

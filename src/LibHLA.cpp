@@ -6,29 +6,29 @@
 // _/_/_/   _/_/_/  _/_/_/_/_/     _/     _/_/_/   _/_/
 // ===========================================================
 //
-// Copyright (C) 2012	Xiuwen Zheng
+// Copyright (C) 2013	Xiuwen Zheng (zhengx@u.washington.edu)
 //
 // This file is part of HIBAG package.
 //
 // HIBAG is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Lesser General Public License Version 3 as
+// under the terms of the GNU General Public License Version 3 as
 // published by the Free Software Foundation.
 //
 // HIBAG is distributed in the hope that it will be useful, but
 // WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
+// GNU General Public License for more details.
 //
-// You should have received a copy of the GNU Lesser General Public
-// License along with CoreArray.
+// You should have received a copy of the GNU General Public License
+// along with HIBAG.
 // If not, see <http://www.gnu.org/licenses/>.
 
 // ===========================================================
 // Name        : LibHLA
 // Author      : Xiuwen Zheng
-// Version     : 0.9.4
+// Version     : 1.0.0
 // Copyright   : Xiuwen Zheng (GPL v3.0)
-// Created     : 11/14/2012
+// Created     : 11/14/2011
 // Description : HLA Genotype Imputation with Attribute Bagging
 // ===========================================================
 
@@ -752,15 +752,17 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 					}
 				}
-				// CHECKING(MinDiff > 0, "CAlg_EM::PrepareHaplotypes, no haplotype pair.");
+
 				if (MinDiff > 0)
 				{
 					for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
+					{
 						for (p2 = pH2.begin(); p2 != pH2.end(); p2++)
 						{
 							if (pG._Diff(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
 								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 						}
+					}
 				}
 			} else {
 				for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
@@ -773,15 +775,17 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 					}
 				}
-				// CHECKING(MinDiff > 0, "CAlg_EM::PrepareHaplotypes, no haplotype pair.");
+
 				if (MinDiff > 0)
 				{
 					for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
+					{
 						for (p2 = p1; p2 != pH1.end(); p2++)
 						{
 							if (pG._Diff(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
 								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 						}
+					}
 				}
 			}
 		}
@@ -959,7 +963,8 @@ void CAlg_Prediction::NormalizeSumPostProb()
 	{
 		const double scale = 1.0 / _Sum_Weight;
 		double *s = &_SumPostProb[0];
-		for (size_t n = _SumPostProb.size(); n > 0; n--) *s++ *= scale;
+		for (size_t n = _SumPostProb.size(); n > 0; n--)
+			*s++ *= scale;
 	}
 }
 

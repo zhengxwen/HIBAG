@@ -4,7 +4,7 @@
 	Missing Rates Per SNP
 }
 \description{
-	To calculate the missing rates from genotypes or haplotypes per SNP
+	To calculate the missing rates from genotypes or haplotypes per SNP.
 }
 \usage{
 hlaGenoMRate(obj)

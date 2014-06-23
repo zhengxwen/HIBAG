@@ -2,7 +2,8 @@
 \alias{hlaSNPGenoClass}
 \title{The class of SNP genotypes}
 \description{
-	The class of SNP genotypes, and its instance is returned from \code{\link{hlaMakeSNPGeno}}.
+	The class of SNP genotypes, and its instance is returned from
+\code{\link{hlaMakeSNPGeno}}.
 }
 \value{
 	There are five components:

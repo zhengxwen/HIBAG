@@ -4,7 +4,7 @@
 	Plot a "hlaAttrBagObj" object
 }
 \description{
-	To show a scatterplot of the numbers of individual classifiers and SNP positions
+	To show a scatterplot of the numbers of individual classifiers and SNP positions.
 }
 \usage{
 \method{plot}{hlaAttrBagObj}(x, xlab=NULL, ylab=NULL, locus.color="red",

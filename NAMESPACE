@@ -1,5 +1,5 @@
-# Default NAMESPACE created by R
-# Remove the previous line if you edit this file
+# Load the shared object
+useDynLib(HIBAG)
 
 # Export all names
 exportPattern(".")

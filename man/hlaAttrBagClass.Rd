@@ -2,7 +2,7 @@
 \alias{hlaAttrBagClass}
 \title{The class of HIBAG model}
 \description{
-	The class of an attribute bagging model, and its instance is returned from
+	The class of a HIBAG model, and its instance is returned from
 \code{\link{hlaAttrBagging}}.
 }
 \value{
@@ -20,6 +20,16 @@
 	\item{model}{internal use}
 }
 
+\references{
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.;
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
+	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
+	November 9, 2012 in San Francisco, California.
+
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
+	To appear in the Pharmacogenomics Journal.
+}
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{hlaAttrBagObj}}

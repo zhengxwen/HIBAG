@@ -1,11 +1,12 @@
 \name{hlaModelToObj}
 \alias{hlaModelToObj}
 \title{
-	Convert "hlaAttrBagClass" to "hlaAttrBagObj"
+	Convert ``hlaAttrBagClass'' to ``hlaAttrBagObj''
 }
 \description{
-	Convert "hlaAttrBagClass" to "hlaAttrBagObj", and "hlaAttrBagObj" can be written to
-the specified file with an external representation of R objects.
+	Convert \code{\link{hlaAttrBagClass}} to \code{\link{hlaAttrBagObj}}, and
+\code{\link{hlaAttrBagObj}} can be written to the specified file with an external
+representation of R objects.
 }
 \usage{
 hlaModelToObj(model)

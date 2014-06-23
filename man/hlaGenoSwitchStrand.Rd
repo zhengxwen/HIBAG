@@ -4,7 +4,8 @@
 	Allele switching
 }
 \description{
-	Determine the ordered pair of A and B alleles, using the allele information provided by \code{template}.
+	Determine the ordered pair of A and B alleles, using the allele information
+provided by \code{template}.
 }
 \usage{
 hlaGenoSwitchStrand(target, template, match.pos=TRUE, verbose=TRUE)

@@ -1,0 +1,166 @@
+%\VignetteIndexEntry{HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging}
+%\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS, Random Forests, HIBAG}
+%\VignettePackage{HIBAG}
+
+\documentclass[12pt]{article}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{indentfirst}
+\usepackage{amsmath}  
+\usepackage{graphicx}
+\usepackage[pdftex, plainpages=false, letterpaper, bookmarks, bookmarksnumbered, colorlinks, linkcolor=blue, citecolor=blue, filecolor=blue, urlcolor=blue]{hyperref}
+\usepackage{url}
+\usepackage{Sweave}
+
+% Different font in captions
+\newcommand{\captionfonts}{\footnotesize}
+\newcommand{\hn}[1]{\textsf{#1}}
+\newcommand{\fn}[1]{\textbf{#1}}
+\newcommand{\vr}[1]{\textbf{#1}}
+
+
+\begin{document}
+
+\title{HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging}
+\author{Xiuwen Zheng}
+\date{March 25, 2013}
+
+
+\maketitle
+\tableofcontents
+
+% \SweaveOpts{keep.source=TRUE, eps=FALSE}
+
+\onehalfspace
+
+% ---- Overview ----
+\section{Overview}
+
+The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation \cite{Shiina:2009fk}. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the {\em HLA--B} locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database \cite{Robinson:2013:Nucleic-Acids-Res:23080122} (\url{http://www.ebi.ac.uk/imgt/hla/}).
+
+Classical HLA genotyping methodologies have been predominantly developed for tissue typing purposes, with sequence based typing (SBT) approaches currently considered the gold standard. While there is widespread availability of vendors offering HLA genotyping services, the complexities involved in performing this to the standard required for diagnostic purposes make using a SBT approach time-consuming and cost-prohibitive for most research studies wishing to look in detail at the involvement of classical HLA genes in disease. Previous studies have suggested that the existence of some HLA alleles can be predicted by a SNP-based tagging approach \cite{deBakker:2006:Nat-Genet:16998491, Evseeva:2010:Eur-J-Hum-Genet:20354563}. However, SNP-based tagging does not offer a definitive solution to HLA genotyping by prediction since many HLA alleles are found on multiple haplotype backgrounds \cite{Leslie:2008:Am-J-Hum-Genet:18179884} that differ among populations.
+
+% -------- BEGIN FIGURE --------
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=0.95\columnwidth]{HLA-HIBAG-model.png}
+\caption{Overview of the HIBAG prediction algorithm. HIBAG is an ensemble classifier consisting of individual classifiers ($C_k$) with HLA and SNP haplotype probabilities estimated from bootstrapped samples ($B_k$) and SNP subsets ($\mathcal{S}_k$). The SNP subsets are determined by a variable selection algorithm with a random component. HLA type predictions are averaged over the posterior probabilities from all classifiers.}
+\label{fig:HLA-AttrBag}
+\end{figure}
+% -------- END FIGURE --------
+
+Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf BAG}ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples \cite{ZhengHIBAG2013}. It combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles deduced using bootstrap aggregating and random subsets of variables \cite{Breiman96baggingpredictors, springerlink:10.1023/A:1010933404324, Bryll20031291}, as shown in Figure~\ref{fig:HLA-AttrBag}. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers. Compared to other methods like HLA*IMP and BEAGLE, HIBAG has only the minimal assumption of Hardy-Weinberg equilibrium (HWE).
+
+
+
+% ---- Features ----
+\section{Features}
+
+\begin{enumerate}
+	\item HIBAG can be used by researchers with published parameter estimates instead of requiring access to large training sample datasets.
+	\item A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
+	\item SNPs within the xMHC region (chromosome 6) are used for imputation.
+	\item HIBAG employs unphased genotypes of unrelated individuals as a training set.
+\end{enumerate}
+
+
+
+% ---- Examples ----
+\section{Examples}
+
+%     ---- The pre-fit HIBAG models for HLA imputation ----
+\subsection{The pre-fit HIBAG models for HLA imputation}
+
+\begin{Schunk}
+\begin{Sinput}
+library(HIBAG)
+ 
+# Load the published parameter estimates from European ancestry
+model.list <- get(load("European-HLA4.RData"))
+ 
+#########################################################################
+# Import your PLINK BED file
+#
+yourgeno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
+summary(yourgeno)
+ 
+# HLA imputation at HLA-A
+hla.id <- "A"
+model <- hlaModelfromObj(model.list[[hla.id]])
+summary(model)
+ 
+# SNPs in the model
+head(model$snp.id)
+# "rs2523442" "rs9257863" "rs2107191" "rs4713226" "rs1362076" "rs7751705"
+head(model$snp.position)
+# 29525796 29533563 29542274 29542393 29549148 29549597
+ 
+# best-guess genotypes
+pred.guess <- predict(model, yourgeno, type="response")
+# posterior probabilities
+pred.prob <- predict(model, yourgeno, type="prob")
+\end{Sinput}
+\end{Schunk}
+
+
+%     ---- Build your own HIBAG models for HLA imputation ----
+\subsection{Build your own HIBAG models for HLA imputation}
+
+\begin{Schunk}
+\begin{Sinput}
+library(HIBAG)
+ 
+# Import your PLINK BED file
+geno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
+summary(geno)
+ 
+# HLA genotypes, 01:02/02:01, 05:01/03:01, ...
+train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
+    H2=c("02:01", "03:01", ...), locus="A")
+ 
+# Selected SNPs, two options:
+# 1) the flanking region of 500kb on each side,
+#    or an appropriate flanking size without sacrificing predictive accuracy
+  snpid <- hlaFlankingSNP(geno$snp.id, geno$snp.position, "A", 500*1000)
+# 2) the SNPs in our pre-fit models
+  model.list <- get(load("European-HLA4.RData"))
+  snpid <- model.list[["A"]]$snp.id
+# Subset training SNP genotypes
+train.geno <- hlaGenoSubset(geno, snp.sel=match(snpid, geno$snp.id))
+ 
+# Building ...
+model <- hlaAttrBagging(train.HLA, train.geno, nclassifier=100, verbose.detail=TRUE)
+summary(model)
+ 
+# Save your model
+model.obj <- hlaModelToObj(model)
+save(model.obj, file="your_model.RData")
+ 
+# Predict ...
+# best-guess genotypes
+pred.guess <- predict(model, newgeno, type="response")
+# posterior probabilities
+pred.prob <- predict(model, newgeno, type="prob")
+\end{Sinput}
+\end{Schunk}
+
+
+
+
+% ---- Resources ----
+\section{Resources}
+
+\begin{enumerate}
+	\item Allele Frequency Net Database (AFND): \url{http://www.allelefrequencies.net}.
+	\item IMGT/HLA Database: \url{http://www.ebi.ac.uk/imgt/hla}.
+	\item GlaxoSmithKline (GSK): \url{http://www.gsk.com}.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\singlespacing
+\bibliographystyle{unsrt}
+\bibliography{HIBAG_Ref}
+ 
+
+\end{document}

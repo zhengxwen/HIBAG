@@ -2,7 +2,7 @@
 \alias{hlaAttrBagObj}
 \title{The class of HIBAG object}
 \description{
-	The class of an attribute bagging model.
+	The class of a HIBAG model.
 }
 \value{
 	A list of:

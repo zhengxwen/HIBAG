@@ -4,7 +4,7 @@
 	Get a subset of haplotypes
 }
 \description{
-	To get a subset of haplotypes from a ``hlaSNPHaploClass'' object
+	To get a subset of haplotypes from a \code{\link{hlaSNPHaploClass}} object.
 }
 \usage{
 hlaHaploSubset(haploobj, samp.sel=NULL, snp.sel=NULL)

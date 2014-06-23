@@ -1,10 +1,11 @@
 \name{hlaModelfromObj}
 \alias{hlaModelfromObj}
 \title{
-	Build a model from "hlaAttrBagObj"
+	Build a model from ``hlaAttrBagObj''
 }
 \description{
-	Build a model from an object of \code{hlaAttrBagObj}, which is stored in an R object file.
+	Build a model from an object of \code{\link{hlaAttrBagObj}}, which is stored in an
+R object file.
 }
 \usage{
 hlaModelfromObj(obj)

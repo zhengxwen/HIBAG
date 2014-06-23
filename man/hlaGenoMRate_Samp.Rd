@@ -4,7 +4,7 @@
 	Missing Rates Per Sample
 }
 \description{
-	To calculate the missing rates from genotypes or haplotypes per sample
+	To calculate the missing rates from genotypes or haplotypes per sample.
 }
 \usage{
 hlaGenoMRate_Samp(obj)

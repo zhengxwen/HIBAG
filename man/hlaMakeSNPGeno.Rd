@@ -4,7 +4,7 @@
 	Make a SNP genotype object
 }
 \description{
-	To create a ``hlaSNPGenoClass'' object (SNP genotype object)
+	To create a \code{\link{hlaSNPGenoClass}} object (SNP genotype object).
 }
 \usage{
 hlaMakeSNPGeno(genotype, sample.id, snp.id, snp.position, A.allele, B.allele)

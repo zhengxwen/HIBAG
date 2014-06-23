@@ -4,7 +4,7 @@
 	Divide the samples randomly
 }
 \description{
-	Divide the samples to the training and validation sets randomly
+	Divide the samples to the training and validation sets randomly.
 }
 \usage{
 hlaSplitAllele(HLA, train.prop=0.5)

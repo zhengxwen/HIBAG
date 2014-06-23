@@ -1,10 +1,10 @@
 \name{summary.hlaAttrBagClass}
 \alias{summary.hlaAttrBagClass}
 \title{
-	Summarize a "hlaAttrBagClass" object
+	Summarize a ``hlaAttrBagClass'' object
 }
 \description{
-	Show the information of a "hlaAttrBagClass" object
+	Show the information of a \code{\link{hlaAttrBagClass}} object.
 }
 \usage{
 \method{summary}{hlaAttrBagClass}(object, show=TRUE, ...)

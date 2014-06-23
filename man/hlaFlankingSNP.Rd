@@ -4,7 +4,7 @@
 	SNP IDs in Flanking Region
 }
 \description{
-	To select SNPs in the flanking region of a specified HLA locus
+	To select SNPs in the flanking region of a specified HLA locus.
 }
 \usage{
 hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000)

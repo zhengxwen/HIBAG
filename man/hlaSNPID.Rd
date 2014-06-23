@@ -4,7 +4,7 @@
 	Get SNP IDs and positions
 }
 \description{
-	Get the information of SNP ID with or without position
+	Get the information of SNP ID with or without position.
 }
 \usage{
 hlaSNPID(obj, with.pos=TRUE)
