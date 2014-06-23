@@ -1205,7 +1205,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 #endif
 
 	// the converage tolerance
-	TFLOAT ConvTol, LogLik = -1e+30;
+	TFLOAT ConvTol = 0, LogLik = -1e+30;
 
 	// iterate ...
 	for (int iter=0; iter <= EM_MaxNum_Iterations; iter++)
