@@ -6,11 +6,10 @@
 \usepackage{setspace}
 \usepackage{fullpage}
 \usepackage{indentfirst}
-\usepackage{amsmath}  
 \usepackage{graphicx}
+\usepackage{Sweave}
 \usepackage[pdftex, plainpages=false, letterpaper, bookmarks, bookmarksnumbered, colorlinks, linkcolor=blue, citecolor=blue, filecolor=blue, urlcolor=blue]{hyperref}
 \usepackage{url}
-\usepackage{Sweave}
 
 % Different font in captions
 \newcommand{\captionfonts}{\footnotesize}
@@ -23,7 +22,7 @@
 
 \title{HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging}
 \author{Xiuwen Zheng}
-\date{Oct 29, 2013}
+\date{March 5, 2014}
 
 
 \maketitle
@@ -38,18 +37,9 @@
 
 The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation \cite{Shiina:2009fk}. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the {\em HLA--B} locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database \cite{Robinson:2013:Nucleic-Acids-Res:23080122} (\url{http://www.ebi.ac.uk/imgt/hla/}).
 
-Classical HLA genotyping methodologies have been predominantly developed for tissue typing purposes, with sequence based typing (SBT) approaches currently considered the gold standard. While there is widespread availability of vendors offering HLA genotyping services, the complexities involved in performing this to the standard required for diagnostic purposes make using a SBT approach time-consuming and cost-prohibitive for most research studies wishing to look in detail at the involvement of classical HLA genes in disease. Previous studies have suggested that the existence of some HLA alleles can be predicted by a SNP-based tagging approach \cite{deBakker:2006:Nat-Genet:16998491, Evseeva:2010:Eur-J-Hum-Genet:20354563}. However, SNP-based tagging does not offer a definitive solution to HLA genotyping by prediction since many HLA alleles are found on multiple haplotype backgrounds \cite{Leslie:2008:Am-J-Hum-Genet:18179884} that differ among populations.
+Classical HLA genotyping methodologies have been predominantly developed for tissue typing purposes, with sequence based typing (SBT) approaches currently considered the gold standard. While there is widespread availability of vendors offering HLA genotyping services, the complexities involved in performing this to the standard required for diagnostic purposes make using a SBT approach time-consuming and cost-prohibitive for most research studies wishing to look in detail at the involvement of classical HLA genes in disease.
 
-% -------- BEGIN FIGURE --------
-\begin{figure}[!t]
-    \centering
-    \includegraphics[width=0.95\columnwidth]{HLA-HIBAG-model.png}
-\caption{Overview of the HIBAG prediction algorithm. HIBAG is an ensemble classifier consisting of individual classifiers ($C_k$) with HLA and SNP haplotype probabilities estimated from bootstrapped samples ($B_k$) and SNP subsets ($\mathcal{S}_k$). The SNP subsets are determined by a variable selection algorithm with a random component. HLA type predictions are averaged over the posterior probabilities from all classifiers.}
-\label{fig:HLA-AttrBag}
-\end{figure}
-% -------- END FIGURE --------
-
-Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf BAG}ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples \cite{Zheng:2013:Pharmacogenomics-J:23712092}. It combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles deduced using bootstrap aggregating and random subsets of variables \cite{Breiman96baggingpredictors, springerlink:10.1023/A:1010933404324, Bryll20031291}, as shown in Figure~\ref{fig:HLA-AttrBag}. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers. Compared to other methods like HLA*IMP and BEAGLE, HIBAG has only the minimal assumption of Hardy-Weinberg equilibrium (HWE).
+Here we introduce a new prediction method for {\bf H}LA {\bf I}mputation using attribute {\bf BAG}ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples \cite{Zheng:2013:Pharmacogenomics-J:23712092}. It relies on a training set with known HLA and SNP genotypes, and combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles using bootstrap aggregating and random variable selection \cite{Breiman96baggingpredictors, springerlink:10.1023/A:1010933404324, Bryll20031291}. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers.
 
 
 
@@ -57,7 +47,7 @@ Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf
 \section{Features}
 
 \begin{enumerate}
-    \item HIBAG can be used by researchers with published parameter estimates (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/} \footnote{mirror site: \url{http://corearray.sourceforge.net/mirror/HIBAG/}}) instead of requiring access to large training sample datasets.
+    \item HIBAG can be used by researchers with published parameter estimates (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of requiring access to large training sample datasets.
     \item A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
     \item SNPs within the xMHC region (chromosome 6) are used for imputation.
     \item HIBAG employs unphased genotypes of unrelated individuals as a training set.
@@ -283,8 +273,8 @@ hlaReport(comp, type="tex")
 \end{Schunk}
 
 
-%     ---- Release a HIBAG model with no confidential information ----
-\subsection{Release a HIBAG model with no confidential information}
+%     ---- Release HIBAG models without confidential information ----
+\subsection{Release HIBAG models without confidential information}
 
 \begin{Schunk}
 \singlespace
@@ -314,7 +304,7 @@ set.seed(1000)
 model <- hlaAttrBagging(hla, train.geno, nclassifier=100)
 summary(model)
 
-# remove unused SNPs from the model and sample IDs
+# remove unused SNPs and sample IDs from the model
 mobj <- hlaPublish(model,
     platform = "Illumina 1M Duo",
     information = "Training set -- HapMap Phase II",

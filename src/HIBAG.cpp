@@ -8,7 +8,7 @@
 //
 // HIBAG.cpp: HLA Genotype Imputation with Attribute Bagging
 //
-// Copyright (C) 2013	Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2014	Xiuwen Zheng (zhengx@u.washington.edu)
 //
 // This file is part of HIBAG R package.
 //

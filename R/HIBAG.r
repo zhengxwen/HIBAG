@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.2.2
+# Package Name: HIBAG v1.2.3
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
@@ -25,8 +25,14 @@
 {
 	stopifnot(is.character(geno.name))
 	i <- grep(paste("\\b",c(
-			"A", "B", "C", "DMA", "DMB", "DOA", "DOB",
-			"DRA\\d", "DRB\\d", "DQA\\d", "DQB\\d", "DPA\\d", "DPB\\d"),
+			# HLA Classic I genes
+			"A", "B", "C", "E", "F", "G",
+			# HLA Classic II genes
+			"DMA", "DMB", "DOA", "DOB",
+			"DRA", "DRB\\d", "DQA\\d", "DQB\\d", "DPA\\d", "DPB\\d",
+			# HLA Classic III genes
+			"LTA", "TNF", "LTB", "HSPA1L", "HSPA1A", "HSPA1B",
+			"C2", "BF", "C4A", "C4B"),
 		"\\b", sep="", collapse="|"),
 		geno.name)
 	geno.name[i] <- paste("HLA -", geno.name[i])
@@ -997,11 +1003,11 @@ hlaLociInfo <- function(assembly =
 		assembly <- "hg19"
 	}
 
-	# the name of HLA genes
-	ID <- c("A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1", "any")
-
 	if (assembly == "hg18")
 	{
+		# the name of HLA genes
+		ID <- c("A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1", "any")
+
 		# starting position
 		pos.HLA.start <- as.integer(c(30018310, 31429628, 31344508, 32654527,
 			32593129, 32713161, 32735635, 33151738, NA))
@@ -1012,27 +1018,83 @@ hlaLociInfo <- function(assembly =
 	} else if (assembly == "hg19")
 	{
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-A.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-B.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-C.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DRB1.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DRB5.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DQA1.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DQB1.html
-		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DPB1.html
+
+		# the name of HLA genes
+		ID <- c(
+			# HLA Classic I
+			"A", "B", "C", "E", "F", "G",
+			# HLA Classic II
+			"DMA", "DMB", "DOA", "DOB", "DRA", "DRB1", "DRB5",
+			"DQA1", "DQB1", "DPA1", "DPB1",
+			# HLA Classic III
+			"BF", "C4A", "C4B", "HSPA1A", "HSPA1B", "HSPA1L", "LTA", "LTB", "TNF",
+			"any")
 
 		# starting position
-		pos.HLA.start <- as.integer(c(29910247, 31321649, 31236526, 32546547,
-			32485154, 32605183, 32627241, 33043703, NA))
+		pos.HLA.start <- as.integer(c(
+			29910247,  # A
+			31321649,  # B
+			31236526,  # C
+			30457183,  # E
+			29691117,  # F
+			29794756,  # G
+			32916390,  # DMA
+			32902406,  # DMB
+			32971960,  # DOA
+			32780540,  # DOB
+			32407619,  # DRA
+			32546547,  # DRB1
+			32485154,  # DRB5
+			32605183,  # DQA1
+			32627241,  # DQB1
+			33032346,  # DPA1
+			33043703,  # DPB1
+			31913721,  # BF
+			31949834,  # C4A
+			31949834,  # C4B
+			31783291,  # HSPA1A
+			31795512,  # HSPA1B
+			31777396,  # HSPA1L
+			31540071,  # LTA
+			31548336,  # LTB
+			31543344,  # TNF
+			NA))
 
 		# ending position
-		pos.HLA.end <- as.integer(  c(29913661, 31324989, 31239913, 32557613,
-			32498006, 32611429, 32634466, 33057473, NA))
+		pos.HLA.end <- as.integer(c(
+			29913661,  # A
+			31324989,  # B
+			31239913,  # C
+			30461982,  # E
+			29694303,  # F
+			29798899,  # G
+			32936871,  # DMA
+			32908847,  # DMB
+			32977389,  # DOA
+			32784825,  # DOB
+			32412826,  # DRA
+			32557613,  # DRB1
+			32498006,  # DRB5
+			32611429,  # DQA1
+			32634466,  # DQB1
+			33048555,  # DPA1
+			33057473,  # DPB1
+			31919861,  # BF
+			31970457,  # C4A
+			31970458,  # C4B
+			31785719,  # HSPA1A
+			31798031,  # HSPA1B
+			31782835,  # HSPA1L
+			31542100,  # LTA
+			31550202,  # LTB
+			31546112,  # TNF
+			NA))
 	} else {
 		stop("Unknown human genome reference in 'assembly'!")
 	}
 
 	# length in basepair
-	length.HLA <- (pos.HLA.end - pos.HLA.start)
+	length.HLA <- (pos.HLA.end - pos.HLA.start + 1L)
 
 	# the names of HLA genes
 	names(pos.HLA.start) <- ID
@@ -1670,8 +1732,14 @@ hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
 
 	pos.start <- HLAInfo$pos.HLA.start[hla.id] - flank.bp
 	pos.end <- HLAInfo$pos.HLA.end[hla.id] + flank.bp
-	flag <- (pos.start <= position) & (position <= pos.end)
-	return(snp.id[flag])
+
+	if (is.finite(pos.start) & is.finite(pos.end))
+	{
+		flag <- (pos.start <= position) & (position <= pos.end)
+		return(snp.id[flag])
+	} else {
+		stop("The position information is not available!")
+	}
 }
 
 
@@ -3454,7 +3522,7 @@ hlaErrMsg <- function()
 
 	# information
 	packageStartupMessage(
-		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.2")
+		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.3")
 	if (rv$SSE.Flag != 0)
 		packageStartupMessage("Supported by Streaming SIMD Extensions 2 (SSE2)")
 

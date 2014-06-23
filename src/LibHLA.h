@@ -6,7 +6,7 @@
 // _/_/_/   _/_/_/  _/_/_/_/_/     _/     _/_/_/   _/_/
 // ===========================================================
 //
-// Copyright (C) 2013	Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2014	Xiuwen Zheng (zhengx@u.washington.edu)
 //
 // This file is part of HIBAG R package.
 //
@@ -26,7 +26,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.1
+// Version        : 1.2.3
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
 // Last modified  : 10/29/2013

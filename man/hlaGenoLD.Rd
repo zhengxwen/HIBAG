@@ -19,13 +19,14 @@ hlaGenoLD(hla, geno)
 	Return a vector of linkage disequilibrium (r2) for each SNP marker.
 }
 \references{
-	Weir BS, Cockerham CC: Complete characterization of disequilibrium at two loci;
-		in Feldman MW (ed): Mathematical Evolutionary Theory.
-		Princeton, NJ: Princeton University Press, 1989.
+	Weir BS, Cockerham CC:
+	Complete characterization of disequilibrium at two loci;
+	in Feldman MW (ed): Mathematical Evolutionary Theory.
+	Princeton, NJ: Princeton University Press, 1989.
 
 	Zaykin, D. V., Pudovkin, A., and Weir, B. S. (2008).
-		Correlation-based inference for linkage disequilibrium with multiple alleles.
-		Genetics 180, 533-545.
+	Correlation-based inference for linkage disequilibrium with multiple alleles.
+	Genetics 180, 533-545.
 }
 \author{Xiuwen Zheng}
 
@@ -36,7 +37,8 @@ data(HapMap_CEU_Geno, package="HIBAG")
 
 # plot linkage disequilibrium
 ymax <- 0.16
-plot(NaN, NaN, xlab="SNP Position (in KB)", ylab="Composite Linkage Disequilibrium (r2)",
+plot(NaN, NaN, xlab="SNP Position (in KB)",
+	ylab="Composite Linkage Disequilibrium (r2)",
 	xlim=range(HapMap_CEU_Geno$snp.position)/1000, ylim=c(0, ymax),
 	main="Major Histocompatibility Complex")
 

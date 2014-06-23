@@ -11,7 +11,7 @@ method.
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 1.2.2\cr
+		Version: \tab 1.2.3\cr
 		License: \tab GPL version 3\cr
 	}
 
@@ -22,7 +22,7 @@ published parameter estimates instead of requiring access to large training
 sample datasets. It combines the concepts of attribute bagging, an ensemble
 classifier method, with haplotype inference for SNPs and HLA types. Attribute
 bagging is a technique which improves the accuracy and stability of classifier
-ensembles deduced using bootstrap aggregating and random variable selection.
+ensembles using bootstrap aggregating and random variable selection.
 
 \bold{Features:} \cr
 1) HIBAG can be used by researchers with published parameter estimates
@@ -156,6 +156,12 @@ head(pred$value)
 # 1    NA10859   01:01   03:01 0.9374860
 # 2    NA11882   01:01   29:02 0.9999835
 # ...
+
+
+# delete the temporary files
+unlink("HIBAG_model.RData", force=TRUE)
+unlink("testgeno.RData", force=TRUE)
+unlink("HLASplit.RData", force=TRUE)
 }
 
 \keyword{HLA}
