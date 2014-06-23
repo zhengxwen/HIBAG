@@ -1,0 +1,6 @@
+#################################################################
+###                        HIBAG Codes                        ###
+###                                                           ###
+
+# additional preprocessor options
+PKG_CPPFLAGS = -I.
