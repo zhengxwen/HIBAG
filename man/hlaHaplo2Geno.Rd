@@ -25,7 +25,7 @@ usually set to be NA).
 	\item{snp.position}{a vector of SNP positions in basepair}
 	\item{snp.allele}{a vector of characters with the format of ``A allele/B allele''}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaGenoSubset}},
 \code{\link{hlaHaploSubset}}

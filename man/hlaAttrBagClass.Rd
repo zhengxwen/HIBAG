@@ -18,19 +18,22 @@
 	\item{hla.allele}{the HLA alleles used in the model}
 	\item{hla.freq}{the HLA allele frequencies}
 	\item{model}{internal use}
+	\item{appendix}{optional: \code{platform} -- the text of platform information;
+		\code{information} -- the other information, like authors;
+		\code{warning} -- any warning message}
 }
 
 \references{
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.;
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
 	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
 
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
 	To appear in the Pharmacogenomics Journal.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{hlaAttrBagObj}}
 }

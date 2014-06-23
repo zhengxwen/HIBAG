@@ -16,7 +16,7 @@ hlaCombineAllele(H1, H2)
 \value{
 	Return \code{\link{hlaAlleleClass}}.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoSubset}}
@@ -24,15 +24,15 @@ hlaCombineAllele(H1, H2)
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
 
-head(hla.type.table)
-dim(hla.type.table)  # 60 13
+head(HLA_Type_Table)
+dim(HLA_Type_Table)  # 60 13
 
 # make a "hlaAlleleClass" object
 hla.id <- "C"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 summary(hla)
 
 subhla1 <- hlaAlleleSubset(hla,   1:100)

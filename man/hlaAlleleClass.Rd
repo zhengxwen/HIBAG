@@ -10,6 +10,7 @@
 	\item{pos.start}{the starting position in basepair}
 	\item{pos.end}{the end position in basepair}
 	\item{value}{a data frame}
+	\item{assembly}{genome assembly, such like "hg19"}
 
 	The component \code{value} includes:
 	\item{sample.id}{sample ID}
@@ -18,7 +19,7 @@
 	\item{prob}{the posterior probability}
 }
 
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}
 }

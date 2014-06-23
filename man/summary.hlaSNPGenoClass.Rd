@@ -20,7 +20,7 @@
 \value{
 	None.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoSubset}}, \code{\link{summary.hlaSNPHaploClass}}
@@ -28,10 +28,10 @@
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
-summary(hla.snp.geno)
+summary(HapMap_CEU_Geno)
 }
 
 \keyword{HLA}

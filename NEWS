@@ -1,3 +1,16 @@
+Changes in 1.1.0:
+
+	* add genome assembly information (such like hg19, NCBI37)
+	* allow class majority voting in 'predict.hlaAttrBagClass'
+	* add an autosave function to 'hlaParallelAttrBagging'
+	* add a new function 'hlaPublish'
+	* allow additional information in the objects of 'hlaAttrBagClass' and 'hlaAttrBagObj'
+	* improvement in mismatching alleles for allelic strands
+	* update citation information
+	* change 'hlaModelfromObj' to 'hlaModelFromObj'
+	* document improvements
+
+
 Changes in 1.0.0:
 
 	* use 'useDynLib()' in NAMESPACE instead of 'library.dynam()'
@@ -14,12 +27,12 @@ Changes in 0.9.4:
 
 Changes in 0.9.3:
 
-	* adds a load balancing function to 'hlaParallelAttrBagging'
-	* adds 'hlaUniqueAllele'
-	* adds an argument 'match.pos' to the functions 'predict.hlaAttrBagClass', 'hlaGenoCombine', 'hlaGenoSwitchStrand'
-	* adds an argument 'with.pos' to the function 'hlaSNPID'
-	* gives more warnings about missing SNPs in 'predict.hlaAttrBagClass'
-	* avoids segmentation fault in 'predict.hlaAttrBagClass' when all SNPs are missing.
+	* add a load balancing function to 'hlaParallelAttrBagging'
+	* add 'hlaUniqueAllele'
+	* add an argument 'match.pos' to the functions 'predict.hlaAttrBagClass', 'hlaGenoCombine', 'hlaGenoSwitchStrand'
+	* add an argument 'with.pos' to the function 'hlaSNPID'
+	* give more warnings about missing SNPs in 'predict.hlaAttrBagClass'
+	* avoid segmentation fault in 'predict.hlaAttrBagClass' when all SNPs are missing.
 	* a warning is given for strand mismatching when calling 'hlaGenoSwitchStrand'
 	* document improvements
 

@@ -8,6 +8,7 @@
 }
 \usage{
 hlaAllele(sample.id, H1, H2, max.resolution="", locus="any",
+	assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"),
 	locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
 }
 \arguments{
@@ -19,6 +20,8 @@ hlaAllele(sample.id, H1, H2, max.resolution="", locus="any",
 		"protein" = "4-digit", "full" and "" indicating no limit on resolution}
 	\item{locus}{the name of HLA locus: "A", "B", "C", "DRB1", "DRB5", "DQA1",
 		"DQB1", "DPB1", or "any", where "any" indicates any other multiallelic locus}
+	\item{assembly}{genome assembly: "hg19" (default), "hg18", "NCBI37" or "NCBI36";
+		"auto" refers to "hg19"}
 	\item{locus.pos.start}{the starting position in basepair}
 	\item{locus.pos.end}{the end position in basepair}
 	\item{prob}{the probabilities assigned to the samples}
@@ -38,6 +41,7 @@ a possible maximum resolution.
 	\item{pos.start}{the starting position in basepair}
 	\item{pos.end}{the end position in basepair}
 	\item{value}{a data frame}
+	\item{assembly}{genome assembly, such like "hg19"}
 
 	The component \code{value} includes:
 	\item{sample.id}{sample ID}
@@ -45,7 +49,7 @@ a possible maximum resolution.
 	\item{allele2}{HLA allele}
 	\item{prob}{the posterior probability}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
 	\code{\link{hlaHaploSubset}}, \code{\link{hlaGenoSubset}}
@@ -53,15 +57,15 @@ a possible maximum resolution.
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
 
-head(hla.type.table)
-dim(hla.type.table)  # 60 13
+head(HLA_Type_Table)
+dim(HLA_Type_Table)  # 60 13
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 summary(hla)
 }
 

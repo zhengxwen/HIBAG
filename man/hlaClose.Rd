@@ -16,7 +16,7 @@ hlaClose(model)
 \value{
 	None.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{summary.hlaAttrBagClass}}
 }

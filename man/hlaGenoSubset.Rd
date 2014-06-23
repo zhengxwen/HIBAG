@@ -27,7 +27,7 @@ hlaGenoSubset(genoobj, samp.sel=NULL, snp.sel=NULL)
 	\item{snp.position}{a vector of SNP positions in basepair}
 	\item{snp.allele}{a vector of characters with the format of ``A allele/B allele''}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoCombine}}
@@ -35,10 +35,10 @@ hlaGenoSubset(genoobj, samp.sel=NULL, snp.sel=NULL)
 
 \examples{
 # load SNP genotypes
-data(hla.snp.geno, package="HIBAG")
-summary(hla.snp.geno)
+data(HapMap_CEU_Geno, package="HIBAG")
+summary(HapMap_CEU_Geno)
 
-geno <- hlaGenoSubset(hla.snp.geno, snp.sel = (hlaGenoMFreq(hla.snp.geno)>0.10) )
+geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel = (hlaGenoMFreq(HapMap_CEU_Geno)>0.10) )
 summary(geno)
 }
 

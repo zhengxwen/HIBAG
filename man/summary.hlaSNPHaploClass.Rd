@@ -17,7 +17,7 @@
 \value{
 	None.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoSubset}}, \code{\link{summary.hlaSNPGenoClass}}

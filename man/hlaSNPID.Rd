@@ -25,16 +25,19 @@ hlaSNPID(obj, with.pos=TRUE)
 \details{
 	This function can be used to distinguish SNPs with both of SNP ID and position.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaGenoSwitchStrand}}, \code{\link{hlaGenoCombine}}
 }
 
 \examples{
 # load SNP genotypes
-data(hla.snp.geno, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
-x <- hlaSNPID(hla.snp.geno)
+x <- hlaSNPID(HapMap_CEU_Geno, TRUE)
+head(x)
+
+x <- hlaSNPID(HapMap_CEU_Geno, FALSE)
 head(x)
 }
 

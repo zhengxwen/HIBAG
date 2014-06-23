@@ -1,12 +1,12 @@
-\name{hla.type.table}
+\name{HLA_Type_Table}
 \docType{data}
-\alias{hla.type.table}
+\alias{HLA_Type_Table}
 \title{Four-digit HLA types of a study simulated from HapMap CEU}
 \description{
 	A data.frame object including HLA-A, B, C, DRB1, DQA1 and DQB1 loci of 60 samples.
 }
 
-\usage{hla.type.table}
+\usage{HLA_Type_Table}
 \references{
 	A high-resolution HLA and SNP haplotype map for disease association studies in
 the extended human MHC. de Bakker PI, McVean G, Sabeti PC, Miretti MM, Green T,

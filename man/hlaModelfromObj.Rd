@@ -1,5 +1,5 @@
-\name{hlaModelfromObj}
-\alias{hlaModelfromObj}
+\name{hlaModelFromObj}
+\alias{hlaModelFromObj}
 \title{
 	Build a model from ``hlaAttrBagObj''
 }
@@ -8,7 +8,7 @@
 R object file.
 }
 \usage{
-hlaModelfromObj(obj)
+hlaModelFromObj(obj)
 }
 \arguments{
 	\item{obj}{an object of \code{\link{hlaAttrBagObj}}}
@@ -16,9 +16,9 @@ hlaModelfromObj(obj)
 \value{
 	None.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaAttrBagging}}
+	\code{\link{hlaModelToObj}}, \code{\link{hlaAttrBagging}}
 }
 
 \keyword{HLA}

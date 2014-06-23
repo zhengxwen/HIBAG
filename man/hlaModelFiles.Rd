@@ -7,17 +7,18 @@
 	To load HIBAG models from a list of files, and merge all together.
 }
 \usage{
-hlaModelFiles(fn.list, action.missingfile=c("ignore", "stop"))
+hlaModelFiles(fn.list, action.missingfile=c("ignore", "stop"), verbose=TRUE)
 }
 \arguments{
 	\item{fn.list}{a vector of file names}
 	\item{action.missingfile}{"ignore", ignore the missing files, by default;
 		"stop", stop if missing}
+	\item{verbose}{if TRUE, show information}
 }
 \value{
 	Return \code{\link{hlaAttrBagObj}}.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{hlaAllele}}, \code{\link{hlaFlankingSNP}},
 \code{\link{hlaModelToObj}}
@@ -25,26 +26,27 @@ hlaModelFiles(fn.list, action.missingfile=c("ignore", "stop"))
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "C"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 
 # training genotypes
 region <- 100   # kb
-snpid <- hlaFlankingSNP(hla.snp.geno$snp.id, hla.snp.geno$snp.position, hla.id, region*1000)
-train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.id),
-	samp.sel=match(hla$value$sample.id, hla.snp.geno$sample.id))
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+	hla.id, region*1000, assembly="hg19")
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id),
+	samp.sel=match(hla$value$sample.id, HapMap_CEU_Geno$sample.id))
 
 #
-# train an attribute bagging model
+# train a HIBAG model
 #
 set.seed(1000)
 
-# please try "nclassifier=25" or "nclassifier=100" when you use HIBAG for real data
+# please use "nclassifier=100" when you use HIBAG for real data
 model1 <- hlaAttrBagging(hla, train.geno, nclassifier=1, verbose.detail=TRUE)
 mobj1 <- hlaModelToObj(model1)
 save(mobj1, file="test-model1.RData")

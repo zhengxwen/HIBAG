@@ -24,7 +24,7 @@ hlaGenoSwitchStrand(target, template, match.pos=TRUE, verbose=TRUE)
 	Return a \code{\link{hlaSNPGenoClass}} object consisting of the SNP intersect
 between \code{target} and \code{template}.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoSubset}}
@@ -32,22 +32,22 @@ between \code{target} and \code{template}.
 
 \examples{
 # load SNP genotypes
-data(hla.snp.geno, package="HIBAG")
-summary(hla.snp.geno)
+data(HapMap_CEU_Geno, package="HIBAG")
+summary(HapMap_CEU_Geno)
 # A/C A/G C/T G/T 
 # 136 655 632 141 
 
 # import a PLINK BED file
-bed.fn <- system.file("extdata", "hapmap.ceu.bed", package="HIBAG")
-fam.fn <- system.file("extdata", "hapmap.ceu.fam", package="HIBAG")
-bim.fn <- system.file("extdata", "hapmap.ceu.bim", package="HIBAG")
-hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn)
+bed.fn <- system.file("extdata", "HapMap_CEU.bed", package="HIBAG")
+fam.fn <- system.file("extdata", "HapMap_CEU.fam", package="HIBAG")
+bim.fn <- system.file("extdata", "HapMap_CEU.bim", package="HIBAG")
+hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 summary(hapmap.ceu)
 #  A/C  A/G  A/T  C/G  C/T  G/T 
 #  471 2102   83  134 2046  480 
 
 # combine two datasets together
-geno <- hlaGenoSwitchStrand(hla.snp.geno, hapmap.ceu)
+geno <- hlaGenoSwitchStrand(HapMap_CEU_Geno, hapmap.ceu)
 summary(geno)
 # There are 1564 SNPs in common.
 # The allele pairs of 763 SNPs need to be switched.

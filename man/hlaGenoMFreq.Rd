@@ -15,7 +15,7 @@ hlaGenoMFreq(obj)
 \value{
 	Return minor allele frequecies.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaGenoAFreq}}, \code{\link{hlaGenoMFreq}}, \code{\link{hlaGenoMRate}},
 \code{\link{hlaGenoMRate_Samp}}
@@ -23,11 +23,11 @@ hlaGenoMFreq(obj)
 
 \examples{
 # load SNP genotypes
-data(hla.snp.geno, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
-summary(hla.snp.geno)
+summary(HapMap_CEU_Geno)
 
-summary(hlaGenoMFreq(hla.snp.geno))
+summary(hlaGenoMFreq(HapMap_CEU_Geno))
 }
 
 \keyword{HLA}

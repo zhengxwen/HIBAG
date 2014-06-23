@@ -17,19 +17,22 @@
 	\item{hla.allele}{the HLA alleles used in the model}
 	\item{hla.freq}{the HLA allele frequencies}
 	\item{classifiers}{a list of all classifiers (described as follows)}
+	\item{appendix}{\code{platform} -- the text of platform information;
+		\code{information} -- the other information, like authors;
+		\code{warning} -- any warning message}
 
 	\code{classifiers} has the following components:
 	\item{samp.num}{the number of copies of samples in a bootstrap sample}
 	\item{haplos}{a data.frame of haplotype frequencies}
-	\item{ }{\code{freq}: haplotype frequency}
-	\item{ }{\code{hla}: a HLA allele}
-	\item{ }{\code{haplo}: a SNP haplotype, with an entry value 0 standing for B (ZERO A allele),
+	\item{ }{\code{freq}  -- haplotype frequency}
+	\item{ }{\code{hla}   -- a HLA allele}
+	\item{ }{\code{haplo} -- a SNP haplotype, with an entry value 0 standing for B (ZERO A allele),
 1 for A (ONE A allele)}
 	\item{snpidx}{the SNP indices used in this classifier}
 	\item{outofbag.acc}{the out-of-bag accuracy of this classifier}
 }
 
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaModelToObj}}, \code{\link{hlaAttrBagClass}}
 }

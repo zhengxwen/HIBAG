@@ -8,13 +8,17 @@
 }
 \usage{
 \method{predict}{hlaAttrBagClass}(object, genotypes, type=c("response", "prob"),
-	allele.check=TRUE, match.pos=TRUE, verbose=TRUE, ...)
+	vote=c("prob", "majority"), allele.check=TRUE, match.pos=TRUE, verbose=TRUE, ...)
 }
 \arguments{
 	\item{object}{a model of \code{\link{hlaAttrBagClass}}}
 	\item{genotypes}{a genotype object of \code{\link{hlaSNPGenoClass}}}
 	\item{type}{"response": return the best-guess type plus posterior probability;
 		"prob": return all posterior probabilites}
+	\item{vote}{\code{"prob"} (default behavior) -- make a prediction based on
+		the averaged posterior probabilities from all individual classifiers;
+		\code{"majority"} -- class majority voting from all individual classifiers,
+		where each classifier votes for an HLA type}
 	\item{allele.check}{if \code{TRUE}, check and then switch allele pairs if needed}
 	\item{match.pos}{if \code{TRUE}, it uses both SNP ID and position to match SNPs;
 		otherwise, it uses SNP ID only; calling \code{hlaSNPID(, with.pos=match.pos)}}
@@ -36,7 +40,7 @@ and a lower missing fraction maybe gained by matching reference SNP ID only. Cal
 reference SNP ID but different position may raise a problem of SNP mismatching.
 Any concern about SNP mismatching should be emailed to the genotyping platform provider.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{hlaAllele}}
 }

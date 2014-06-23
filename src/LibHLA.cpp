@@ -26,7 +26,7 @@
 // ===========================================================
 // Name        : LibHLA
 // Author      : Xiuwen Zheng
-// Version     : 1.0.0
+// Version     : 1.1.0
 // Copyright   : Xiuwen Zheng (GPL v3.0)
 // Created     : 11/14/2011
 // Description : HLA Genotype Imputation with Attribute Bagging
@@ -939,7 +939,12 @@ void CAlg_Prediction::InitPrediction(int n_hla)
 	_SumPostProb.resize(size);
 }
 
-void CAlg_Prediction::InitSumPostProb()
+void CAlg_Prediction::InitPostProbBuffer()
+{
+	memset(&_PostProb[0], 0, _PostProb.size()*sizeof(double));
+}
+
+void CAlg_Prediction::InitSumPostProbBuffer()
 {
 	memset(&_SumPostProb[0], 0, _SumPostProb.size()*sizeof(double));
 	_Sum_Weight = 0;
@@ -1028,10 +1033,12 @@ void CAlg_Prediction::Predict(const CHaplotypeList &Haplo, const TGenotype &Geno
 	p = &_PostProb[0];
 	for (size_t n = _PostProb.size(); n > 0; n--) *p++ *= sum;
 }
-		
+
 THLAType CAlg_Prediction::MaxProb()
 {
 	THLAType rv;
+	rv.Allele1 = rv.Allele2 = NA_INTEGER;
+
 	double *p = &_PostProb[0];
 	double max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
@@ -1045,6 +1052,7 @@ THLAType CAlg_Prediction::MaxProb()
 			}
 		}
 	}
+
 	return rv;
 }
 
@@ -1052,6 +1060,7 @@ THLAType CAlg_Prediction::MaxSumProb()
 {
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
+
 	double *p = &_SumPostProb[0];
 	double max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
@@ -1065,6 +1074,7 @@ THLAType CAlg_Prediction::MaxSumProb()
 			}
 		}
 	}
+
 	return rv;
 }
 
@@ -1442,9 +1452,12 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	}
 }
 
-void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int OutH1[], int OutH2[],
-	double OutProb[], bool ShowInfo)
+void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
+	int OutH1[], int OutH2[], double OutProb[], bool ShowInfo)
 {
+	if ((vote_method < 1) || (vote_method > 2))
+		throw ErrHLA("Invalid 'vote_method'.");
+
 	_Predict.InitPrediction(nHLA());
 	Progress.Info = "Predicting:";
 	Progress.Init(n_samp, ShowInfo);
@@ -1454,7 +1467,7 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int OutH1[], int
 
 	for (int i=0; i < n_samp; i++, genomat+=nSNP())
 	{
-		_PredictHLA(genomat, &Weight[0]);
+		_PredictHLA(genomat, &Weight[0], vote_method);
 
 		THLAType HLA = _Predict.MaxSumProb();
 		OutH1[i] = HLA.Allele1; OutH2[i] = HLA.Allele2;
@@ -1468,9 +1481,12 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int OutH1[], int
 	}
 }
 
-void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp, double OutProb[],
-	bool ShowInfo)
+void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
+	int vote_method, double OutProb[], bool ShowInfo)
 {
+	if ((vote_method < 1) || (vote_method > 2))
+		throw ErrHLA("Invalid 'vote_method'.");
+
 	const int n = nHLA()*(nHLA()+1)/2;
 	_Predict.InitPrediction(nHLA());
 	Progress.Info = "Predicting:";
@@ -1481,17 +1497,17 @@ void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp, double OutP
 
 	for (int i=0; i < n_samp; i++, genomat+=nSNP())
 	{
-		_PredictHLA(genomat, &Weight[0]);
+		_PredictHLA(genomat, &Weight[0], vote_method);
 		for (int j=0; j < n; j++)
 			*OutProb++ = _Predict.SumPostProb()[j];
 		Progress.Forward(1, ShowInfo);
 	}
 }
 
-void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[])
+void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[], int vote_method)
 {
 	TGenotype Geno;
-	_Predict.InitSumPostProb();
+	_Predict.InitSumPostProbBuffer();
 
 	// missing proportion
 	vector<CAttrBag_Classifier>::const_iterator it;
@@ -1506,12 +1522,28 @@ void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[])
 			if ((0 <= geno[k]) && (geno[k] <= 2))
 				nWeight += weights[k];
 		}
+
 		/// set weight with respect to missing SNPs
 		if (nWeight > 0)
 		{
 			Geno.IntToSNP(n, geno, &(it->_SNPIndex[0]));
 			_Predict.Predict(it->_Haplo, Geno);
-			_Predict.AddProbToSum(double(nWeight) / SumWeight);
+
+			if (vote_method == 1)
+			{
+				// predicting based on the averaged posterior probabilities
+				_Predict.AddProbToSum(double(nWeight) / SumWeight);
+			} else if (vote_method == 2)
+			{
+				// predicting by class majority voting
+				THLAType pd = _Predict.MaxProb();
+				if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
+				{
+					_Predict.InitPostProbBuffer();  // fill by ZERO
+					_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
+					_Predict.AddProbToSum(double(nWeight) / SumWeight);
+				}
+			}
 		}
 	}
 

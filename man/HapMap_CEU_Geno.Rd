@@ -1,12 +1,12 @@
-\name{hla.snp.geno}
+\name{HapMap_CEU_Geno}
 \docType{data}
-\alias{hla.snp.geno}
-\title{SNP genotypes of a study simulated from HapMap CEU}
+\alias{HapMap_CEU_Geno}
+\title{SNP genotypes of a study simulated from HapMap CEU genotypic data}
 \description{
 	An object of \code{\link{hlaSNPGenoClass}} of 60 samples and 1564 SNPs.
 }
 
-\usage{hla.snp.geno}
+\usage{HapMap_CEU_Geno}
 \references{
 	\url{http://hapmap.ncbi.nlm.nih.gov/downloads/genotypes/2010-08_phaseII+III/forward/}
 

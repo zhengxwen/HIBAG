@@ -22,7 +22,7 @@ with a training proportion "\code{train.prop}".
 	\item{training}{an object of \code{\link{hlaAlleleClass}}}
 	\item{validation}{an object of \code{\link{hlaAlleleClass}}}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoSubset}}
@@ -30,13 +30,13 @@ with a training proportion "\code{train.prop}".
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 
 # divide HLA types randomly
 set.seed(100)

@@ -7,7 +7,8 @@
 	To create a \code{\link{hlaSNPGenoClass}} object (SNP genotype object).
 }
 \usage{
-hlaMakeSNPGeno(genotype, sample.id, snp.id, snp.position, A.allele, B.allele)
+hlaMakeSNPGeno(genotype, sample.id, snp.id, snp.position,
+	A.allele, B.allele, assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
 }
 \arguments{
 	\item{genotype}{a genotype matrix, ``# of SNPs'' - by - ``# of individuals''}
@@ -16,6 +17,8 @@ hlaMakeSNPGeno(genotype, sample.id, snp.id, snp.position, A.allele, B.allele)
 	\item{snp.position}{a vector of SNP positions}
 	\item{A.allele}{a vector of A alleles in the SNP list}
 	\item{B.allele}{a vector of B alleles in the SNP list}
+	\item{assembly}{genome assembly: "hg19" (default), "hg18", "NCBI37" or "NCBI36";
+		"auto" refers to "hg19"}
 }
 \details{
 	\code{genotype} is a numeric matrix, with an entry value 0 standing for BB (ZERO A allele),
@@ -30,7 +33,7 @@ are usually set to be NA).
 	\item{snp.position}{a vector of SNP positions in basepair}
 	\item{snp.allele}{a vector of characters with the format of ``A allele/B allele''}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaGenoSubset}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoCombine}}
@@ -38,15 +41,17 @@ are usually set to be NA).
 
 \examples{
 # load SNP genotypes
-data(hla.snp.geno, package="HIBAG")
-summary(hla.snp.geno)
+data(HapMap_CEU_Geno, package="HIBAG")
+summary(HapMap_CEU_Geno)
 
-allele <- strsplit(hla.snp.geno$snp.allele, "/")
+allele <- strsplit(HapMap_CEU_Geno$snp.allele, "/")
 A.allele <- sapply(allele, function(x) { x[1] })
 B.allele <- sapply(allele, function(x) { x[2] })
 
-geno <- hlaMakeSNPGeno(hla.snp.geno$genotype, hla.snp.geno$sample.id, hla.snp.geno$snp.id,
-	hla.snp.geno$snp.position, A.allele, B.allele)
+geno <- hlaMakeSNPGeno(HapMap_CEU_Geno$genotype, HapMap_CEU_Geno$sample.id,
+	HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position, A.allele, B.allele,
+	assembly="hg19")
+
 summary(geno)
 }
 

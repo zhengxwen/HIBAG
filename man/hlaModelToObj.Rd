@@ -17,9 +17,9 @@ hlaModelToObj(model)
 \value{
 	Return an object of \code{\link{hlaAttrBagObj}}.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaModelfromObj}}, \code{\link{hlaAttrBagging}},
+	\code{\link{hlaModelFromObj}}, \code{\link{hlaAttrBagging}},
 	\code{\link{hlaAttrBagClass}}.
 }
 

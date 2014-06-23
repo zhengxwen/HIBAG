@@ -3,8 +3,8 @@
 %\VignettePackage{HIBAG}
 
 \documentclass[12pt]{article}
-\usepackage{fullpage}
 \usepackage{setspace}
+\usepackage{fullpage}
 \usepackage{indentfirst}
 \usepackage{amsmath}  
 \usepackage{graphicx}
@@ -57,10 +57,11 @@ Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf
 \section{Features}
 
 \begin{enumerate}
-	\item HIBAG can be used by researchers with published parameter estimates instead of requiring access to large training sample datasets.
+	\item HIBAG can be used by researchers with published parameter estimates (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of requiring access to large training sample datasets.
 	\item A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
 	\item SNPs within the xMHC region (chromosome 6) are used for imputation.
 	\item HIBAG employs unphased genotypes of unrelated individuals as a training set.
+	\item HIBAG supports parallel computing with R.
 \end{enumerate}
 
 
@@ -74,27 +75,30 @@ Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf
 \begin{Schunk}
 \begin{Sinput}
 library(HIBAG)
- 
+
 # Load the published parameter estimates from European ancestry
 model.list <- get(load("European-HLA4.RData"))
- 
+
 #########################################################################
 # Import your PLINK BED file
 #
 yourgeno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
 summary(yourgeno)
- 
+
 # HLA imputation at HLA-A
 hla.id <- "A"
-model <- hlaModelfromObj(model.list[[hla.id]])
+model <- hlaModelFromObj(model.list[[hla.id]])
 summary(model)
- 
+
 # SNPs in the model
 head(model$snp.id)
 # "rs2523442" "rs9257863" "rs2107191" "rs4713226" "rs1362076" "rs7751705"
 head(model$snp.position)
 # 29525796 29533563 29542274 29542393 29549148 29549597
- 
+
+# plot SNP information
+plot(model)
+
 # best-guess genotypes
 pred.guess <- predict(model, yourgeno, type="response")
 # posterior probabilities
@@ -109,15 +113,15 @@ pred.prob <- predict(model, yourgeno, type="prob")
 \begin{Schunk}
 \begin{Sinput}
 library(HIBAG)
- 
+
 # Import your PLINK BED file
 geno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
 summary(geno)
- 
+
 # HLA genotypes, 01:02/02:01, 05:01/03:01, ...
 train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
     H2=c("02:01", "03:01", ...), locus="A")
- 
+
 # Selected SNPs, two options:
 # 1) the flanking region of 500kb on each side,
 #    or an appropriate flanking size without sacrificing predictive accuracy
@@ -127,15 +131,15 @@ train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
   snpid <- model.list[["A"]]$snp.id
 # Subset training SNP genotypes
 train.geno <- hlaGenoSubset(geno, snp.sel=match(snpid, geno$snp.id))
- 
+
 # Building ...
 model <- hlaAttrBagging(train.HLA, train.geno, nclassifier=100, verbose.detail=TRUE)
 summary(model)
- 
+
 # Save your model
 model.obj <- hlaModelToObj(model)
 save(model.obj, file="your_model.RData")
- 
+
 # Predict ...
 # best-guess genotypes
 pred.guess <- predict(model, newgeno, type="response")

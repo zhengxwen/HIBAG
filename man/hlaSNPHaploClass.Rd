@@ -12,9 +12,10 @@
 	\item{snp.id}{a vector of SNP IDs}
 	\item{snp.position}{a vector of SNP positions in basepair}
 	\item{snp.allele}{a vector of characters with the format of ``A allele/B allele''}
+	\item{assembly}{genome assembly, such like "hg19"}
 }
 
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPHaplo}}
 }

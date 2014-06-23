@@ -24,7 +24,7 @@ hlaAlleleDigit(obj, max.resolution="4-digit")
 	Return a \code{\link{hlaAlleleClass}} object if \code{obj} is
 \code{\link{hlaAlleleClass}}-type, or characters if \code{obj} is character-type.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
 \code{\link{hlaGenoSubset}}
@@ -32,15 +32,15 @@ hlaAlleleDigit(obj, max.resolution="4-digit")
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
 
-head(hla.type.table)
-dim(hla.type.table)  # 60 13
+head(HLA_Type_Table)
+dim(HLA_Type_Table)  # 60 13
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, H1=hla.type.table[, paste(hla.id, ".1", sep="")],
-	H2=hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, H1=HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	H2=HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 summary(hla)
 
 hla2 <- hlaAlleleDigit(hla, "2-digit")

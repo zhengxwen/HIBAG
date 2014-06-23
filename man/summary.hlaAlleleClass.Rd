@@ -17,19 +17,19 @@
 \value{
 	Return a \code{data.frame} of count and frequency for each HLA allele.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{summary.hlaSNPGenoClass}}
 }
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 summary(hla)
 }
 

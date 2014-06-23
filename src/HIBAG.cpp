@@ -31,6 +31,7 @@
 #include <map>
 #include <algorithm>
 #include <fstream>
+#include <vector>
 
 #include <LibHLA.h>
 #include <R.h>
@@ -197,45 +198,36 @@ DLLEXPORT void HIBAG_SortAlleleStr(int *n_hla, char *const hlastr[], char *outst
 //  SNP functions
 //
 
-/// to detect strand problem
+/// to detect and correct strand problem
 
-static inline bool ATGC(char ch)
+static inline bool ATGC(const string &s)
 {
-	return (ch=='A') || (ch=='T') || (ch=='G') || (ch=='C');
-}
-static inline bool ATGC_atgc(char ch)
-{
-	return (ch=='A') || (ch=='T') || (ch=='G') || (ch=='C') ||
-		(ch=='a') || (ch=='t') || (ch=='g') || (ch=='c');
+	return (s=="A") || (s=="T") || (s=="G") || (s=="C");
 }
 static inline int ALLELE_MINOR(double freq)
 {
 	return (freq <= 0.5) ? 0 : 1;
 }
-static inline void split_allele(const char *txt, char &allele1, char &allele2)
+static inline void split_allele(const char *txt, string &allele1, string &allele2)
 {
 	const char *p = strchr(txt, '/');
 	if (p != NULL)
 	{
 		// the first allele
-		if ((p == (txt+1)) && ATGC_atgc(*txt))
-			allele1 = toupper(*txt);
-		else
-			allele1 = '.';
+		allele1.assign(txt, p);
+		for (unsigned int i=0; i < allele1.size(); i++)
+			allele1[i] = toupper(allele1[i]);
 
 		// the second allele	
-		txt = p + 1;
-		if ((strlen(txt) == 1) && ATGC_atgc(*txt))
-			allele2 = toupper(*txt);
-		else
-			allele2 = '.';
+		allele2 = p + 1;
+		for (unsigned int i=0; i < allele2.size(); i++)
+			allele2[i] = toupper(allele2[i]);
 	} else {
 		// no a second allele
-		if ((strlen(txt) == 1) && ATGC_atgc(*txt))
-			allele1 = toupper(*txt);
-		else
-			allele1 = '.';
-		allele2 = '.';
+		allele1 = txt;
+		for (unsigned int i=0; i < allele1.size(); i++)
+			allele1[i] = toupper(allele1[i]);
+		allele2.clear();
 	}
 }
 
@@ -246,8 +238,8 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 {
 	CORETRY
 		// initialize: A-T pair, C-G pair
-		map<char, char> MAP;
-		MAP['A'] = 'T'; MAP['C'] = 'G'; MAP['G'] = 'C'; MAP['T'] = 'A';
+		map<string, string> MAP;
+		MAP["A"] = "T"; MAP["C"] = "G"; MAP["G"] = "C"; MAP["T"] = "A";
 
 		*out_n_stand_amb = 0;
 		*out_n_mismatch = 0;
@@ -265,8 +257,8 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 			int switch_freq_detect = 0;
 
 			// ``ref / nonref alleles''
-			char s1, s2;
-			char p1, p2;
+			string s1, s2;
+			string p1, p2;
 			split_allele(allele1[I1[i]-1], s1, s2);
 			split_allele(allele2[I2[i]-1], p1, p2);
 
@@ -298,12 +290,21 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 					switch_flag = true;
 				} else {
 					switch_freq_detect = 2;
-					// throw ErrHLA("Invalid strand in SNP %d: %c/%c <--> %c/%c",
-					//	i+1, s1, s2, p1, p2);
 				}
 			} else {
-				switch_freq_detect = 2;
-				// throw ErrHLA("Invalid alleles in the sample: %d", i+1);
+				if ((s1 == p1) && (s2 == p2))
+				{
+					if (s1 == s2)
+						switch_freq_detect = 1;  // ambiguous
+				} else if ((s1 == p2) && (s2 == p1))
+				{
+					if (s1 == s2)
+						switch_freq_detect = 1;  // ambiguous
+					else
+						switch_flag = true;
+				} else {
+					switch_freq_detect = 2;
+				}
 			}
 
 			if (switch_freq_detect != 0)
@@ -459,11 +460,13 @@ DLLEXPORT void HIBAG_NewClassifiers(int *model, int *nclassifier, int *mtry,
  *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
 **/
 DLLEXPORT void HIBAG_Predict(int *model, int *GenoMat, int *nSamp,
-	LongBool *ShowInfo, int out_H1[], int out_H2[], double out_Prob[], LongBool *out_err)
+	int *vote_method, LongBool *ShowInfo,
+	int out_H1[], int out_H2[], double out_Prob[], LongBool *out_err)
 {
 	CORETRY
 		_Check_HIBAG_Model(*model);
-		_HIBAG_MODELS_[*model]->PredictHLA(GenoMat, *nSamp, out_H1, out_H2, out_Prob, *ShowInfo);
+		_HIBAG_MODELS_[*model]->PredictHLA(
+			GenoMat, *nSamp, *vote_method, out_H1, out_H2, out_Prob, *ShowInfo);
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 }
@@ -481,11 +484,12 @@ DLLEXPORT void HIBAG_Predict(int *model, int *GenoMat, int *nSamp,
  *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
 **/
 DLLEXPORT void HIBAG_Predict_Prob(int *model, int *GenoMat, int *nSamp,
-	LongBool *ShowInfo, double out_Prob[], LongBool *out_err)
+	int *vote_method, LongBool *ShowInfo, double out_Prob[], LongBool *out_err)
 {
 	CORETRY
 		_Check_HIBAG_Model(*model);
-		_HIBAG_MODELS_[*model]->PredictHLA_Prob(GenoMat, *nSamp, out_Prob, *ShowInfo);
+		_HIBAG_MODELS_[*model]->PredictHLA_Prob(
+			GenoMat, *nSamp, *vote_method, out_Prob, *ShowInfo);
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 }
@@ -765,8 +769,8 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 			nNum = (*n_snp);
 		}
 
-		auto_ptr<char> srcgeno(new char[nPack]);
-		auto_ptr<int> dstgeno(new int[(nNumPack+1)*4]);
+		vector<char> srcgeno(nPack);
+		vector<int> dstgeno((nNumPack+1) * 4);
 		static const int cvt[4] = { 2, INT_MIN, 1, 0 };
 		int I_SNP = 0;
 
@@ -774,12 +778,12 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 		for (int i=0; i < nNum; i++)
 		{
 			// read genotypes
-			file.read(srcgeno.get(), nPack);
+			file.read(&srcgeno[0], nPack);
 			// unpacked
-			int *p = dstgeno.get();
+			int *p = &dstgeno[0];
 			for (int k=0; k < nNumPack; k++)
 			{
-				unsigned char g = srcgeno.get()[k];
+				unsigned char g = srcgeno[k];
 				*p++ = cvt[g & 0x03]; g >>= 2;
 				*p++ = cvt[g & 0x03]; g >>= 2;
 				*p++ = cvt[g & 0x03]; g >>= 2;
@@ -787,7 +791,7 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 			}
 			if (nRe > 0)
 			{
-				unsigned char g = srcgeno.get()[nNumPack];
+				unsigned char g = srcgeno[nNumPack];
 				for (long k=0; k < nRe; k++)
 				{
 					*p++ = cvt[g & 0x03]; g >>= 2;
@@ -802,7 +806,7 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 				for (int j=0; j < *n_snp; j++)
 				{
 					if (snp_flag[j])
-						{ *pI++ = dstgeno.get()[j]; }
+						*pI++ = dstgeno[j];
 				}
 			} else {
 				// the SNP-major mode
@@ -812,7 +816,7 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 					I_SNP ++;
 					for (int j=0; j < *n_samp; j++)
 					{
-						*pI = dstgeno.get()[j];
+						*pI = dstgeno[j];
 						pI += *n_save_snp;
 					}
 				}

@@ -36,6 +36,8 @@ performs a parsimonious forward variable selection: if a new SNP predictor reduc
 current out-of-bag accuracy, then it is removed from the candidate SNP set for future searching.
 Parsimonious selection helps to improve the computational efficiency by reducing the searching
 times of non-informative SNP markers.
+
+	A parallel version of \code{hlaAttrBagging} is \code{\link{hlaParallelAttrBagging}}.
 }
 \value{
 	Return an object of \code{\link{hlaAttrBagClass}}:
@@ -52,29 +54,31 @@ times of non-informative SNP markers.
 	\item{model}{internal use}
 }
 \references{
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.;
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
 	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
 
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
-	To appear in the Pharmacogenomics Journal.
+	the Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
+	\url{http://dx.doi.org/10.1038/tpj.2013.18}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaClose}}, \code{\link{summary.hlaAttrBagClass}}
+	\code{\link{hlaClose}}, \code{\link{hlaParallelAttrBagging}},
+	\code{\link{summary.hlaAttrBagClass}}
 }
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 
 # divide HLA types randomly
 set.seed(100)
@@ -86,18 +90,19 @@ summary(hlatab$validation)
 
 # SNP predictors within the flanking region on each side
 region <- 500   # kb
-snpid <- hlaFlankingSNP(hla.snp.geno$snp.id, hla.snp.geno$snp.position, hla.id, region*1000)
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+	hla.id, region*1000, assembly="hg19")
 length(snpid)  # 275
 
 # training and validation genotypes
-train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.id),
-	samp.sel=match(hlatab$training$value$sample.id, hla.snp.geno$sample.id))
-test.geno <- hlaGenoSubset(hla.snp.geno,
-	samp.sel=match(hlatab$validation$value$sample.id, hla.snp.geno$sample.id))
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id),
+	samp.sel=match(hlatab$training$value$sample.id, HapMap_CEU_Geno$sample.id))
+test.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+	samp.sel=match(hlatab$validation$value$sample.id, HapMap_CEU_Geno$sample.id))
 
 # train an attribute bagging model
 set.seed(100)
-# please try "nclassifier=25" or "nclassifier=100" when you use HIBAG for real data
+# please use "nclassifier=100" when you use HIBAG for real data
 model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4, verbose.detail=TRUE)
 summary(model)
 
@@ -125,7 +130,7 @@ rm(list = ls())
 
 # NOW, load a HIBAG model from the parameter file
 mobj <- get(load("HIBAG_model.RData"))
-model <- hlaModelfromObj(mobj)
+model <- hlaModelFromObj(mobj)
 
 # validation
 test.geno <- get(load("testgeno.RData"))

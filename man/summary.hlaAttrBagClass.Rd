@@ -26,7 +26,7 @@
 		haplotypes (\code{num.haplo}), out-of-bag accuracies (\code{accuracy}) among
 		all classifiers: mean, standard deviation, min, max}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{plot.hlaAttrBagClass}}, \code{\link{plot.hlaAttrBagObj}},
 	\code{\link{print.hlaAttrBagClass}}, \code{\link{print.hlaAttrBagObj}},

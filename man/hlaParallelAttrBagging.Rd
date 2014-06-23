@@ -7,24 +7,23 @@
 	To build a HIBAG model for predicting HLA types via parallel computation.
 }
 \usage{
-hlaParallelAttrBagging(cl, hla, genotype, nclassifier=100,
-	mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE, ptype=c("LB", "none"),
-	verbose=TRUE, verbose.detail=FALSE)
+hlaParallelAttrBagging(cl, hla, genotype, auto.save="",
+	nclassifier=100, mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
+	verbose=TRUE)
 }
 \arguments{
-	\item{cl}{a cluster object, created by this package or by the package
-		\link[parallel]{parallel} or \href{http://CRAN.R-project.org/package=snow}{snow}}
+	\item{cl}{a cluster object, created by the package \link[parallel]{parallel} or
+		\href{http://CRAN.R-project.org/package=snow}{snow}}
 	\item{hla}{training HLA types, an object of \code{\link{hlaAlleleClass}}}
 	\item{genotype}{training genotypes, a genotype object of \code{\link{hlaSNPGenoClass}}}
+	\item{auto.save}{specify a autosaved file, see details}
 	\item{nclassifier}{the total number of individual classifiers}
 	\item{mtry}{a character or a numeric value, the number of variables randomly sampled
 		as candidates for each selection. See details}
 	\item{prune}{if TRUE, to perform a parsimonious forward variable selection, otherwise,
 		exhaustive forward variable selection. See details}
 	\item{rm.na}{if TRUE, remove the samples with missing HLA types}
-	\item{ptype}{if "LB" load balancing}
 	\item{verbose}{if TRUE, show information}
-	\item{verbose.detail}{if TRUE, show more information}
 }
 \details{
 	\code{mtry} (the number of variables randomly sampled as candidates for each selection):
@@ -40,6 +39,9 @@ performs a parsimonious forward variable selection: if a new SNP predictor reduc
 current out-of-bag accuracy, then it is removed from the candidate SNP set for future searching.
 Parsimonious selection helps to improve the computational efficiency by reducing the searching
 times of non-informative SNP markers.
+
+	If \code{auto.save=""}, the function returns a HIBAG model (an object of
+\code{\link{hlaAttrBagClass}}); otherwise, there is no return.
 }
 \value{
 	Return an object of \code{\link{hlaAttrBagClass}}:
@@ -56,29 +58,31 @@ times of non-informative SNP markers.
 	\item{model}{internal use}
 }
 \references{
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.;
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
 	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
 
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
-	To appear in the Pharmacogenomics Journal.
+	the Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
+	\url{http://dx.doi.org/10.1038/tpj.2013.18}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaClose}}, \code{\link{summary.hlaAttrBagClass}}
+	\code{\link{hlaAttrBagging}}, \code{\link{hlaClose}},
+	\code{\link{summary.hlaAttrBagClass}}
 }
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 
 # divide HLA types randomly
 set.seed(100)
@@ -90,27 +94,33 @@ summary(hlatab$validation)
 
 # SNP predictors within the flanking region on each side
 region <- 500   # kb
-snpid <- hlaFlankingSNP(hla.snp.geno$snp.id, hla.snp.geno$snp.position, hla.id, region*1000)
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+	hla.id, region*1000, assembly="hg19")
 length(snpid)  # 275
 
 # training and validation genotypes
-train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.id),
-	samp.sel=match(hlatab$training$value$sample.id, hla.snp.geno$sample.id))
-test.geno <- hlaGenoSubset(hla.snp.geno,
-	samp.sel=match(hlatab$validation$value$sample.id, hla.snp.geno$sample.id))
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id),
+	samp.sel=match(hlatab$training$value$sample.id, HapMap_CEU_Geno$sample.id))
+test.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+	samp.sel=match(hlatab$validation$value$sample.id, HapMap_CEU_Geno$sample.id))
 
 
 #############################################################################
 
 library(parallel)
-# Use option cl.core to choose an appropriate cluster size.
+
+# use option cl.core to choose an appropriate cluster size.
 cl <- makeCluster(getOption("cl.cores", 2))
 set.seed(100)
 
-# train an attribute bagging model
-# please try "nclassifier=25" or "nclassifier=100" when you use HIBAG for real data
-model <- hlaParallelAttrBagging(cl, hlatab$training, train.geno, nclassifier=4)
-summary(model)
+# train a HIBAG model
+# please use "nclassifier=100" when you use HIBAG for real data
+hlaParallelAttrBagging(cl, hlatab$training, train.geno, nclassifier=4,
+	auto.save="tmp_model.RData")
+
+mobj <- get(load("tmp_model.RData"))
+summary(mobj)
+model <- hlaModelFromObj(mobj)
 
 # validation
 pred <- predict(model, test.geno)

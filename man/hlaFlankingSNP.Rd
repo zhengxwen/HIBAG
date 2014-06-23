@@ -7,13 +7,15 @@
 	To select SNPs in the flanking region of a specified HLA locus.
 }
 \usage{
-hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000)
+hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000, assembly="auto")
 }
 \arguments{
 	\item{snp.id}{a vector of SNP IDs}
 	\item{position}{a vector of positions}
 	\item{hla.id}{the name of HLA locus}
 	\item{flank.bp}{the size of flanking region on each side in basepair}
+	\item{assembly}{genome assembly: "hg19" (default), "hg18", "NCBI37" or "NCBI36";
+		"auto" refers to "hg19"}
 }
 \details{
 	\code{hla.id} is "A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1" or "any".
@@ -21,27 +23,28 @@ hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000)
 \value{
 	Return allele frequecies.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{hlaClose}}
 }
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 
 # training genotypes
 region <- 500   # kb
-snpid <- hlaFlankingSNP(hla.snp.geno$snp.id, hla.snp.geno$snp.position, hla.id, region*1000)
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+	hla.id, region*1000, assembly="hg19")
 
-train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.id),
-	samp.sel=match(hla$training$value$sample.id, hla.snp.geno$sample.id))
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id),
+	samp.sel=match(hla$training$value$sample.id, HapMap_CEU_Geno$sample.id))
 summary(train.geno)
 }
 

@@ -1,10 +1,10 @@
 \name{hlaGenoCombine}
 \alias{hlaGenoCombine}
 \title{
-	Combine two genotype dataset into one
+	Combine two genotypic data sets into one
 }
 \description{
-	To combine two genotype datasets into one dataset.
+	To combine two genotypic data sets into one dataset.
 }
 \usage{
 hlaGenoCombine(geno1, geno2, match.pos=TRUE, allele.check=TRUE)
@@ -25,7 +25,7 @@ the same SNP information (allele and position) as \code{geno1}.
 \value{
 	A \code{\link{hlaSNPGenoClass}} object.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
 	\code{\link{hlaHaploSubset}}, \code{\link{hlaGenoSubset}}
@@ -33,16 +33,16 @@ the same SNP information (allele and position) as \code{geno1}.
 
 \examples{
 # load SNP genotypes
-data(hla.snp.geno, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
 # import a PLINK BED file
-bed.fn <- system.file("extdata", "hapmap.ceu.bed", package="HIBAG")
-fam.fn <- system.file("extdata", "hapmap.ceu.fam", package="HIBAG")
-bim.fn <- system.file("extdata", "hapmap.ceu.bim", package="HIBAG")
-hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn)
+bed.fn <- system.file("extdata", "HapMap_CEU.bed", package="HIBAG")
+fam.fn <- system.file("extdata", "HapMap_CEU.fam", package="HIBAG")
+bim.fn <- system.file("extdata", "HapMap_CEU.bim", package="HIBAG")
+hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 
 # combine two datasets together
-geno <- hlaGenoCombine(hla.snp.geno, hapmap.ceu)
+geno <- hlaGenoCombine(HapMap_CEU_Geno, hapmap.ceu)
 summary(geno)
 #	390 samples X 1564 SNPs
 #	SNPs range from 25877003bp to 33529555bp

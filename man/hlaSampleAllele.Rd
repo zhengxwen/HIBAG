@@ -1,7 +1,7 @@
 \name{hlaSampleAllele}
 \alias{hlaSampleAllele}
 \title{
-	Get sample IDs from HLA types
+	Get sample IDs from HLA types with a filter
 }
 \description{
 	Get sample IDs from HLA types limited to a set of HLA alleles.
@@ -20,11 +20,11 @@ hlaSampleAllele(TrueHLA, allele.limit=NULL, max.resolution="")
 \value{
 	Return a list of sample IDs.
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
 	\code{\link{hlaHaploSubset}}, \code{\link{hlaGenoSubset}}
-	\code{\link{hlaCompareAllele}}
+	\code{\link{hlaCompareAllele}}.
 }
 
 \keyword{HLA}

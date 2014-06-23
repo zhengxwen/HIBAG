@@ -9,7 +9,7 @@
 \usage{
 hlaErrMsg()
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 
 \keyword{HLA}
 \keyword{GWAS}

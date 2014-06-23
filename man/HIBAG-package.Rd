@@ -10,8 +10,8 @@
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 1.0.0\cr
-		Date:    \tab 2013-03-26\cr
+		Version: \tab 1.1.0\cr
+		Date:    \tab 2013-06-02\cr
 		License: \tab GPL version 3\cr
 	}
 
@@ -24,57 +24,48 @@ inference for SNPs and HLA types. Attribute bagging is a technique which improve
 accuracy and stability of classifier ensembles deduced using bootstrap aggregating and
 random variable selection.
 
-\tabular{l}{
-	\bold{Features:} \cr
-	1) HIBAG can be used by researchers with published parameter estimates
-		(\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of requiring
-		access to large training sample datasets. \cr
-	2) A typical HIBAG parameter file contains only haplotype frequencies at
-		different SNP subsets rather than individual training genotypes. \cr
-	3) SNPs within the xMHC region (chromosome 6) are used for imputation. \cr
-	4) HIBAG employs unphased genotypes of unrelated individuals as a training set. \cr
-}
+\bold{Features:} \cr
+1) HIBAG can be used by researchers with published parameter estimates
+	(\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of requiring
+	access to large training sample datasets. \cr
+2) A typical HIBAG parameter file contains only haplotype frequencies at
+	different SNP subsets rather than individual training genotypes. \cr
+3) SNPs within the xMHC region (chromosome 6) are used for imputation. \cr
+4) HIBAG employs unphased genotypes of unrelated individuals as a training set. \cr
 }
 \references{
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir;
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
 	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
 
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
 	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
-	To appear in the Pharmacogenomics Journal.
+	the Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
+	\url{http://dx.doi.org/10.1038/tpj.2013.18}
 }
 \author{
 	Xiuwen Zheng \email{zhengx@u.washington.edu},
-	Bruce Weir \email{bsweir@u.washington.edu}
+	Bruce S. Weir \email{bsweir@u.washington.edu}
 }
 
 \examples{
 # load HLA types and SNP genotypes
-data(hla.type.table, package="HIBAG")
-data(hla.snp.geno, package="HIBAG")
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
 
-head(hla.type.table)
-dim(hla.type.table)  # 60 13
+head(HLA_Type_Table)
+dim(HLA_Type_Table)  # 60 13
 
-summary(hla.snp.geno)
-
-
-# make a "hlaAlleleClass" object
-hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
-summary(hla)
-
+summary(HapMap_CEU_Geno)
 
 
 ######################################################################
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(hla.type.table$sample.id, hla.type.table[, paste(hla.id, ".1", sep="")],
-	hla.type.table[, paste(hla.id, ".2", sep="")], locus=hla.id)
+hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
 
 # divide HLA types randomly
 set.seed(100)
@@ -86,18 +77,19 @@ summary(hlatab$validation)
 
 # SNP predictors within the flanking region on each side
 region <- 500   # kb
-snpid <- hlaFlankingSNP(hla.snp.geno$snp.id, hla.snp.geno$snp.position, hla.id, region*1000)
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+	hla.id, region*1000, assembly="hg19")
 length(snpid)  # 275
 
 # training and validation genotypes
-train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.id),
-	samp.sel=match(hlatab$training$value$sample.id, hla.snp.geno$sample.id))
-test.geno <- hlaGenoSubset(hla.snp.geno,
-	samp.sel=match(hlatab$validation$value$sample.id, hla.snp.geno$sample.id))
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id),
+	samp.sel=match(hlatab$training$value$sample.id, HapMap_CEU_Geno$sample.id))
+test.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+	samp.sel=match(hlatab$validation$value$sample.id, HapMap_CEU_Geno$sample.id))
 
 # train a HIBAG model
 set.seed(100)
-# please try "nclassifier=25" or "nclassifier=100" when you use HIBAG for real data
+# please use "nclassifier=100" when you use HIBAG for real data
 model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4, verbose.detail=TRUE)
 summary(model)
 
@@ -125,7 +117,7 @@ rm(list = ls())
 
 # NOW, load a HIBAG model from the parameter file
 mobj <- get(load("HIBAG_model.RData"))
-model <- hlaModelfromObj(mobj)
+model <- hlaModelFromObj(mobj)
 
 # validation
 test.geno <- get(load("testgeno.RData"))
@@ -140,17 +132,17 @@ pred <- predict(model, test.geno)
 #########################################################################
 # import a PLINK BED file
 #
-bed.fn <- system.file("extdata", "hapmap.ceu.bed", package="HIBAG")
-fam.fn <- system.file("extdata", "hapmap.ceu.fam", package="HIBAG")
-bim.fn <- system.file("extdata", "hapmap.ceu.bim", package="HIBAG")
-hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn)
+bed.fn <- system.file("extdata", "HapMap_CEU.bed", package="HIBAG")
+fam.fn <- system.file("extdata", "HapMap_CEU.fam", package="HIBAG")
+bim.fn <- system.file("extdata", "HapMap_CEU.bim", package="HIBAG")
+hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 
 
 #########################################################################
 # predict
 #
 pred <- predict(model, hapmap.ceu, type="response")
-pred$value
+head(pred$value)
 #    sample.id allele1 allele2      prob
 # 1    NA10859   01:01   03:01 0.9374860
 # 2    NA11882   01:01   29:02 0.9999835

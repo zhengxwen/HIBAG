@@ -7,7 +7,8 @@
 	To create a \code{\link{hlaSNPHaploClass}} object (SNP haplotype object).
 }
 \usage{
-hlaMakeSNPHaplo(haplotype, sample.id, snp.id, snp.position, A.allele, B.allele)
+hlaMakeSNPHaplo(haplotype, sample.id, snp.id, snp.position,
+	A.allele, B.allele, assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
 }
 \arguments{
 	\item{haplotype}{a haplotype matrix, ``# of SNPs'' - by - ``2 x # of individuals''}
@@ -16,6 +17,8 @@ hlaMakeSNPHaplo(haplotype, sample.id, snp.id, snp.position, A.allele, B.allele)
 	\item{snp.position}{a vector of SNP positions}
 	\item{A.allele}{a vector of A alleles in the SNP list}
 	\item{B.allele}{a vector of B alleles in the SNP list}
+	\item{assembly}{genome assembly: "hg19" (default), "hg18", "NCBI37" or "NCBI36";
+		"auto" refers to "hg19"}
 }
 \details{
 	\code{haplotype} is a numeric matrix, with an entry value 0 standing for B (ZERO A allele),
@@ -29,7 +32,7 @@ hlaMakeSNPHaplo(haplotype, sample.id, snp.id, snp.position, A.allele, B.allele)
 	\item{snp.position}{a vector of SNP positions in basepair}
 	\item{snp.allele}{a vector of characters with the format of ``A allele/B allele''}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaGenoSubset}}, \code{\link{hlaHaploSubset}}
 }

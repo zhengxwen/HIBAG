@@ -26,7 +26,7 @@
 // ===========================================================
 // Name        : LibHLA
 // Author      : Xiuwen Zheng
-// Version     : 1.0.0
+// Version     : 1.1.0
 // Copyright   : Xiuwen Zheng (GPL v3.0)
 // Created     : 11/14/2011
 // Description : HLA Genotype Imputation with Attribute Bagging
@@ -389,8 +389,10 @@ namespace HLA_LIB
 		/** \param n_hla    the number of unique HLA alleles **/
 		void InitPrediction(int n_hla);
 
-		/// initialize the sums of posterior probability by setting ZERO
-		void InitSumPostProb();
+		/// initialize the posterior probabilities by setting ZERO
+		void InitPostProbBuffer();
+		/// initialize the sums of posterior probabilities by setting ZERO
+		void InitSumPostProbBuffer();
 		/// add the posterior probabilities of a classifier with a weight to the variable for summing up
 		void AddProbToSum(const double weight);
 		/// average over all classifiers
@@ -548,11 +550,26 @@ namespace HLA_LIB
 		void BuildClassifiers(int nclassifier, int mtry, bool prune,
 			bool verbose, bool verbose_detail=false, bool debug=false);
 
-		/// get the best-guess HLA types
-		void PredictHLA(const int *genomat, int n_samp,
+		/** get the best-guess HLA types
+		 *  \param genomat
+		 *  \param n_samp
+		 *  \param vote_method  1: average posterior prob, 2: majority voting
+		 *  \param OutH1
+		 *  \param OutH2
+		 *  \param OutProb
+		 *  \param ShowInfo
+		**/
+		void PredictHLA(const int *genomat, int n_samp, int vote_method,
 			int OutH1[], int OutH2[], double OutProb[], bool ShowInfo);
-		/// get the posterior probabilities of HLA type
-		void PredictHLA_Prob(const int *genomat, int n_samp,
+
+		/** get the posterior probabilities of HLA type
+		 *  \param genomat
+		 *  \param n_samp
+		 *  \param vote_method  1: average posterior prob, 2: majority voting
+		 *  \param OutProb
+		 *  \param ShowInfo
+		**/
+		void PredictHLA_Prob(const int *genomat, int n_samp, int vote_method,
 			double OutProb[], bool ShowInfo);
 
 		/// the number of samples
@@ -582,7 +599,7 @@ namespace HLA_LIB
 		CAlg_Prediction _Predict;
 
 		/// prediction HLA types internally
-		void _PredictHLA(const int *geno, const int weights[]);
+		void _PredictHLA(const int *geno, const int weights[], int vote_method);
 		/// get weight with respect to missing SNPs
 		void _GetSNPWeights(int OutWeight[]);
 	};

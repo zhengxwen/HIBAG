@@ -25,7 +25,7 @@ hlaCheckSNPs(model, object, match.pos=TRUE, verbose=TRUE)
 	\item{NumOfSNP}{the number of SNP predictors in an individual classifier}
 	\item{fraction}{NumOfValidSNP / NumOfSNP}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}, \code{\link{predict.hlaAttrBagClass}}
 }

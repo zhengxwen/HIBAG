@@ -16,7 +16,8 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL,
 	\item{PredHLA}{an object of \code{\link{hlaAlleleClass}}, the predicted HLA types}
 	\item{allele.limit}{a list of HLA alleles, the validation samples are limited to
 		those having HLA alleles in \code{allele.limit}}
-	\item{call.threshold}{the call threshold}
+	\item{call.threshold}{the call threshold for posterior probability, i.e.,
+		call or no call is determined by whether \code{prob >= call.threshold} or not}
 	\item{max.resolution}{"2-digit", "4-digit", "6-digit", "8-digit", "allele",
 		"protein", "2", "4", "6", "8", "full" or "": "allele" = "2-digit",
 		"protein" = "4-digit", "full" and "" indicating no limit on resolution}
@@ -63,7 +64,7 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL,
 	\item{pred.hla}{the prediction of HLA type}
 	\item{accuracy}{accuracy, 0, 0.5, or 1}
 }
-\author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
+\author{Xiuwen Zheng}
 \seealso{
 	\code{\link{hlaAttrBagging}}
 }
