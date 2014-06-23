@@ -10,8 +10,8 @@
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 0.9.3\cr
-		Date:    \tab 2012-10-20\cr
+		Version: \tab 0.9.4\cr
+		Date:    \tab 2012-12-21\cr
 		License: \tab GPL version 3\cr
 	}
 }

@@ -26,9 +26,9 @@
 // ===========================================================
 // Name        : LibHLA
 // Author      : Xiuwen Zheng
-// Version     : 0.9.3.0
+// Version     : 0.9.4
 // Copyright   : Xiuwen Zheng (GPL v3.0)
-// Created     : 10/13/2012
+// Created     : 11/14/2012
 // Description : HLA Genotype Imputation with Attribute Bagging
 // ===========================================================
 
@@ -201,7 +201,7 @@ void THaplotype::SetSNP(const int idx, UINT8 val)
 	CHECKING((idx<0) || (idx>=MAXNUM_SNP_IN_CLASSIFIER),
 		"THaplotype::GetSNP, invalid index.");
 	CHECKING(val!=0 && val!=1,
-		"THaplotype::GetSNP, the value should be 0 or 1.");
+		"THaplotype::SetSNP, the value should be 0 or 1.");
 	UINT8 &ch = PackedSNPs[idx >> 2];
 	int shift = (idx & 0x03)*2;
 	UINT8 mask = ~(0x03 << shift);
@@ -250,7 +250,7 @@ UINT8 TGenotype::GetSNP(const int idx) const
 void TGenotype::SetSNP(const int idx, int val)
 {
 	CHECKING((idx<0) || (idx>=MAXNUM_SNP_IN_CLASSIFIER),
-		"TGenotype::GetSNP, invalid index.");
+		"TGenotype::SetSNP, invalid index.");
 	if (val<0 || val>2) val = 3;
 	_SetSNP(idx, val);
 }
@@ -703,98 +703,6 @@ void CSamplingWithoutReplace::RemoveFlag()
 int &CSamplingWithoutReplace::operator[] (int idx)
 {
 	return _IdxArray[_IdxArray.size() - _m_try + idx];
-}
-
-
-// -------------------------------------------------------------------------------
-// CSamplingWithoutReplaceWithProb
-
-CSamplingWithoutReplaceWithProb::CSamplingWithoutReplaceWithProb()
-{
-	_m_try = 0;
-	_prob_sum = 0;
-}
-
-CBaseSampling *CSamplingWithoutReplaceWithProb::Init(int m_total, double *var_prob)
-{
-	_m_try = 0; _prob_sum = 0;
-	_IdxArray.resize(m_total);
-	for (int i=0; i < m_total; i++)
-	{
-		_IdxArray[i].index = i;
-		_IdxArray[i].prob = var_prob[i];
-		_prob_sum += var_prob[i];
-	}
-	return this;
-}
-
-int CSamplingWithoutReplaceWithProb::TotalNum() const
-{
-	return _IdxArray.size();
-}
-
-void CSamplingWithoutReplaceWithProb::RandomSelect(int m_try)
-{
-	const int n_tmp = _IdxArray.size();
-	if (m_try > n_tmp) m_try = n_tmp;
-	if (m_try < n_tmp)
-	{
-		double tmpsum = _prob_sum;
-		for (int i=0; i < m_try; i++)
-		{
-			int I;
-			double r = runif(0, tmpsum), s = 0;
-			for (I=0; I < n_tmp; I++)
-			{
-				s += _IdxArray[I].prob;
-				if (r <= s) break;
-			}
-			if (I >= n_tmp) I = n_tmp - 1;
-			tmpsum -= _IdxArray[I].prob;
-			std::swap(_IdxArray[I], _IdxArray[n_tmp-i-1]);
-		}
-	}
-	_m_try = m_try;
-}
-
-int CSamplingWithoutReplaceWithProb::NumOfSelection() const
-{
-	return _m_try;
-}
-
-void CSamplingWithoutReplaceWithProb::Remove(int idx)
-{
-	idx = _IdxArray.size() - _m_try + idx;
-	_prob_sum -= _IdxArray[idx].prob;
-	_IdxArray.erase(_IdxArray.begin() + idx);
-}
-
-void CSamplingWithoutReplaceWithProb::RemoveSelection()
-{
-	vector<type>::const_iterator it;
-	it = _IdxArray.begin() + ((int)_IdxArray.size() - _m_try);
-	for (; it != _IdxArray.end(); it++)
-		_prob_sum -= it->prob;
-	_IdxArray.resize(_IdxArray.size() - _m_try);
-}
-
-void CSamplingWithoutReplaceWithProb::RemoveFlag()
-{
-	const int n_tmp = _IdxArray.size();
-	for (int i=n_tmp-1; i >= n_tmp - _m_try; i--)
-	{
-		vector<type>::iterator p = _IdxArray.begin() + i;
-		if (p->index < 0)
-		{
-			_prob_sum -= p->prob;
-			_IdxArray.erase(p);
-		}
-	}
-}
-
-int &CSamplingWithoutReplaceWithProb::operator[] (int idx)
-{
-	return _IdxArray[_IdxArray.size() - _m_try + idx].index;
 }
 
 
@@ -1469,13 +1377,28 @@ void CAttrBag_Model::InitTraining(int n_snp, int n_samp, int *snp_geno, int n_hl
 	}
 }
 
-CAttrBag_Classifier *CAttrBag_Model::NewClassifier()
+CAttrBag_Classifier *CAttrBag_Model::NewClassifierBootstrap()
 {
 	_ClassifierList.push_back(CAttrBag_Classifier(*this));
 	CAttrBag_Classifier *I = &_ClassifierList.back();
 
-	vector<int> S(nSamp(), 0);
-	for (int i=0; i < nSamp(); i++) S[RandomNum(nSamp())] ++;
+	const int n = nSamp();
+	vector<int> S(n);
+	int n_unique;
+
+	do {
+		// initialize S
+		for (int i=0; i < n; i++) S[i] = 0;
+		n_unique = 0;
+
+		for (int i=0; i < n; i++)
+		{
+			int k = RandomNum(n);
+			if (S[k] == 0) n_unique ++;
+			S[k] ++;
+		}
+	} while (n_unique >= n); // to avoid the case of no out-of-bag individuals
+
 	I->InitBootstrapCount(&S[0]);
 
 	return I;
@@ -1492,22 +1415,17 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 	return I;
 }
 
-void CAttrBag_Model::RunNewClassifiers(int nclassifier, int mtry, double *var_prob,
-	bool prune, bool verbose, bool verbose_detail, bool debug)
+void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
+	bool verbose, bool verbose_detail, bool debug)
 {
-	CSamplingWithoutReplace VarSampling1;
-	CSamplingWithoutReplaceWithProb VarSampling2;
+	CSamplingWithoutReplace VarSampling;
 
 	for (int k=0; k < nclassifier; k++)
 	{
-		CBaseSampling *s;
-		if (!var_prob)
-			s = VarSampling1.Init(nSNP());
-		else
-			s = VarSampling2.Init(nSNP(), var_prob);
+		VarSampling.Init(nSNP());
 
-		CAttrBag_Classifier *I = NewClassifier();
-		I->Grow(*s, mtry, prune, verbose, verbose_detail, debug);
+		CAttrBag_Classifier *I = NewClassifierBootstrap();
+		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail, debug);
 		if (verbose)
 		{
 			time_t tm; time(&tm);
@@ -1583,6 +1501,7 @@ void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[])
 			if ((0 <= geno[k]) && (geno[k] <= 2))
 				nWeight += weights[k];
 		}
+		/// set weight with respect to missing SNPs
 		if (nWeight > 0)
 		{
 			Geno.IntToSNP(n, geno, &(it->_SNPIndex[0]));

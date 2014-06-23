@@ -1,3 +1,9 @@
+Changes in 0.9.4:
+
+	* improve documents
+	* bug fix: passing only one individual to 'predict.hlaAttrBagClass'
+
+
 Changes in 0.9.3:
 
 	* add a load balancing function to 'hlaParallelAttrBagging'

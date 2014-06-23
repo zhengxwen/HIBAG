@@ -7,8 +7,8 @@
 	Return an object of "hlaAlleleClass", which contains HLA types.
 }
 \usage{
-hlaAllele(sample.id, H1, H2, max.resolution="",
-	locus="", locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
+hlaAllele(sample.id, H1, H2, max.resolution="", locus="any",
+	locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
 }
 \arguments{
 	\item{sample.id}{sample IDs}

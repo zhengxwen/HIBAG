@@ -421,19 +421,19 @@ DLLEXPORT void hlaAB_Close(int *model, LongBool *out_err)
  *  \param model           the model index
  *  \param nclassifier     the total number of individual classifiers to be created
  *  \param mtry            the number of variables randomly sampled as candidates for selection
+ *  \param prune           if TRUE, perform a parsimonious forward variable selection
  *  \param verbose         show information if TRUE
  *  \param verbose_detail  show more information if TRUE
+ *  \param Debug           if TRUE, show debug information
  *  \param out_err         output the error information, 0 -- no error, 1 -- an error exists
 **/
 DLLEXPORT void hlaAB_NewClassifiers(int *model, int *nclassifier, int *mtry,
-	double *var_prob, LongBool *var_prob_flag,
 	LongBool *prune, LongBool *verbose, LongBool *verbose_detail, LongBool *Debug,
 	LongBool *out_err)
 {
 	CORETRY
 		_Check_Model(*model);
-		_AB_Model_[*model]->RunNewClassifiers(*nclassifier, *mtry,
-			(*var_prob_flag) ? var_prob : NULL,
+		_AB_Model_[*model]->BuildClassifiers(*nclassifier, *mtry,
 			*prune, *verbose, *verbose_detail, *Debug);
 		*out_err = 0;
 	CORECATCH(*out_err = 1)

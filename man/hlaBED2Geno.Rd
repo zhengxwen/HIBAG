@@ -7,7 +7,7 @@
 	To convert a PLINK BED file to an object of \code{\link{hlaSNPGenoClass}}.
 }
 \usage{
-hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=TRUE, import.chr="xMHC", verbose=TRUE)
+hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE, import.chr="xMHC", verbose=TRUE)
 }
 \arguments{
 	\item{bed.fn}{binary file, genotype information}
