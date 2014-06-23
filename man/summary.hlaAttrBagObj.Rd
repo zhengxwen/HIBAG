@@ -20,19 +20,17 @@
 	\item{num.snp}{the total number of SNPs}
 	\item{snp.id}{SNP IDs}
 	\item{snp.position}{SNP position in basepair}
-	\item{snp.hist}{the number of classifier for each SNP, and it could be used for
-		SNP importance}
-	\item{info}{a \code{data.frame} for the average number of SNPs (\code{num.snp}),
-		haplotypes (\code{num.haplo}), out-of-bag accuracies (\code{accuracy}) among
-		all classifiers: mean, standard deviation, min, max}
+	\item{snp.hist}{the number of classifier for each SNP, and it could be
+		used for SNP importance}
+	\item{info}{a \code{data.frame} for the average number of SNPs
+		(\code{num.snp}), haplotypes (\code{num.haplo}), out-of-bag accuracies
+		(\code{accuracy}) among all classifiers:
+		mean, standard deviation, min, max}
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{plot.hlaAttrBagClass}}, \code{\link{plot.hlaAttrBagObj}},
-	\code{\link{print.hlaAttrBagClass}}, \code{\link{print.hlaAttrBagObj}},
-	\code{\link{summary.hlaAttrBagClass}}
+	\code{\link{plot.hlaAttrBagObj}}, \code{\link{print.hlaAttrBagObj}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

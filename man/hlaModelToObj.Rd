@@ -5,8 +5,8 @@
 }
 \description{
 	Convert \code{\link{hlaAttrBagClass}} to \code{\link{hlaAttrBagObj}}, and
-\code{\link{hlaAttrBagObj}} can be written to the specified file with an external
-representation of R objects.
+\code{\link{hlaAttrBagObj}} can be written to the specified file with an
+external representation of R objects.
 }
 \usage{
 hlaModelToObj(model)
@@ -19,10 +19,8 @@ hlaModelToObj(model)
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaModelFromObj}}, \code{\link{hlaAttrBagging}},
-	\code{\link{hlaAttrBagClass}}.
+	\code{\link{hlaModelFromObj}}, \code{\link{hlaAttrBagging}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

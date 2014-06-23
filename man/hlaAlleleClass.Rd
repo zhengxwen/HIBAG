@@ -2,7 +2,8 @@
 \alias{hlaAlleleClass}
 \title{Class of HLA Type}
 \description{
-	The definition of a class for HLA types.
+	The definition of a class for HLA types, returned from
+\code{\link{hlaAllele}}.
 }
 \value{
 	There are following components:
@@ -10,7 +11,8 @@
 	\item{pos.start}{the starting position in basepair}
 	\item{pos.end}{the end position in basepair}
 	\item{value}{a data frame}
-	\item{assembly}{genome assembly, such like "hg19"}
+	\item{assembly}{the human genome reference, such like "hg19"}
+	\item{postprob}{a matrix of all posterior probabilities}
 
 	The component \code{value} includes:
 	\item{sample.id}{sample ID}
@@ -21,9 +23,8 @@
 
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}
+	\code{\link{hlaAllele}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

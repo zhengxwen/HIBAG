@@ -16,9 +16,11 @@
 	\item{hla.locus}{the name of HLA locus}
 	\item{hla.allele}{the HLA alleles used in the model}
 	\item{hla.freq}{the HLA allele frequencies}
+	\item{assembly}{the human genome reference, such like "hg19"}
 	\item{classifiers}{a list of all classifiers (described as follows)}
-	\item{appendix}{\code{platform} -- the text of platform information;
-		\code{information} -- the other information, like authors;
+	\item{appendix}{
+		\code{platform} -- supported platform(s);
+		\code{information} -- other information, like training sets, authors;
 		\code{warning} -- any warning message}
 
 	\code{classifiers} has the following components:
@@ -26,17 +28,18 @@
 	\item{haplos}{a data.frame of haplotype frequencies}
 	\item{ }{\code{freq}  -- haplotype frequency}
 	\item{ }{\code{hla}   -- a HLA allele}
-	\item{ }{\code{haplo} -- a SNP haplotype, with an entry value 0 standing for B (ZERO A allele),
-1 for A (ONE A allele)}
+	\item{ }{\code{haplo} -- a SNP haplotype, with an entry value 0 standing
+		for B (ZERO A allele), 1 for A (ONE A allele)}
 	\item{snpidx}{the SNP indices used in this classifier}
 	\item{outofbag.acc}{the out-of-bag accuracy of this classifier}
 }
 
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaModelToObj}}, \code{\link{hlaAttrBagClass}}
+	\code{\link{hlaAttrBagging}}, \code{\link{hlaParallelAttrBagging}},
+	\code{\link{hlaModelToObj}}, \code{\link{hlaModelFiles}},
+	\code{\link{hlaAttrBagClass}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

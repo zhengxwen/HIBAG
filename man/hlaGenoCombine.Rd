@@ -7,23 +7,31 @@
 	To combine two genotypic data sets into one dataset.
 }
 \usage{
-hlaGenoCombine(geno1, geno2, match.pos=TRUE, allele.check=TRUE)
+hlaGenoCombine(geno1, geno2,
+	match.type=c("RefSNP+Position", "RefSNP", "Position"),
+	allele.check=TRUE, same.strand=FALSE, verbose=TRUE)
 }
 \arguments{
 	\item{geno1}{the first genotype object of \code{\link{hlaSNPGenoClass}}}
 	\item{geno2}{the second genotype object of \code{\link{hlaSNPGenoClass}}}
-	\item{match.pos}{if \code{TRUE}, it uses both SNP ID and position to match SNPs;
-		otherwise, it uses SNP ID only; calling \code{hlaSNPID(, with.pos=match.pos)}}
-	\item{allele.check}{if \code{TRUE}, call \code{\link{hlaGenoSwitchStrand}} to check
-		and then switch allele pairs if needed}
+	\item{match.type}{\code{"RefSNP+Position"} (by default) -- using both of
+		RefSNP IDs and positions; \code{"RefSNP"} -- using RefSNP IDs only;
+		\code{"Position"} -- using positions only}
+	\item{allele.check}{if \code{TRUE}, call \code{\link{hlaGenoSwitchStrand}}
+		to check and then switch allele pairs if needed}
+	\item{same.strand}{\code{TRUE} assuming alleles are on the same strand
+		(e.g., forward strand); otherwise, \code{FALSE} not assuming whether
+		on the same strand or not}
+	\item{verbose}{show information, if TRUE}
 }
 \details{
-	The function merges two SNP dataset \code{geno1} and \code{geno2}, and returns a SNP
-data consisting of the SNP intersect between \code{geno1} and \code{geno2}, and having
-the same SNP information (allele and position) as \code{geno1}.
+	The function merges two SNP dataset \code{geno1} and \code{geno2}, and
+returns a SNP dataset consisting of the SNP intersect between \code{geno1} and
+\code{geno2}, and having the same SNP information (allele and position) as
+\code{geno1}.
 }
 \value{
-	A \code{\link{hlaSNPGenoClass}} object.
+	An object of \code{\link{hlaSNPGenoClass}}.
 }
 \author{Xiuwen Zheng}
 \seealso{
@@ -44,10 +52,7 @@ hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 # combine two datasets together
 geno <- hlaGenoCombine(HapMap_CEU_Geno, hapmap.ceu)
 summary(geno)
-#	390 samples X 1564 SNPs
-#	SNPs range from 25877003bp to 33529555bp
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

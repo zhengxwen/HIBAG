@@ -1,10 +1,10 @@
 \name{summary.hlaAlleleClass}
 \alias{summary.hlaAlleleClass}
 \title{
-	Get a subset of HLA types
+	Summarize a ``hlaAlleleClass'' object
 }
 \description{
-	Get a subset of HLA types from an object of \code{\link{hlaAlleleClass}}.
+	Show the information of a \code{\link{hlaAlleleClass}} object.
 }
 \usage{
 \method{summary}{hlaAlleleClass}(object, show=TRUE, ...)
@@ -19,7 +19,7 @@
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{summary.hlaSNPGenoClass}}
+	\code{\link{hlaAllele}}
 }
 
 \examples{
@@ -28,11 +28,12 @@ data(HLA_Type_Table, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+	locus=hla.id, assembly="hg19")
 summary(hla)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

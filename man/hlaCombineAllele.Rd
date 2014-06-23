@@ -18,8 +18,7 @@ hlaCombineAllele(H1, H2)
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
-\code{\link{hlaGenoSubset}}
+	\code{\link{hlaAllele}}, \code{\link{hlaAlleleSubset}}
 }
 
 \examples{
@@ -45,5 +44,4 @@ summary(H)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

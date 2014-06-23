@@ -11,8 +11,9 @@
 	\item{sample.id}{a vector of sample IDs}
 	\item{snp.id}{a vector of SNP IDs}
 	\item{snp.position}{a vector of SNP positions in basepair}
-	\item{snp.allele}{a vector of characters with the format of ``A allele/B allele''}
-	\item{assembly}{genome assembly, such like "hg19"}
+	\item{snp.allele}{a vector of characters with the format of
+		``A allele/B allele''}
+	\item{assembly}{the human genome reference, such like "hg19"}
 }
 
 \author{Xiuwen Zheng}
@@ -20,6 +21,5 @@
 	\code{\link{hlaMakeSNPHaplo}}
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

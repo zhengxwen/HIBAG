@@ -23,43 +23,97 @@
 // along with HIBAG.
 // If not, see <http://www.gnu.org/licenses/>.
 
-// ===========================================================
-// Name        : LibHLA
-// Author      : Xiuwen Zheng
-// Version     : 1.1.0
-// Copyright   : Xiuwen Zheng (GPL v3.0)
-// Created     : 11/14/2011
-// Description : HLA Genotype Imputation with Attribute Bagging
-// ===========================================================
+// ===============================================================
+// Name           : LibHLA
+// Author         : Xiuwen Zheng
+// Version        : 1.2.0
+// Copyright      : Xiuwen Zheng (GPL v3.0)
+// Created        : 11/14/2011
+// Last modified  : 07/20/2013
+// Description    : HLA Genotype Imputation with Attribute Bagging
+// ===============================================================
 
 #ifndef _LibHLA_H_
 #define _LibHLA_H_
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <math.h>
 #include <R.h>
 #include <Rmath.h>
-#include <cmath>
 #include <vector>
 #include <list>
 #include <string>
 #include <algorithm>
+#include <StructHLA.h>
 
 
-#define HLA_CHECK_CODE
+// TODO: check LITTLE END
+// Streaming SIMD Extensions, SSE and SSE2
+
+#if (defined(__SSE__) && defined(__SSE2__))
+
+#  include <xmmintrin.h>  // SSE
+#  include <emmintrin.h>  // SSE2
+
+#  define HIBAG_SSE_VAR_ALIGN    __attribute__((aligned(16)))
+
+#  define HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+
+# else
+
+#  define HIBAG_SSE_VAR_ALIGN 
+
+#  ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+#    undef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+#  endif
+
+#endif
 
 
 namespace HLA_LIB
 {
 	using namespace std;
 
+	#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+	typedef UINT16    UTYPE;
+	#else
+	typedef UINT8     UTYPE;
+	#endif
 
-	// ******************************************************************************* //
-	// ********                          description                          ********
-	// SNP allele: 0, 1
-	// SNP genotype: 0, 1, 2, 3 (missing, or other values)
+
+	#define HIBAG_FLOAT_TYPE_ID    0
+
+	#if (HIBAG_FLOAT_TYPE_ID == 0)
+	#  define TFLOAT           double
+	#  define FLOAT_LOG        log
+	#  define FLOAT_EXP        exp
+	#  define FLOAT_EPSILON    DBL_EPSILON
+	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+	#  define TFLOAT           float
+	#  define FLOAT_LOG        logf
+	#  define FLOAT_EXP        expf
+	#  define FLOAT_EPSILON    FLT_EPSILON
+	#else
+	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+	#endif
+
+
+	// ************************************************************************* //
+	// ************************************************************************* //
+
+	/// macro for checking error
+	#define HIBAG_CHECKING(x, msg)	{ if (x) throw ErrHLA(msg); }
+
+
+
+	// ************************************************************************* //
+	// ********                       description                       ********
+	// SNP allele: 0 (B allele), 1 (A allele)
+	// SNP genotype: 0 (BB), 1 (AB), 2 (AA), 3 (missing)
 	// HLA allele: start from 0
 	//
 	// Packed SNP storage strategy is used for faster matching
@@ -69,57 +123,36 @@ namespace HLA_LIB
 	// Packed SNP genotype: s8 s7 s6 s5 s4 s3 s2 s1
 	//     the 1st genotype: (s2 s1), the 2nd genotype: (s4 s3)
 	//     the 3rd genotype: (s6 s5), the 4th genotype: (s8 s7)
-	// ********                                                               ********
-	// ******************************************************************************* //
+	// ********                                                         ********
+	// ************************************************************************* //
 
 
+	// ************************************************************************* //
+	// ********                        container                        ********
 
-	// ******************************************************************************* //
-	// ******************************************************************************* //
-
-	/// macro for checking error
-	#define CHECKING(x, msg)	{ if (x) throw ErrHLA(msg); }
-
-
-
-	// ******************************************************************************* //
-	// ********                           container                           ********
-
-	/// Define an unsigned integer of 8 bits
-	typedef unsigned char	UINT8;
-
-	/// The number of bytes for packed SNP genotypes
-	#define PACKED_NUM_IN_BYTE(x)	( ((x)/4) + (((x) % 4)!=0 ? 1 : 0) )
-
-	/// The max number of SNP markers in an individual classifier
-	static const int MAXNUM_SNP_IN_CLASSIFIER = 256;
-	/// The max number of bytes for packed SNP genotypes
-	static const int PACKED_BYTE_MAXNUM_SNP = PACKED_NUM_IN_BYTE(MAXNUM_SNP_IN_CLASSIFIER);
-
-
-	/// Packed SNP haplotype structure: 4 SNPs in a byte
+	/// Packed SNP haplotype structure: 4 SNPs in a byte / short
 	struct THaplotype
 	{
 	public:
 		/// packed SNP alleles
-		UINT8 PackedSNPs[PACKED_BYTE_MAXNUM_SNP];
+		UTYPE PackedHaplo[HIBAG_PACKED_UTYPE_MAXNUM_SNP];
 		/// haplotype frequency
-		double Frequency;
+		TFLOAT Frequency;
 		/// old haplotype frequency
-		double OldFreq;
+		TFLOAT OldFreq;
 
-		THaplotype() {}
-		THaplotype(const double _freq);
-		THaplotype(const char *str, const double _freq);
+		THaplotype();
+		THaplotype(const TFLOAT _freq);
+		THaplotype(const char *str, const TFLOAT _freq);
 
 		/// get SNP allele, idx starts from ZERO
-		UINT8 GetSNP(int idx) const;
+		UINT8 GetAllele(int idx) const;
 		/// set SNP allele, idx starts from ZERO
-		void SetSNP(int idx, UINT8 val);
+		void SetAllele(int idx, UINT8 val);
 		/// get a string of "0" and "1" from packed SNP alleles
-		string SNPToString(const int Length) const;
+		string HaploToStr(const int Length) const;
 		/// set packed SNP alleles from a string of "0" and "1"
-		void StringToSNP(const string &str);
+		void StrToHaplo(const string &str);
 	};
 
 
@@ -127,33 +160,45 @@ namespace HLA_LIB
 	class CHaplotypeList
 	{
 	public:	
+		friend class CVariableSelection;
+
 		CHaplotypeList();
 
 		/// initialize haplotypes for EM algorithm
 		void DoubleHaplos(CHaplotypeList &OutHaplos) const;
 		/// initialize haplotypes for EM algorithm with the allele frequency of the new SNP
-		void DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const double AFreq) const;
+		void DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const TFLOAT AFreq) const;
 		/// merge rare haplotypes
-		void MergeDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const;
+		void MergeDoubleHaplos(const TFLOAT RareProb, CHaplotypeList &OutHaplos) const;
 		/// remove rare haplotypes
-		void EraseDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const;
+		void EraseDoubleHaplos(const TFLOAT RareProb, CHaplotypeList &OutHaplos) const;
 		/// save frequency to old.frequency, and set current freq. to be 0
 		void SaveClearFrequency();
 		/// scale the haplotype frequencies by a factor
-		void ScaleFrequency(const double scale);
+		void ScaleFrequency(const TFLOAT scale);
 		/// the total number of haplotypes
 		int TotalNumOfHaplo() const;
+		/// the total number of unique HLA alleles
+		inline int nHLA() const { return List.size(); }
+
 		/// print all haplotypes
 		void Print();
 
-		/// haplotype list
+		/// haplotype list with HLA allele index
 		vector< vector<THaplotype> > List;
 		/// the number of SNP markers
 		int Num_SNP;
+
+	protected:
+
+	#ifdef HIBAG_GPU_SUPPORT
+		void InitGPUHostData(int *&_HLA_HapIdx, void *&_HapList);
+		inline void FreqGPUHostData(int *&_HLA_HapIdx, void *&_HapList);
+	#endif
 	};
 
 
-	/// Packed SNP genotype structure: 4 SNPs in a byte
+	/// Packed SNP genotype structure: 4 SNPs in a byte / short
 	class TGenotype
 	{
 	public:
@@ -162,9 +207,11 @@ namespace HLA_LIB
 		friend class CAlg_Prediction;
 
 		/// packed SNP genotypes
-		UINT8 PackedSNPs[PACKED_BYTE_MAXNUM_SNP];
+		UTYPE PackedSNPs[HIBAG_PACKED_UTYPE_MAXNUM_SNP];
 		/// the count in the bootstrapped data
 		int BootstrapCount;
+
+		TGenotype();
 
 		/// get SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
 		UINT8 GetSNP(const int idx) const;
@@ -176,18 +223,16 @@ namespace HLA_LIB
 		void StringToSNP(const string &str);
 		/// export SNPs to a vector of integers
 		void SNPToInt(const int Length, int OutArray[]) const;
-		/// import SNPs from a vector of integers
-		void IntToSNP(int Length, const int InArray[]);
 		/// import SNPs from an integer vector 'InBase' with 'Index'
 		void IntToSNP(int Length, const int InBase[], const int Index[]);
 		/// compute the Hamming distance between SNPs and H1+H2
-		int Diff(int Length, const THaplotype &H1, const THaplotype &H2) const;
+		int HammingDistance(int Length, const THaplotype &H1, const THaplotype &H2) const;
 
 	protected:
 		/// set SNP genotype (0, 1, 2) without checking
 		void _SetSNP(const int idx, UINT8 val);
 		/// compute the Hamming distance between SNPs and H1+H2 without checking
-		int _Diff(int Length, const THaplotype &H1, const THaplotype &H2) const;
+		inline int _HamDist(int Length, const THaplotype &H1, const THaplotype &H2) const;
 	};
 
 
@@ -215,6 +260,8 @@ namespace HLA_LIB
 	class CGenotypeList
 	{
 	public:
+		friend class CVariableSelection;
+
 		CGenotypeList();
 
 		/// add a new SNP
@@ -231,17 +278,8 @@ namespace HLA_LIB
 		vector<TGenotype> List;
 		/// the number of SNPs
 		int Num_SNP;
-	protected:
 	};
 
-
-	/// A pair of HLA alleles
-	struct THLAType
-	{
-	public:
-		int Allele1;  //< the first HLA allele
-		int Allele2;  //< the second HLA allele
-	};
 
 	/// A list of HLA types
 	class CHLATypeList
@@ -276,7 +314,7 @@ namespace HLA_LIB
 	extern int EM_MaxNum_Iterations;  // = 500
 
 	/// The reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
-	extern double EM_FuncRelTol;  // = sqrt(DBL_EPSILON)
+	extern TFLOAT EM_FuncRelTol;  // = sqrt(DBL_EPSILON)
 
 
 	/// variable sampling
@@ -357,7 +395,7 @@ namespace HLA_LIB
 			bool Flag;       //< if true, the haplotype pair exists in the sample
 			THaplotype *H1;  //< the first haplotype
 			THaplotype *H2;  //< the second haplotype
-			double Freq;     //< genotype frequency
+			TFLOAT Freq;     //< genotype frequency
 
 			THaploPair() { Flag = true; H1 = H2 = NULL; }
 			THaploPair(THaplotype *i1, THaplotype *i2) { Flag = true; H1 = i1; H2 = i2; }
@@ -383,6 +421,8 @@ namespace HLA_LIB
 	class CAlg_Prediction
 	{
 	public:
+		friend class CVariableSelection;
+
 		CAlg_Prediction();
 
 		/// initialize
@@ -394,41 +434,50 @@ namespace HLA_LIB
 		/// initialize the sums of posterior probabilities by setting ZERO
 		void InitSumPostProbBuffer();
 		/// add the posterior probabilities of a classifier with a weight to the variable for summing up
-		void AddProbToSum(const double weight);
+		void AddProbToSum(const TFLOAT weight);
 		/// average over all classifiers
 		void NormalizeSumPostProb();
 
 		/// 
-		double &IndexPostProb(int H1, int H2);
+		TFLOAT &IndexPostProb(int H1, int H2);
 		/// 
-		double &IndexSumPostProb(int H1, int H2);
+		TFLOAT &IndexSumPostProb(int H1, int H2);
 
-		/// predict based on SNP profiles and haplotype list
-		void Predict(const CHaplotypeList &Haplo, const TGenotype &Geno);
-		/// the best-guess HLA type for the current classifier
-		THLAType MaxProb();
-		/// the best-guess HLA type from all classifiers
-		THLAType MaxSumProb();
+		/// predict based on SNP profiles and haplotype list,
+		//    and save posterior probabilities in '_PostProb'
+		void PredictPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		/// the best-guess HLA type from '_PostProb'
+		THLAType BestGuess();
+		/// the best-guess HLA type from '_SumPostProb'
+		THLAType BestGuessEnsemble();
 
 		/// get the number of unique HLA alleles
 		inline const int nHLA() const
 			{ return _nHLA; }
 		/// the posterior probabilities for the current classifier
-		inline const vector<double> &PostProb() const
+		inline const vector<TFLOAT> &PostProb() const
 			{ return _PostProb; }
 		/// the average posterior probabilities for all classifiers
-		inline const vector<double> &SumPostProb() const
+		inline const vector<TFLOAT> &SumPostProb() const
 			{ return _SumPostProb; }
 
 	protected:
 		/// the number of different HLA alleles
 		int _nHLA;
 		/// plus weight after calling AddProbToSum()
-		double _Sum_Weight;
+		TFLOAT _Sum_Weight;
 		/// a vector of posterior probabilities
-		vector<double> _PostProb;
+		vector<TFLOAT> _PostProb;
 		/// a vector of posterior probabilities for summing up
-		vector<double> _SumPostProb;
+		vector<TFLOAT> _SumPostProb;
+
+		/// the best-guess HLA type based on SNP profiles and haplotype list
+		//    without saving posterior probabilities in '_PostProb'
+		THLAType _PredBestGuess(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		/// the prob of the given HLA type based on SNP profiles and haplotype list
+		//    without saving posterior probabilities in '_PostProb'
+		TFLOAT _PredPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			const THLAType &HLA);
 	};
 
 
@@ -443,8 +492,8 @@ namespace HLA_LIB
 			const int _BootstrapCnt[]);
 		/// searching algorithm
 		void Search(CBaseSampling &VarSampling, CHaplotypeList &OutHaplo,
-			vector<int> &OutSNPIndex, double &Out_Global_Max_OutOfBagAcc,
-			int mtry, bool prune, bool verbose, bool verbose_detail, bool debug);
+			vector<int> &OutSNPIndex, TFLOAT &Out_Global_Max_OutOfBagAcc,
+			int mtry, bool prune, bool verbose, bool verbose_detail);
 
 		/// the number of samples
 		inline const int nSamp() const { return _SNPMat->Num_Total_Samp; }
@@ -469,9 +518,18 @@ namespace HLA_LIB
 		/// initialize the haplotype list
 		void _InitHaplotype(CHaplotypeList &Haplo);
 		/// compute the out-of-bag accuracy using the haplotypes 'Haplo'
-		double _OutOfBagAccuracy(CHaplotypeList &Haplo);
+		TFLOAT _OutOfBagAccuracy(CHaplotypeList &Haplo);
 		/// compute the in-bag log likelihood using the haplotypes 'Haplo'
-		double _InBagLogLik(CHaplotypeList &Haplo);
+		TFLOAT _InBagLogLik(CHaplotypeList &Haplo);
+
+
+	#ifdef HIBAG_GPU_SUPPORT
+
+		int InitGPUHostData_OutOfBag(TGPU_Genotype *&_GList);
+		int InitGPUHostData_InBag(TGPU_Genotype *&_GList);
+		inline void FreqGPUHostData(TGPU_Genotype *&_GList);
+
+	#endif
 	};
 
 
@@ -494,10 +552,10 @@ namespace HLA_LIB
 		void InitBootstrapCount(int SampCnt[]);
 		/// assign the haplotype frequencies
 		void Assign(int n_snp, const int snpidx[], const int samp_num[], int n_haplo,
-			const double *freq, const int *hla, char *const haplo[], double *_acc=NULL);
+			const TFLOAT *freq, const int *hla, char *const haplo[], TFLOAT *_acc=NULL);
 		/// grow this classifier by adding SNPs
 		void Grow(CBaseSampling &VarSampling, int mtry, bool prune,
-			bool verbose, bool verbose_detail, bool debug);
+			bool verbose, bool verbose_detail);
 
 		/// the owner
 		inline CAttrBag_Model &Owner() { return *_Owner; }
@@ -506,7 +564,7 @@ namespace HLA_LIB
 		/// the number of haplotyeps
 		inline const int nHaplo() const { return _Haplo.TotalNumOfHaplo(); }
 		/// the out-of-bag accuracy
-		inline const double OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
+		inline const TFLOAT OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
 		/// the SNP selection
 		inline const vector<int> &SNPIndex() const { return _SNPIndex; }
 		/// the bootstrapped individuals
@@ -524,7 +582,7 @@ namespace HLA_LIB
 		/// the SNP selection
 		vector<int> _SNPIndex;
 		/// the out-of-bag accuracy
-		double _OutOfBag_Accuracy;
+		TFLOAT _OutOfBag_Accuracy;
 	};
 
 
@@ -548,7 +606,7 @@ namespace HLA_LIB
 
 		/// build n individual classifiers with the specified parameters
 		void BuildClassifiers(int nclassifier, int mtry, bool prune,
-			bool verbose, bool verbose_detail=false, bool debug=false);
+			bool verbose, bool verbose_detail=false);
 
 		/** get the best-guess HLA types
 		 *  \param genomat
@@ -560,7 +618,8 @@ namespace HLA_LIB
 		 *  \param ShowInfo
 		**/
 		void PredictHLA(const int *genomat, int n_samp, int vote_method,
-			int OutH1[], int OutH2[], double OutProb[], bool ShowInfo);
+			int OutH1[], int OutH2[], TFLOAT OutMaxProb[],
+			TFLOAT OutProbArray[], bool ShowInfo);
 
 		/** get the posterior probabilities of HLA type
 		 *  \param genomat
@@ -570,7 +629,7 @@ namespace HLA_LIB
 		 *  \param ShowInfo
 		**/
 		void PredictHLA_Prob(const int *genomat, int n_samp, int vote_method,
-			double OutProb[], bool ShowInfo);
+			TFLOAT OutProb[], bool ShowInfo);
 
 		/// the number of samples
 		inline const int nSamp() const { return _SNPMat.Num_Total_Samp; }
@@ -667,6 +726,19 @@ namespace HLA_LIB
 	protected:
 		std::string fMessage;
 	};
+
+
+
+#ifdef HIBAG_GPU_SUPPORT
+
+	/// Initialize the GPU computing library
+	//  throw errors if it fails
+	void Init_GPU_Support(const char *lib_fn);
+
+	/// Finalize the GPU computing library
+	void Done_GPU_Support();
+
+#endif
 }
 
 #endif /* _LibHLA_H_ */

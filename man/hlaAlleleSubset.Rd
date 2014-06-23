@@ -18,8 +18,7 @@ hlaAlleleSubset(hla, samp.sel=NULL)
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
-\code{\link{hlaGenoSubset}}
+	\code{\link{hlaAllele}}, \code{\link{hlaAlleleDigit}}
 }
 
 \examples{
@@ -31,8 +30,10 @@ dim(HLA_Type_Table)  # 60 13
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+	locus=hla.id, assembly="hg19")
 summary(hla)
 
 subhla <- hlaAlleleSubset(hla, 1:100)
@@ -40,5 +41,4 @@ summary(subhla)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

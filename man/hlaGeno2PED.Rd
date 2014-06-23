@@ -4,7 +4,8 @@
 	Convert to PLINK PED format
 }
 \description{
-	Convert an object of \code{\link{hlaSNPGenoClass}} to a file of PLINK PED format.
+	Convert an object of \code{\link{hlaSNPGenoClass}} to a file of
+PLINK PED format.
 }
 \usage{
 hlaGeno2PED(geno, out.fn)
@@ -31,20 +32,21 @@ data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	HLA_Type_Table[, paste(hla.id, ".2", sep="")], max.resolution=4,
-	locus=hla.id, assembly="hg19")
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+	max.resolution=4, locus=hla.id, assembly="hg19")
 
 # training genotypes
 region <- 500   # kb
 snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
 	hla.id, region*1000, assembly="hg19")
 
-train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id))
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+	snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
 
 hlaGeno2PED(train.geno, "test")
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

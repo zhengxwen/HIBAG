@@ -4,15 +4,16 @@
 	Composite Linkage Disequilibrium
 }
 \description{
-	To calculate composite linkage disequilibrium (r2) between HLA locus and SNP markers
+	To calculate composite linkage disequilibrium (r2) between HLA locus
+and SNP markers.
 }
 \usage{
 hlaGenoLD(hla, geno)
 }
 \arguments{
 	\item{hla}{an object of \code{\link{hlaAlleleClass}}}
-	\item{geno}{an object of \code{\link{hlaSNPGenoClass}}, or a vector or matrix
-		for SNP data}
+	\item{geno}{an object of \code{\link{hlaSNPGenoClass}}, or a vector or
+		matrix for SNP data}
 }
 \value{
 	Return a vector of linkage disequilibrium (r2) for each SNP marker.
@@ -48,8 +49,10 @@ for (i in 1:3)
 	hla.id <- hla.list[i]
 
 	# make a "hlaAlleleClass" object
-	hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-		HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
+	hla <- hlaAllele(HLA_Type_Table$sample.id,
+		H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+		H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+		locus=hla.id, assembly="hg19")
 
 	# linkage disequilibrium between HLA locus and SNP markers
 	ld <- hlaGenoLD(hla, HapMap_CEU_Geno)
@@ -64,6 +67,5 @@ legend("topleft", col=col.list, pt.bg=col.list, text.col=col.list, pch=25,
 	legend=paste("HLA -", hla.list))
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

@@ -10,15 +10,16 @@
 hlaGenoAFreq(obj)
 }
 \arguments{
-	\item{obj}{an object of \code{\link{hlaSNPGenoClass}} or \code{\link{hlaSNPHaploClass}}}
+	\item{obj}{an object of \code{\link{hlaSNPGenoClass}} or
+		\code{\link{hlaSNPHaploClass}}}
 }
 \value{
 	Return allele frequecies.
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaGenoAFreq}}, \code{\link{hlaGenoMFreq}}, \code{\link{hlaGenoMRate}},
-\code{\link{hlaGenoMRate_Samp}}
+	\code{\link{hlaGenoAFreq}}, \code{\link{hlaGenoMFreq}},
+	\code{\link{hlaGenoMRate}}, \code{\link{hlaGenoMRate_Samp}}
 }
 
 \examples{
@@ -30,6 +31,5 @@ summary(HapMap_CEU_Geno)
 summary(hlaGenoAFreq(HapMap_CEU_Geno))
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

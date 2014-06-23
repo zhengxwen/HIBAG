@@ -18,11 +18,8 @@
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{plot.hlaAttrBagClass}}, \code{\link{plot.hlaAttrBagObj}},
-	\code{\link{print.hlaAttrBagObj}},
-	\code{\link{summary.hlaAttrBagClass}}, \code{\link{summary.hlaAttrBagObj}}
+	\code{\link{plot.hlaAttrBagClass}}, \code{\link{summary.hlaAttrBagClass}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

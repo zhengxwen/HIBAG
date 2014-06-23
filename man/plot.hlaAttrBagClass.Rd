@@ -4,7 +4,8 @@
 	Plot a "hlaAttrBagClass" object
 }
 \description{
-	To show a scatterplot of the numbers of individual classifiers and SNP positions.
+	To show a scatterplot of the numbers of individual classifiers and SNP
+positions.
 }
 \usage{
 \method{plot}{hlaAttrBagClass}(x, ...)
@@ -19,5 +20,4 @@
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

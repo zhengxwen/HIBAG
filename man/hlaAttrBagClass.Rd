@@ -17,15 +17,18 @@
 	\item{hla.locus}{the name of HLA locus}
 	\item{hla.allele}{the HLA alleles used in the model}
 	\item{hla.freq}{the HLA allele frequencies}
+	\item{assembly}{the human genome reference, such like "hg19"}
 	\item{model}{internal use}
-	\item{appendix}{optional: \code{platform} -- the text of platform information;
-		\code{information} -- the other information, like authors;
+	\item{appendix}{an optional list:
+		\code{platform} -- supported platform(s);
+		\code{information} -- other information, like training sets, authors;
 		\code{warning} -- any warning message}
 }
 
 \references{
 	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
-	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Platform/Oral Talk);
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging;
+	(Abstract 294, Platform/Oral Talk);
 	Present at the 62nd Annual Meeting of the American Society of Human Genetics,
 	November 9, 2012 in San Francisco, California.
 
@@ -35,9 +38,9 @@
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaAttrBagging}}, \code{\link{hlaAttrBagObj}}
+	\code{\link{hlaAttrBagging}}, \code{\link{hlaParallelAttrBagging}},
+	\code{\link{hlaAttrBagObj}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

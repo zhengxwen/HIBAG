@@ -8,26 +8,38 @@
 provided by \code{template}.
 }
 \usage{
-hlaGenoSwitchStrand(target, template, match.pos=TRUE, verbose=TRUE)
+hlaGenoSwitchStrand(target, template,
+	match.type=c("RefSNP+Position", "RefSNP", "Position"),
+	same.strand=FALSE, verbose=TRUE)
 }
 \arguments{
-	\item{target}{a genotype object of \code{\link{hlaSNPGenoClass}}}
-	\item{template}{a genotype object of \code{\link{hlaSNPGenoClass}}}
-	\item{match.pos}{if TRUE, it uses both SNP ID and position to match SNPs; otherwise,
-		it uses SNP ID only; calling \code{hlaSNPID(, with.pos=match.pos)}}
+	\item{target}{an object of \code{\link{hlaSNPGenoClass}} or
+		\code{\link{hlaSNPHaploClass}}}
+	\item{template}{a genotypic object of \code{\link{hlaSNPGenoClass}},
+		a haplotypic object of \code{\link{hlaSNPHaploClass}},
+		a model object of \code{\link{hlaAttrBagClass}} or
+		a model object of \code{\link{hlaAttrBagObj}}}
+	\item{match.type}{\code{"RefSNP+Position"} (by default) -- using both of
+		RefSNP IDs and positions; \code{"RefSNP"} -- using RefSNP IDs only;
+		\code{"Position"} -- using positions only}
+	\item{same.strand}{\code{TRUE} assuming alleles are on the same strand
+		(e.g., forward strand); otherwise, \code{FALSE} not assuming whether
+		on the same strand or not}
 	\item{verbose}{show information, if TRUE}
 }
 \details{
-	The A/B pairs of \code{target} are determined using the information from \code{template}.
+	The A/B pairs of \code{target} are determined using the information from
+\code{template}.
 }
 \value{
-	Return a \code{\link{hlaSNPGenoClass}} object consisting of the SNP intersect
-between \code{target} and \code{template}.
+	Return a \code{\link{hlaSNPGenoClass}} or \code{\link{hlaSNPHaploClass}}
+object consisting of the SNP intersect between \code{target} and
+\code{template}.
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
-\code{\link{hlaGenoSubset}}
+	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
+	\code{\link{hlaGenoSubset}}, \code{\link{hlaHaploSubset}}
 }
 
 \examples{
@@ -55,6 +67,5 @@ summary(geno)
 # 136 655 632 141 
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

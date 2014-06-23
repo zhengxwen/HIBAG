@@ -232,7 +232,8 @@ static inline void split_allele(const char *txt, string &allele1, string &allele
 }
 
 DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
-	char *allele2[], double afreq2[], int I2[], int *n,
+	char *allele2[], double afreq2[], int I2[],
+	int *if_same_strand, int *n,
 	LongBool out_flag[], int *out_n_stand_amb, int *out_n_mismatch,
 	LongBool *out_err)
 {
@@ -243,6 +244,8 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 
 		*out_n_stand_amb = 0;
 		*out_n_mismatch = 0;
+
+		const bool check_strand = (if_same_strand[0] == 0);
 
 		// loop for each SNP
 		for (int i=0; i < *n; i++)
@@ -263,33 +266,45 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 			split_allele(allele2[I2[i]-1], p1, p2);
 
 			// allele frequency
-			double F1=afreq1[I1[i]-1], F2=afreq2[I2[i]-1];
+			const double F1 = afreq1[I1[i]-1];
+			const double F2 = afreq2[I2[i]-1];
 
 			if (ATGC(s1) && ATGC(s2) && ATGC(p1) && ATGC(p2))
 			{
 				// check
 				if ( (s1 == p1) && (s2 == p2) )
 				{
-					// for example, + C/G <---> - C/G, strand ambi
-					if (s1 == MAP[p2])
-						switch_freq_detect = 1;
+					if (check_strand)
+					{
+						// for example, + C/G <---> - C/G, strand ambi
+						if (s1 == MAP[p2])
+							switch_freq_detect = 1;
+					}
 				} else if ( (s1 == p2) && (s2 == p1) )
 				{
-					// for example, + C/G <---> - G/C, strand ambi
-					if (s1 == MAP[p1])
-						switch_freq_detect = 1;
-					else
+					if (check_strand)
+					{
+						// for example, + C/G <---> - G/C, strand ambi
+						if (s1 == MAP[p1])
+							switch_freq_detect = 1;
+						else
+							switch_flag = true;
+					} else
 						switch_flag = true;
-				} else if ( (s1 == MAP[p1]) && (s2 == MAP[p2]) )
-				{
-					// for example, + C/G <---> - G/C, strand ambi
-					if (s1 == p2)
-						switch_freq_detect = 1;
-				} else if ( (s1 == MAP[p2]) && (s2 == MAP[p1]) )
-				{
-					switch_flag = true;
 				} else {
-					switch_freq_detect = 2;
+					if (check_strand)
+					{
+						if ( (s1 == MAP[p1]) && (s2 == MAP[p2]) )
+						{
+							// for example, + C/G <---> - G/C, strand ambi
+							if (s1 == p2)
+								switch_freq_detect = 1;
+						} else if ( (s1 == MAP[p2]) && (s2 == MAP[p1]) )
+							switch_flag = true;
+						else
+							switch_freq_detect = 2;
+					} else
+						switch_freq_detect = 2;
 				}
 			} else {
 				if ((s1 == p1) && (s2 == p2))
@@ -302,9 +317,8 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 						switch_freq_detect = 1;  // ambiguous
 					else
 						switch_flag = true;
-				} else {
+				} else
 					switch_freq_detect = 2;
-				}
 			}
 
 			if (switch_freq_detect != 0)
@@ -430,18 +444,17 @@ DLLEXPORT void HIBAG_Close(int *model, LongBool *out_err)
  *  \param prune           if TRUE, perform a parsimonious forward variable selection
  *  \param verbose         show information if TRUE
  *  \param verbose_detail  show more information if TRUE
- *  \param Debug           if TRUE, show debug information
  *  \param out_err         output the error information, 0 -- no error, 1 -- an error exists
 **/
 DLLEXPORT void HIBAG_NewClassifiers(int *model, int *nclassifier, int *mtry,
-	LongBool *prune, LongBool *verbose, LongBool *verbose_detail, LongBool *Debug,
+	LongBool *prune, LongBool *verbose, LongBool *verbose_detail,
 	LongBool *out_err)
 {
 	GetRNGstate();
 	CORETRY
 		_Check_HIBAG_Model(*model);
 		_HIBAG_MODELS_[*model]->BuildClassifiers(*nclassifier, *mtry,
-			*prune, *verbose, *verbose_detail, *Debug);
+			*prune, *verbose, *verbose_detail);
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 	PutRNGstate();
@@ -459,14 +472,30 @@ DLLEXPORT void HIBAG_NewClassifiers(int *model, int *nclassifier, int *mtry,
  *  \param out_Prob     the posterior probabilities
  *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
 **/
-DLLEXPORT void HIBAG_Predict(int *model, int *GenoMat, int *nSamp,
+DLLEXPORT void HIBAG_Predict_Resp(int *model, int *GenoMat, int *nSamp,
 	int *vote_method, LongBool *ShowInfo,
 	int out_H1[], int out_H2[], double out_Prob[], LongBool *out_err)
 {
 	CORETRY
 		_Check_HIBAG_Model(*model);
-		_HIBAG_MODELS_[*model]->PredictHLA(
-			GenoMat, *nSamp, *vote_method, out_H1, out_H2, out_Prob, *ShowInfo);
+		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
+
+	#if (HIBAG_FLOAT_TYPE_ID == 0)
+
+		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2, out_Prob,
+			NULL, *ShowInfo);
+
+	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+
+		vector<float> tmp(*nSamp);
+		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2, &tmp[0],
+			NULL, *ShowInfo);
+		for (int i=0; i < *nSamp; i++) out_Prob[i] = tmp[i];
+
+	#else
+	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+	#endif
+
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 }
@@ -488,8 +517,67 @@ DLLEXPORT void HIBAG_Predict_Prob(int *model, int *GenoMat, int *nSamp,
 {
 	CORETRY
 		_Check_HIBAG_Model(*model);
-		_HIBAG_MODELS_[*model]->PredictHLA_Prob(
-			GenoMat, *nSamp, *vote_method, out_Prob, *ShowInfo);
+		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
+
+	#if (HIBAG_FLOAT_TYPE_ID == 0)
+
+		M.PredictHLA_Prob(GenoMat, *nSamp, *vote_method, out_Prob, *ShowInfo);
+
+	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+
+		const int n = M.nHLA()*(M.nHLA()+1) / 2;
+		vector<float> tmp(n);
+		M.PredictHLA_Prob(GenoMat, *nSamp, *vote_method, &tmp[0], *ShowInfo);
+		for (int i=0; i < n; i++) out_Prob[i] = tmp[i];
+
+	#else
+	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+	#endif
+
+		*out_err = 0;
+	CORECATCH(*out_err = 1)
+}
+
+
+/**
+ *  to predict HLA types
+ *
+ *  \param model        the model index
+ *  \param GenoMat      the pointer to the SNP genotypes
+ *  \param nSamp        the number of samples in GenoMat
+ *  \param out_H1       the first HLA alleles
+ *  \param out_H2       the second HLA alleles
+ *  \param out_Prob     the posterior probabilities
+ *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
+**/
+DLLEXPORT void HIBAG_Predict_Resp_Prob(int *model, int *GenoMat, int *nSamp,
+	int *vote_method, LongBool *ShowInfo,
+	int out_H1[], int out_H2[], double out_MaxProb[],
+	double out_Prob[], LongBool *out_err)
+{
+	CORETRY
+		_Check_HIBAG_Model(*model);
+		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
+
+	#if (HIBAG_FLOAT_TYPE_ID == 0)
+
+		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2,
+			out_MaxProb, out_Prob, *ShowInfo);
+
+	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+
+		vector<float> tmp(*nSamp);
+		const int n = M.nHLA()*(M.nHLA()+1) / 2;
+		vector<float> tmp_d(n);
+		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2, &tmp[0],
+			&tmp_d[0], *ShowInfo);
+		for (int i=0; i < *nSamp; i++) out_Prob[i] = tmp[i];
+		for (int i=0; i < n; i++) out_Prob[i] = tmp_d[i];
+
+	#else
+	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+	#endif
+
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 }
@@ -508,13 +596,30 @@ DLLEXPORT void HIBAG_Predict_Prob(int *model, int *GenoMat, int *nSamp,
  *  \param acc          the out-of-bag accuracy
  *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
 **/
-DLLEXPORT void HIBAG_NewClassifierHaplo(int *model, int *n_snp, int snpidx[], int samp_num[],
-	int *n_haplo, double *freq, int *hla, char *haplo[], double *acc, LongBool *out_err)
+DLLEXPORT void HIBAG_NewClassifierHaplo(int *model, int *n_snp, int snpidx[],
+	int samp_num[], int *n_haplo, double *freq, int *hla, char *haplo[],
+	double *acc, LongBool *out_err)
 {
 	CORETRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Classifier *I = _HIBAG_MODELS_[*model]->NewClassifierAllSamp();
+
+	#if (HIBAG_FLOAT_TYPE_ID == 0)
+
 		I->Assign(*n_snp, snpidx, samp_num, *n_haplo, freq, hla, haplo, acc);
+
+	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+
+		float acc_float = *acc;
+		vector<float> tmp(*n_haplo);
+		for (int i=0; i < *n_haplo; i++) tmp[i] = freq[i];
+		I->Assign(*n_snp, snpidx, samp_num, *n_haplo, &tmp[0], hla, haplo,
+			&acc_float);
+
+	#else
+	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+	#endif
+
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 }
@@ -590,7 +695,7 @@ DLLEXPORT void HIBAG_Classifier_GetHaplos(int *model, int *idx,
 			{
 				out_freq[idx] = it->Frequency;
 				out_hla[idx] = i + 1;
-				RStrAgn(it->SNPToString(Voter.nSNP()).c_str(), &out_haplo[idx]);
+				RStrAgn(it->HaploToStr(Voter.nSNP()).c_str(), &out_haplo[idx]);
 				idx ++;
 			}
 		}
@@ -682,7 +787,7 @@ DLLEXPORT void HIBAG_GetParam(int *EM_MaxNum, double *EM_RelTol, int *Search_Max
 {
 	*EM_MaxNum = EM_MaxNum_Iterations;
 	*EM_RelTol = EM_FuncRelTol;
-	*Search_MaxNum = MAXNUM_SNP_IN_CLASSIFIER;
+	*Search_MaxNum = HIBAG_MAXNUM_SNP_IN_CLASSIFIER;
 }
 
 
@@ -827,13 +932,26 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 }
 
 
-
 // -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
-
+// GPU supports
 /**
  *  to get an error message
- *
+ *  \param lib_fn        the file name of GPU computing library
+ *  \param prec          1 -- double, 2 -- single
+**/
+DLLEXPORT void HIBAG_GPU_Init(char **lib_fn, int *prec, int *out_err)
+{
+	CORETRY
+		Init_GPU_Support(lib_fn[0]);
+		*out_err = 0;
+	CORECATCH(*out_err = 1)
+}
+
+
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+/**
+ *  to get an error message
  *  \param Msg           the last error information
 **/
 DLLEXPORT void HIBAG_ErrMsg(char **Msg)
@@ -850,15 +968,26 @@ DLLEXPORT void HIBAG_ErrMsg(char **Msg)
 //
 
 /// initialize the package
-DLLEXPORT void HIBAG_Init()
+DLLEXPORT void HIBAG_Init(int *SSE)
 {
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
+
+	#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+		*SSE = 1;
+	#else
+		*SSE = 0;
+	#endif
 }
 
 /// finalize the package
 DLLEXPORT void HIBAG_Done()
 {
 	try {
+
+	#ifdef HIBAG_GPU_SUPPORT
+		Done_GPU_Support();
+	#endif
+
 		for (int i=0; i < MODEL_NUM_LIMIT; i++)
 		{
 			CAttrBag_Model* m = _HIBAG_MODELS_[i];

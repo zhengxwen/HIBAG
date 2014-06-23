@@ -19,7 +19,7 @@ hlaCombineModelObj(obj1, obj2)
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaAttrBagging}}, \code{\link{hlaParallelAttrBagging}}
+	\code{\link{hlaAttrBagging}}, \code{\link{hlaModelFiles}}
 }
 
 \examples{
@@ -29,8 +29,10 @@ data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+	locus=hla.id, assembly="hg19")
 
 # SNP predictors within the flanking region on each side
 region <- 500   # kb
@@ -39,7 +41,8 @@ snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
 length(snpid)  # 275
 
 # training genotypes
-train.geno <- hlaGenoSubset(HapMap_CEU_Geno, snp.sel=match(snpid, HapMap_CEU_Geno$snp.id))
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+	snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
 
 # train a HIBAG model
 set.seed(100)
@@ -54,5 +57,4 @@ summary(m.obj)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

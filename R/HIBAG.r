@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.1.0
+# Package Name: HIBAG v1.2.0
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
@@ -9,6 +9,122 @@
 # License: GPL-3
 # Email: zhengx@u.washington.edu
 #
+
+
+#######################################################################
+#
+# the internal functions
+#
+#######################################################################
+
+#######################################################################
+# get the name of HLA gene
+#
+
+.hla_gene_name_string <- function(geno.name)
+{
+	stopifnot(is.character(geno.name))
+	i <- grep(paste("\\b",c(
+			"A", "B", "C", "DMA", "DMB", "DOA", "DOB",
+			"DRA\\d", "DRB\\d", "DQA\\d", "DQB\\d", "DPA\\d", "DPB\\d"),
+		"\\b", sep="", collapse="|"),
+		geno.name)
+	geno.name[i] <- paste("HLA -", geno.name[i])
+	geno.name
+}
+
+
+#######################################################################
+# call function in parallel
+#
+
+.DynamicClusterCall <- function(cl, fun, combine.fun, msg.fn, n,
+	stop.cluster, ...)
+{
+	# the functions are all defined in 'parallel/R/snow.R'
+	postNode <- function(con, type, value = NULL, tag = NULL)
+	{
+		parallel:::sendData(con, list(type = type, data = value, tag = tag))
+	}
+	sendCall <- function(con, fun, args, return = TRUE, tag = NULL)
+	{
+		postNode(con, "EXEC",
+			list(fun = fun, args = args, return = return, tag = tag))
+		NULL
+	}
+	recvOneResult <- function(cl)
+	{
+		v <- parallel:::recvOneData(cl)
+		list(value = v$value$value, node = v$node, tag = v$value$tag)
+	}
+
+
+	#################################################################
+	# check
+	stopifnot(is.null(cl) | inherits(cl, "cluster"))
+	stopifnot(is.function(fun))
+	stopifnot(is.function(combine.fun))
+	stopifnot(is.function(msg.fn))
+	stopifnot(is.numeric(n))
+	stopifnot(is.logical(stop.cluster))
+
+	val <- NULL
+	if (!is.null(cl))
+	{
+		p <- length(cl)
+		if (n > 0L && p)
+		{
+			## **** this closure is sending to all nodes
+			argfun <- function(i) c(i, list(...))
+
+			submit <- function(node, job)
+				sendCall(cl[[node]], fun, argfun(job), tag = job)
+
+			for (i in 1:min(n, p)) submit(i, i)
+			for (i in 1:n)
+			{
+				d <- recvOneResult(cl)
+				j <- i + min(n, p)
+
+				stopflag <- FALSE
+				if (j <= n)
+				{
+					submit(d$node, j)
+				} else {
+					if (stop.cluster)
+					{
+						stopCluster(cl[d$node])
+						cl <- cl[-d$node]
+						stopflag <- TRUE
+					}
+				}
+
+				dv <- d$value
+				if (inherits(dv, "try-error"))
+				{
+					if (stop.cluster)
+						stopCluster(cl)
+					stop("One node produced an error: ", as.character(dv))
+				}
+
+				msg.fn(d$node, dv)
+				if (stopflag)
+					message(sprintf("Stop \"job %d\".", d$node))
+
+				val <- combine.fun(val, dv)
+			}
+		}
+	} else {
+		for (i in 1:n)
+		{
+			dv <- fun(i, ...)
+			msg.fn(i, dv)
+			val <- combine.fun(val, dv)
+		}
+	}
+
+	val
+}
 
 
 
@@ -27,7 +143,7 @@
 #     snp.id -- snp id
 #     snp.position -- snp positions in basepair
 #     snp.allele -- snp alleles, ``A allele/B allele''
-#     assembly -- genome assembly, such like "hg19"
+#     assembly -- the human genome reference, such like "hg19"
 #
 #
 # hlaSNPHaploClass is a class of SNP haplotypes
@@ -37,7 +153,7 @@
 #     snp.id -- snp id
 #     snp.position -- snp positions in basepair
 #     snp.allele -- snp alleles, ``A allele/B allele''
-#     assembly -- genome assembly, such like "hg19"
+#     assembly -- the human genome reference, such like "hg19"
 #
 #
 
@@ -47,7 +163,7 @@
 #
 
 hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
-	A.allele, B.allele, assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
+	A.allele, B.allele, assembly=c("auto", "hg18", "hg19", "unknown"))
 {
 	# check
 	stopifnot(is.matrix(genotype))
@@ -62,7 +178,7 @@ hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
 	assembly <- match.arg(assembly)
 	if (assembly == "auto")
 	{
-		message("using the default genome assembly \"hg19\"")
+		message("using the default genome assembly (assembly=\"hg19\")")
 		assembly <- "hg19"
 	}
 
@@ -72,30 +188,24 @@ hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
 		assembly = assembly)
 	class(rv) <- "hlaSNPGenoClass"
 
-    # valid SNP alleles
-    flag <- !((A.allele %in% c("A", "T", "G", "C")) & (B.allele %in% c("A", "T", "G", "C")))
-    if (any(flag))
-    {
-        warning(sprintf("There are %d SNPs with invalid alleles, and they have been removed.",
-        	sum(flag)))
-        rv <- hlaGenoSubset(rv, snp.sel=!flag)
-    }
-    # valid snp.id
-    flag <- is.na(rv$snp.id)
-    if (any(flag))
-    {
-        warning(sprintf("There are %d SNPs with missing SNP id, and they have been removed.",
-        	sum(flag)))
-        rv <- hlaGenoSubset(rv, snp.sel=!flag)
-    }
-    # valid snp.position
-    flag <- is.na(rv$snp.position)
-    if (any(flag))
-    {
-        warning(sprintf("There are %d SNPs with missing SNP positions, and they have been removed.",
-        	sum(flag)))
-        rv <- hlaGenoSubset(rv, snp.sel=!flag)
-    }
+	# valid snp.id
+	flag <- is.na(rv$snp.id)
+	if (any(flag))
+	{
+		warning(sprintf(
+			"There are %d SNPs with missing SNP id, and they have been removed.",
+			sum(flag)))
+		rv <- hlaGenoSubset(rv, snp.sel=!flag)
+	}
+	# valid snp.position
+	flag <- is.na(rv$snp.position)
+	if (any(flag))
+	{
+		warning(sprintf(
+			"There are %d SNPs with missing SNP positions, and they have been removed.",
+			sum(flag)))
+		rv <- hlaGenoSubset(rv, snp.sel=!flag)
+	}
 
 	return(rv)
 }
@@ -106,7 +216,7 @@ hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
 #
 
 hlaMakeSNPHaplo <- function(haplotype, sample.id, snp.id, snp.position,
-	A.allele, B.allele, assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
+	A.allele, B.allele, assembly=c("auto", "hg18", "hg19", "unknown"))
 {
 	# check
 	stopifnot(is.matrix(haplotype))
@@ -121,7 +231,7 @@ hlaMakeSNPHaplo <- function(haplotype, sample.id, snp.id, snp.position,
 	assembly <- match.arg(assembly)
 	if (assembly == "auto")
 	{
-		message("using the default genome assembly \"hg19\"")
+		message("using the default genome assembly (assembly=\"hg19\")")
 		assembly <- "hg19"
 	}
 
@@ -131,32 +241,26 @@ hlaMakeSNPHaplo <- function(haplotype, sample.id, snp.id, snp.position,
 		assembly = assembly)
 	class(rv) <- "hlaSNPHaploClass"
 
-    # valid SNP alleles
-    flag <- !((A.allele %in% c("A", "T", "G", "C")) & (B.allele %in% c("A", "T", "G", "C")))
-    if (any(flag))
-    {
-        warning(sprintf("There are %d SNPs with invalid alleles, and they have been removed.",
-        	sum(flag)))
-        rv <- hlaHaploSubset(rv, snp.sel=!flag)
-    }
-    # valid snp.id
-    flag <- is.na(rv$snp.id)
-    if (any(flag))
-    {
-        warning(sprintf("There are %d SNPs with missing SNP id, and they have been removed.",
-        	sum(flag)))
-        rv <- hlaHaploSubset(rv, snp.sel=!flag)
-    }
-    # valid snp.position
-    flag <- is.na(rv$snp.position)
-    if (any(flag))
-    {
-        warning(sprintf("There are %d SNPs with missing SNP positions, and they have been removed.",
-        	sum(flag)))
-        rv <- hlaHaploSubset(rv, snp.sel=!flag)
-    }
+	# valid snp.id
+	flag <- is.na(rv$snp.id)
+	if (any(flag))
+	{
+		warning(sprintf(
+			"There are %d SNPs with missing SNP id, and they have been removed.",
+			sum(flag)))
+		rv <- hlaHaploSubset(rv, snp.sel=!flag)
+	}
+	# valid snp.position
+	flag <- is.na(rv$snp.position)
+	if (any(flag))
+	{
+		warning(sprintf(
+			"There are %d SNPs with missing SNP positions, and they have been removed.",
+			sum(flag)))
+		rv <- hlaHaploSubset(rv, snp.sel=!flag)
+	}
 
-    return(rv)
+	return(rv)
 }
 
 
@@ -239,7 +343,7 @@ hlaHaploSubset <- function(haploobj, samp.sel=NULL, snp.sel=NULL)
 		snp.id = haploobj$snp.id[snp.sel],
 		snp.position = haploobj$snp.position[snp.sel],
 		snp.allele = haploobj$snp.allele[snp.sel],
-		assembly = haploobj$genoobj
+		assembly = haploobj$assembly
 	)
 	class(rv) <- "hlaSNPHaploClass"
 	return(rv)
@@ -260,7 +364,7 @@ hlaHaplo2Geno <- function(hapobj)
 		snp.id = hapobj$snp.id,
 		snp.position = hapobj$snp.position,
 		snp.allele = hapobj$snp.allele,
-		assembly = hapobj$genoobj
+		assembly = hapobj$assembly
 	)
 	class(rv) <- "hlaSNPGenoClass"
 	return(rv)
@@ -272,27 +376,48 @@ hlaHaplo2Geno <- function(hapobj)
 #   corrected strand.
 #
 
-hlaGenoSwitchStrand <- function(target, template, match.pos=TRUE, verbose=TRUE)
+hlaGenoSwitchStrand <- function(target, template,
+	match.type=c("RefSNP+Position", "RefSNP", "Position"),
+	same.strand=FALSE, verbose=TRUE)
 {
 	# check
-	stopifnot(inherits(target, "hlaSNPGenoClass") | inherits(target, "hlaSNPHaploClass"))
+	stopifnot(inherits(target, "hlaSNPGenoClass") |
+		inherits(target, "hlaSNPHaploClass"))
 	stopifnot(inherits(template, "hlaSNPGenoClass") |
-		inherits(template, "hlaSNPHaploClass") | inherits(template, "hlaAttrBagClass"))
-	stopifnot(is.logical(match.pos))
+		inherits(template, "hlaSNPHaploClass") |
+		inherits(template, "hlaAttrBagClass") |
+		inherits(template, "hlaAttrBagObj"))
+	stopifnot(is.logical(same.strand))
 	stopifnot(is.logical(verbose))
+	match.type <- match.arg(match.type)
 
 	# initialize
-	s1 <- hlaSNPID(template, match.pos)
-	s2 <- hlaSNPID(target, match.pos)
-	s <- intersect(s1, s2)
-	if (length(s) <= 0) stop("There is no common SNP.")
-	I1 <- match(s, s1); I2 <- match(s, s2)
+	s1 <- hlaSNPID(template, match.type)
+	s2 <- hlaSNPID(target, match.type)
+
+	flag <- TRUE
+	if (length(s1) == length(s2))
+	{
+		if (all(s1 == s2, na.rm=TRUE))
+		{
+			s <- s1
+			I1 <- I2 <- seq_len(length(s1))
+			flag <- FALSE
+		}
+	}
+	if (flag)
+	{
+		s <- intersect(s1, s2)
+		if (length(s) <= 0) stop("There is no common SNP.")
+		I1 <- match(s, s1); I2 <- match(s, s2)
+	}
 
 	# compute allele frequencies
 	if (inherits(template, "hlaSNPGenoClass"))
 	{
 		template.afreq <- rowMeans(template$genotype, na.rm=TRUE) * 0.5
-	} else if (inherits(template, "hlaSNPHaploClass")) {
+	} else if (inherits(template, "hlaSNPHaploClass"))
+	{
 		template.afreq <- rowMeans(template$haplotype, na.rm=TRUE)
 	} else {
 		template.afreq <- template$snp.allele.freq
@@ -305,8 +430,10 @@ hlaGenoSwitchStrand <- function(target, template, match.pos=TRUE, verbose=TRUE)
 	}
 
 	# call
-	gz <- .C("HIBAG_AlleleStrand", template$snp.allele, template.afreq, I1,
-		target$snp.allele, target.afreq, I2, length(s), out=logical(length(s)),
+	gz <- .C("HIBAG_AlleleStrand",
+		template$snp.allele, template.afreq, I1,
+		target$snp.allele, target.afreq, I2,
+		same.strand, length(s), out=logical(length(s)),
 		out.n.ambiguity=integer(1), out.n.mismatching=integer(1),
 		err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
 	if (gz$err != 0) stop(hlaErrMsg())
@@ -396,16 +523,20 @@ hlaGenoSwitchStrand <- function(target, template, match.pos=TRUE, verbose=TRUE)
 # To get the information of SNP ID and position
 #
 
-hlaSNPID <- function(obj, with.pos=TRUE)
+hlaSNPID <- function(obj, type=c("RefSNP+Position", "RefSNP", "Position"))
 {
-	stopifnot(inherits(obj, "hlaSNPGenoClass") | inherits(obj, "hlaSNPHaploClass") |
-		inherits(obj, "hlaAttrBagClass") | inherits(obj, "hlaAttrBagObj"))
-	if (with.pos)
-	{
+	stopifnot( inherits(obj, "hlaSNPGenoClass") |
+		inherits(obj, "hlaSNPHaploClass") | inherits(obj, "hlaAttrBagClass") |
+		inherits(obj, "hlaAttrBagObj") )
+	type <- match.arg(type)
+	if (type == "RefSNP+Position")
 		paste(obj$snp.id, obj$snp.position, sep="-")
-	} else {
+	else if (type == "RefSNP")
 		obj$snp.id
-	}
+	else if (type == "Position")
+		obj$snp.position
+	else
+		invisible()
 }
 
 
@@ -413,35 +544,42 @@ hlaSNPID <- function(obj, with.pos=TRUE)
 # To combine two SNP genotype dataset
 #
 
-hlaGenoCombine <- function(geno1, geno2, match.pos=TRUE, allele.check=TRUE)
+hlaGenoCombine <- function(geno1, geno2,
+	match.type=c("RefSNP+Position", "RefSNP", "Position"),
+	allele.check=TRUE, same.strand=FALSE, verbose=TRUE)
 {
-    # check
-    stopifnot(inherits(geno1, "hlaSNPGenoClass"))
-    stopifnot(inherits(geno2, "hlaSNPGenoClass"))
-	stopifnot(is.logical(match.pos))
+	# check
+	stopifnot(inherits(geno1, "hlaSNPGenoClass"))
+	stopifnot(inherits(geno2, "hlaSNPGenoClass"))
 	stopifnot(is.logical(allele.check))
+	stopifnot(is.logical(same.strand))
+	stopifnot(is.logical(verbose))
+	match.type <- match.arg(match.type)
 
 	if (allele.check)
 	{
-	    tmp2 <- hlaGenoSwitchStrand(geno2, geno1, match.pos)
-    	tmp1 <- hlaGenoSubset(geno1, snp.sel=
-    		match(hlaSNPID(tmp2, match.pos), hlaSNPID(geno1, match.pos)))
-    } else {
-		s1 <- hlaSNPID(geno1, match.pos)
-		s2 <- hlaSNPID(geno2, match.pos)
+		tmp2 <- hlaGenoSwitchStrand(geno2, geno1, match.type,
+			same.strand, verbose)
+		tmp1 <- hlaGenoSubset(geno1, snp.sel=
+			match(hlaSNPID(tmp2, match.type), hlaSNPID(geno1, match.type)))
+	} else {
+		s1 <- hlaSNPID(geno1, match.type)
+		s2 <- hlaSNPID(geno2, match.type)
 		set <- unique(intersect(s1, s2))
 		tmp1 <- hlaGenoSubset(geno1, snp.sel=match(set, s1))
 		tmp2 <- hlaGenoSubset(geno2, snp.sel=match(set, s2))
-    }
+	}
 
-    rv <- list(genotype = cbind(tmp1$genotype, tmp2$genotype),
-        sample.id = c(tmp1$sample.id, tmp2$sample.id),
-        snp.id = tmp1$snp.id, snp.position = tmp1$snp.position,
-        snp.allele = tmp1$snp.allele,
-        assembly = tmp1$assembly)
-    class(rv) <- "hlaSNPGenoClass"
+	rv <- list(genotype = cbind(tmp1$genotype, tmp2$genotype),
+		sample.id = c(tmp1$sample.id, tmp2$sample.id),
+		snp.id = tmp1$snp.id, snp.position = tmp1$snp.position,
+		snp.allele = tmp1$snp.allele,
+		assembly = tmp1$assembly)
+	colnames(rv$genotype) <- NULL
+	rownames(rv$genotype) <- NULL
 
-    return(rv)
+	class(rv) <- "hlaSNPGenoClass"
+	return(rv)
 }
 
 
@@ -472,8 +610,8 @@ hlaGeno2PED <- function(geno, out.fn)
 		m[, 2*(i-1)+2] <- allele[c(2, 2, 1)[g]]
 	}
 	rv <- cbind(Family=geno$sample.id, Ind=geno$sample.id,
-		Paternal=rep(0, n), Maternal=rep(0, n), Sex=rep(0, n), Pheno=rep(-9, n),
-		m)
+		Paternal=rep(0, n), Maternal=rep(0, n),
+		Sex=rep(0, n), Pheno=rep(-9, n), m)
 	write.table(rv, file=paste(out.fn, ".ped", sep=""),
 		row.names=FALSE, col.names=FALSE, quote=FALSE)
 
@@ -487,7 +625,7 @@ hlaGeno2PED <- function(geno, out.fn)
 #
 
 hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
-	import.chr="xMHC", assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"),
+	import.chr="xMHC", assembly=c("auto", "hg18", "hg19", "unknown"),
 	verbose=TRUE)
 {
 	# check
@@ -501,8 +639,12 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 	assembly <- match.arg(assembly)
 	if (assembly == "auto")
 	{
-		message("using the default genome assembly \"hg19\"")
+		message("using the default genome assembly (assembly=\"hg19\")")
+		warning("Please explicitly specify the argument 'assembly=\"hg18\"' or 'assembly=\"hg19\"'.")
 		assembly <- "hg19"
+	} else if (assembly == "unknown")
+	{
+		warning("Please explicitly specify the argument 'assembly=\"hg18\"' or 'assembly=\"hg19\"'.")
 	}
 
 	# detect bed.fn
@@ -541,8 +683,12 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 	# position
 	snp.pos <- bimD$pos
 	snp.pos[!is.finite(snp.pos)] <- 0
+
 	# snp.id
 	snp.id <- bimD$snp.id
+	if (length(snp.id) != length(unique(snp.id)))
+		stop("The SNP IDs in the PLINK binary file should be unique!")
+
 	# snp allele
 	snp.allele <- paste(bimD$allele1, bimD$allele2, sep="/")
 	if (verbose)
@@ -632,8 +778,6 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 
 
 
-
-
 #######################################################################
 # Summarize a "hlaSNPGenoClass" object
 #
@@ -676,7 +820,7 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
 		cat(sprintf("Minor allele frequency:\n\t%s\n", fn(rv$maf)))
 
 		# allele information
-		cat("Allele information:")
+		cat("Allelic information:")
 		print(rv$allele)
 	}
 
@@ -727,7 +871,7 @@ summary.hlaSNPHaploClass <- function(object, show=TRUE, ...)
 		cat(sprintf("Minor allele frequency:\n\t%s\n", fn(rv$maf)))
 
 		# allele information
-		cat("Allele information:")
+		cat("Allelic information:")
 		print(rv$allele)
 	}
 
@@ -751,7 +895,8 @@ summary.hlaSNPHaploClass <- function(object, show=TRUE, ...)
 hlaGenoAFreq <- function(obj)
 {
 	# check
-	stopifnot(inherits(obj, "hlaSNPGenoClass") | inherits(obj, "hlaSNPHaploClass"))
+	stopifnot(inherits(obj, "hlaSNPGenoClass") |
+		inherits(obj, "hlaSNPHaploClass"))
     if (inherits(obj, "hlaSNPGenoClass"))
     {
         rowMeans(obj$genotype, na.rm=TRUE) * 0.5
@@ -768,7 +913,8 @@ hlaGenoAFreq <- function(obj)
 hlaGenoMFreq <- function(obj)
 {
 	# check
-	stopifnot(inherits(obj, "hlaSNPGenoClass") | inherits(obj, "hlaSNPHaploClass"))
+	stopifnot(inherits(obj, "hlaSNPGenoClass") |
+		inherits(obj, "hlaSNPHaploClass"))
     if (inherits(obj, "hlaSNPGenoClass"))
     {
         F <- rowMeans(obj$genotype, na.rm=TRUE) * 0.5
@@ -786,7 +932,8 @@ hlaGenoMFreq <- function(obj)
 hlaGenoMRate <- function(obj)
 {
 	# check
-	stopifnot(inherits(obj, "hlaSNPGenoClass") | inherits(obj, "hlaSNPHaploClass"))
+	stopifnot(inherits(obj, "hlaSNPGenoClass") |
+		inherits(obj, "hlaSNPHaploClass"))
     if (inherits(obj, "hlaSNPGenoClass"))
     {
 		rowMeans(is.na(obj$genotype))
@@ -803,7 +950,8 @@ hlaGenoMRate <- function(obj)
 hlaGenoMRate_Samp <- function(obj)
 {
 	# check
-	stopifnot(inherits(obj, "hlaSNPGenoClass") | inherits(obj, "hlaSNPHaploClass"))
+	stopifnot(inherits(obj, "hlaSNPGenoClass") |
+		inherits(obj, "hlaSNPHaploClass"))
     if (inherits(obj, "hlaSNPGenoClass"))
     {
         colMeans(is.na(obj$genotype))
@@ -829,34 +977,35 @@ hlaGenoMRate_Samp <- function(obj)
 # To get the starting and ending positions in basepair for HLA loci
 #
 
-hlaLociInfo <- function(assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
+hlaLociInfo <- function(assembly=c("auto", "hg18", "hg19", "unknown"))
 {
 	# check
 	assembly <- match.arg(assembly)
 	if (assembly == "auto")
 	{
-		message("using the default genome assembly \"hg19\"")
+		message("using the default genome assembly (assembly=\"hg19\")")
 		assembly <- "hg19"
 	}
 
 	# the name of HLA genes
 	ID <- c("A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1", "any")
 
-	if (assembly %in% c("hg18", "NCBI36"))
+	if (assembly == "hg18")
 	{
 		# starting position
-		pos.HLA.start <- as.integer(c(30018310, 31429628, 31344508, 32654527, 32593129,
-			32713161, 32735635, 33151738, NA))
+		pos.HLA.start <- as.integer(c(30018310, 31429628, 31344508, 32654527,
+			32593129, 32713161, 32735635, 33151738, NA))
 
 		# ending position
-		pos.HLA.end <- as.integer(c(30021633, 31432914, 31347834, 32665559, 32605984,
-			32719407, 32742444, 33162954, NA))
-	} else if (assembly %in% c("hg19", "NCBI37"))
+		pos.HLA.end <- as.integer(c(30021633, 31432914, 31347834, 32665559,
+			32605984, 32719407, 32742444, 33162954, NA))
+	} else if (assembly == "hg19")
 	{
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-A.html
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-B.html
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-C.html
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DRB1.html
+		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DRB5.html
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DQA1.html
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DQB1.html
 		# http://atlasgeneticsoncology.org/Genes/GC_HLA-DPB1.html
@@ -869,7 +1018,7 @@ hlaLociInfo <- function(assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
 		pos.HLA.end <- as.integer(  c(29913661, 31324989, 31239913, 32557613,
 			32498006, 32611429, 32634466, 33057473, NA))
 	} else {
-		stop("Invalid genome assembly!")
+		stop("Unknown human genome reference in 'assembly'!")
 	}
 
 	# length in basepair
@@ -892,10 +1041,11 @@ hlaLociInfo <- function(assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"))
 # Limit the resolution of HLA alleles
 #
 
-hlaAlleleDigit <- function(obj, max.resolution="4-digit")
+hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
 {
 	# check
 	stopifnot(inherits(obj, "hlaAlleleClass") | is.character(obj))
+	stopifnot(is.logical(rm.suffix))
 	if (is.character(obj))
 		stopifnot(is.vector(obj))
 	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit", "8-digit",
@@ -917,6 +1067,23 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit")
 							NA
 						} else {
 							if (length(idx) < length(s)) s <- s[idx]
+							if (length(idx) == length(s))
+							{
+								if (rm.suffix & (nchar(s[length(s)])>0))
+								{
+									z <- unlist(strsplit(s[length(s)], ""))
+									for (i in 1:length(z))
+									{
+										if (!(z[i] %in% as.character(0:9)))
+										{
+											if (i > 1)
+												z <- z[1:(i-1)]
+											break
+										}
+									}
+									s[length(s)] <- paste(z, collapse="")
+								}
+							}
 							paste(s, collapse=":")
 						}
 					},
@@ -954,7 +1121,8 @@ hlaUniqueAllele <- function(hla)
 	{
 		hla <- hla[!is.na(hla)]
 		hla <- unique(hla)
-		rv <- .C("HIBAG_SortAlleleStr", length(hla), hla, out = character(length(hla)),
+		rv <- .C("HIBAG_SortAlleleStr", length(hla), hla,
+			out = character(length(hla)),
 			err = integer(1), NAOK = TRUE, PACKAGE = "HIBAG")
 		if (rv$err != 0) stop(hlaErrMsg())
 		rv$out
@@ -969,7 +1137,7 @@ hlaUniqueAllele <- function(hla)
 #
 
 hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
-	assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"),
+	assembly=c("auto", "hg18", "hg19", "unknown"),
 	locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
 {
 	# check
@@ -978,8 +1146,8 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
 	stopifnot(is.vector(H2) & is.character(H2))
 	stopifnot(length(sample.id) == length(H1))
 	stopifnot(length(sample.id) == length(H2))
-	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit", "8-digit",
-		"allele", "protein", "2", "4", "6", "8", "full", ""))
+	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit",
+		"8-digit", "allele", "protein", "2", "4", "6", "8", "full", ""))
 
 	HLAinfo <- hlaLociInfo(assembly)
 	if (!is.null(prob))
@@ -1009,7 +1177,8 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
 	rv <- list(locus = locus,
 		pos.start = locus.pos.start, pos.end = locus.pos.end,
 		value = data.frame(sample.id = sample.id[flag],
-			allele1 = H1[flag], allele2 = H2[flag], stringsAsFactors=FALSE),
+			allele1 = H1[flag], allele2 = H2[flag],
+			stringsAsFactors=FALSE),
 		assembly = HLAinfo$assembly
 	)
 	if (!is.null(prob))
@@ -1021,10 +1190,6 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
 
 #######################################################################
 # To make a class of HLA alleles
-#
-# INPUT:
-#   sample.id -- a vector of sample id
-#   samp.sel -- a logical vector specifying selected samples
 #
 
 hlaAlleleSubset <- function(hla, samp.sel=NULL)
@@ -1053,10 +1218,6 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
 #######################################################################
 # To combine two classes of HLA alleles
 #
-# INPUT:
-#   H1 -- the first "hlaHLAAlleleClass" object
-#   H2 -- the second "hlaHLAAlleleClass" object
-#
 
 hlaCombineAllele <- function(H1, H2)
 {
@@ -1076,10 +1237,17 @@ hlaCombineAllele <- function(H1, H2)
 		value = rbind(H1$value[, id], H2$value[, id]),
 		assembly = H1$assembly
 	)
+	rownames(rv$value) <- NULL
 	if (!is.null(H1$value$prob) & !is.null(H2$value$prob))
 	{
 		rv$value$prob <- c(H1$value$prob, H2$value$prob)
 	}
+
+	if (!is.null(H1$postprob) & !is.null(H2$postprob))
+	{
+		rv$postprob <- cbind(H1$postprob, H2$postprob)
+	}
+
 	class(rv) <- "hlaAlleleClass"
 	return(rv)
 }
@@ -1090,16 +1258,18 @@ hlaCombineAllele <- function(H1, H2)
 #
 
 hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
-	call.threshold=NaN, max.resolution="", output.individual=FALSE, verbose=TRUE)
+	call.threshold=NaN, max.resolution="", output.individual=FALSE,
+	verbose=TRUE)
 {
 	# check
 	stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
 	stopifnot(inherits(PredHLA, "hlaAlleleClass"))
-	stopifnot(is.null(allele.limit) | is.vector(allele.limit) |
+	stopifnot(is.null(allele.limit) |
+		(is.vector(allele.limit) & is.character(allele.limit)) |
 		inherits(allele.limit, "hlaAttrBagClass") |
 		inherits(allele.limit, "hlaAttrBagObj"))
-	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit", "8-digit",
-		"allele", "protein", "2", "4", "6", "8", "full", ""))
+	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit",
+		"8-digit", "allele", "protein", "2", "4", "6", "8", "full", ""))
 	stopifnot(is.logical(output.individual))
 	stopifnot(is.logical(verbose))
 
@@ -1152,17 +1322,21 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 	# allele limitation
 	if (!is.null(allele.limit))
 	{
-		if (inherits(allele.limit, "hlaAttrBagClass") | inherits(allele.limit, "hlaAttrBagObj"))
+		if (inherits(allele.limit, "hlaAttrBagClass") |
+			inherits(allele.limit, "hlaAttrBagObj"))
 		{
 			allele <- hlaUniqueAllele(allele.limit$hla.allele)
 			TrainFreq <- allele.limit$hla.freq
+			TrainNum <- allele.limit$n.samp
 		} else {
 			allele <- hlaUniqueAllele(as.character(allele.limit))
 			TrainFreq <- NULL
+			TrainNum <- NaN
 		}
 	} else {
 		allele <- hlaUniqueAllele(c(ts1, ts2))
 		TrainFreq <- NULL
+		TrainNum <- NaN
 	}
 
 	# max resolution
@@ -1313,17 +1487,18 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 	}
 	rv <- .C("HIBAG_Confusion", as.integer(m), confusion,
 		nw, match(WrongTab, names(PredNum)) - as.integer(1),
-		out = matrix(0.0, nrow=m+1, ncol=m, dimnames=list(Predict=names(PredNum), True=names(TrueNum))),
+		out = matrix(0.0, nrow=m+1, ncol=m, dimnames=
+			list(Predict=names(PredNum), True=names(TrueNum))),
 		tmp = double((m+1)*m),
 		err = integer(1), NAOK = TRUE, PACKAGE = "HIBAG")
 	if (rv$err != 0) stop(hlaErrMsg())
 	confusion <- round(rv$out, 2)
 
 	# detail -- sensitivity and specificity
-	detail <- data.frame(allele = allele)
+	detail <- data.frame(allele = allele, stringsAsFactors=FALSE)
 	if (!is.null(TrainFreq))
 	{
-		detail$train.num <- 2 * TrainFreq * allele.limit$n.samp
+		detail$train.num <- 2 * TrainFreq * TrainNum
 		detail$train.freq <- TrainFreq
 	}
 	detail$valid.num <- TrueNumAll
@@ -1339,7 +1514,8 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 	detail$npv <- 1 - (TrueNum - diag(confusion)) / (2*n - rowSums(confusion)[1:m])
 
 	detail$call.rate[!is.finite(detail$call.rate)] <- 0
-	detail[detail$call.rate<=0, c("sensitivity", "specificity", "ppv", "npv", "accuracy")] <- NaN
+	detail[detail$call.rate<=0,
+		c("sensitivity", "specificity", "ppv", "npv", "accuracy")] <- NaN
 
 	# get miscall
 	rv <- confusion; diag(rv) <- 0
@@ -1372,8 +1548,8 @@ hlaSampleAllele <- function(TrueHLA, allele.limit = NULL, max.resolution="")
 	stopifnot(is.null(allele.limit) | is.vector(allele.limit) |
 		inherits(allele.limit, "hlaAttrBagClass") |
 		inherits(allele.limit, "hlaAttrBagObj"))
-	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit", "8-digit",
-		"allele", "protein", "2", "4", "6", "8", "full", ""))
+	stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit",
+		"8-digit", "allele", "protein", "2", "4", "6", "8", "full", ""))
 
 	# init
 	flag <- !is.na(TrueHLA$value$allele1) & !is.na(TrueHLA$value$allele2)
@@ -1390,7 +1566,8 @@ hlaSampleAllele <- function(TrueHLA, allele.limit = NULL, max.resolution="")
 	# allele limitation
 	if (!is.null(allele.limit))
 	{
-		if (inherits(allele.limit, "hlaAttrBagClass") | inherits(allele.limit, "hlaAttrBagObj"))
+		if (inherits(allele.limit, "hlaAttrBagClass") |
+			inherits(allele.limit, "hlaAttrBagObj"))
 		{
 			allele <- levels(factor(allele.limit$hla.allele))
 		} else {
@@ -1411,10 +1588,6 @@ hlaSampleAllele <- function(TrueHLA, allele.limit = NULL, max.resolution="")
 #######################################################################
 # Divide the list of HLA types to the training and validation sets
 #
-# INPUT:
-#   HLA -- the HLA types, a "hlaHLAAlleleClass" object
-#   train.prop -- the proportion of training samples
-#
 
 hlaSplitAllele <- function(HLA, train.prop=0.5)
 {
@@ -1432,7 +1605,8 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 		}
 
 		allele <- rownames(v)[1]
-		samp.id <- H$value$sample.id[H$value$allele1==allele | H$value$allele2==allele]
+		samp.id <- H$value$sample.id[ H$value$allele1==allele |
+			H$value$allele2==allele ]
 		samp.id <- as.character(samp.id)
 
 		n.train <- ceiling(length(samp.id) * train.prop)
@@ -1445,9 +1619,12 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 
 	train.set <- train.set[order(train.set)]
 	list(
-		training = hlaAlleleSubset(HLA, samp.sel=match(train.set, HLA$value$sample.id)),
-		validation = hlaAlleleSubset(HLA, samp.sel=match(setdiff(HLA$value$sample.id,
-			train.set), HLA$value$sample.id))
+		training = hlaAlleleSubset(HLA,
+			samp.sel = match(train.set, HLA$value$sample.id)),
+		validation = hlaAlleleSubset(HLA,
+			samp.sel = match(setdiff(HLA$value$sample.id, train.set),
+				HLA$value$sample.id)
+			)
 	)
 }
 
@@ -1455,17 +1632,12 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 #######################################################################
 # To select SNPs in the flanking region of a specified HLA locus
 #
-# INPUT:
-#   snp.id -- a vector of snp id
-#   position -- a vector of positions
-#   hla.id -- the name of HLA locus
-#   flank.bp -- the distance in basepair
-#
 
 hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
-	assembly="auto")
+	assembly=c("auto", "hg18", "hg19", "unknown"))
 {
 	# init
+	assembly <- match.arg(assembly)
 	HLAInfo <- hlaLociInfo(assembly)
 	ID <- HLAInfo$loci[-length(HLAInfo$loci)]
 
@@ -1486,9 +1658,6 @@ hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
 #######################################################################
 # Summary a "hlaAlleleClass" object
 #
-# INPUT:
-#   hla -- a "hlaAlleleClass" object
-#
 
 summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 {
@@ -1504,7 +1673,8 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 	rv <- cbind(count=count, freq=freq)
 
 	# get the number of unique genotypes
-	m <- data.frame(a1=hla$value$allele1, a2=hla$value$allele2, stringsAsFactors=FALSE)
+	m <- data.frame(a1 = hla$value$allele1,
+		a2 = hla$value$allele2, stringsAsFactors=FALSE)
 	lst <- apply(m, 1, FUN=function(x) {
 		if (!is.na(x[1]) & !is.na(x[2]))
 		{
@@ -1519,10 +1689,7 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 
 	if (show)
 	{
-		s <- hla$locus
-		if (s %in% c("A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1"))
-			s <- paste0("HLA-", s)
-		cat("Gene: ", s, "\n", sep="")
+		cat("Gene: ", .hla_gene_name_string(hla$locus), "\n", sep="")
 		cat(sprintf("Range: [%dbp, %dbp]", hla$pos.start, hla$pos.end))
 		if (!is.null(hla$assembly))
 			cat(" on ", hla$assembly, "\n", sep="")
@@ -1531,10 +1698,19 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 		cat(sprintf("# of samples: %d\n", dim(hla$value)[1]))
 		cat(sprintf("# of unique HLA alleles: %d\n", length(count)))
 		cat(sprintf("# of unique HLA genotypes: %d\n", unique.n.geno))
+
+		p <- hla$value$prob
+		if (!is.null(p))
+		{
+			z <- table(cut(p, breaks=c(-Inf, 0, 0.25, 0.5, 0.75, 1)))
+			z[] <- sprintf("%d (%0.1f%%)", z, prop.table(z)*100)
+			names(attr(z, "dimnames")) <- "Posterior probability:"
+			print(z)
+		}
 	}
 
 	# return
-	return(rv)
+	return(invisible(rv))
 }
 
 
@@ -1550,19 +1726,20 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 # To fit an attribute bagging model for predicting
 #
 
-hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all", "one"),
-	prune=TRUE, rm.na=TRUE, verbose=TRUE, verbose.detail=FALSE)
+hlaAttrBagging <- function(hla, snp, nclassifier=100,
+	mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
+	verbose=TRUE, verbose.detail=FALSE)
 {
 	# check
 	stopifnot(inherits(hla, "hlaAlleleClass"))
-	stopifnot(inherits(genotype, "hlaSNPGenoClass"))
+	stopifnot(inherits(snp, "hlaSNPGenoClass"))
 	stopifnot(is.character(mtry) | is.numeric(mtry))
 	stopifnot(is.logical(verbose))
 	stopifnot(is.logical(verbose.detail))
 	if (verbose.detail) verbose <- TRUE
 
 	# get the common samples
-	samp.id <- intersect(hla$value$sample.id, genotype$sample.id)
+	samp.id <- intersect(hla$value$sample.id, snp$sample.id)
 
 	# hla types
 	samp.flag <- match(samp.id, hla$value$sample.id)
@@ -1587,13 +1764,13 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 	}
 
 	# SNP genotypes
-	samp.flag <- match(samp.id, genotype$sample.id)
-	snp.geno <- genotype$genotype[, samp.flag]
+	samp.flag <- match(samp.id, snp$sample.id)
+	snp.geno <- snp$genotype[, samp.flag]
 	storage.mode(snp.geno) <- "integer"
 
-	tmp.snp.id <- genotype$snp.id
-	tmp.snp.position <- genotype$snp.position
-	tmp.snp.allele <- genotype$snp.allele
+	tmp.snp.id <- snp$snp.id
+	tmp.snp.position <- snp$snp.position
+	tmp.snp.allele <- snp$snp.allele
 
 	# remove mono-SNPs
 	snpsel <- rowMeans(snp.geno, na.rm=TRUE)
@@ -1603,14 +1780,18 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 	{
 		snp.geno <- snp.geno[snpsel, ]
 		if (verbose)
-			cat(sprintf("%s monomorphic SNPs have been removed.\n", sum(!snpsel)))
+		{
+			a <- sum(!snpsel)
+			cat(sprintf("%s monomorphic SNP%s ha%s been removed.\n",
+				a, if (a>1) "s" else "", if (a>1) "ve" else "s"))
+		}
 		tmp.snp.id <- tmp.snp.id[snpsel]
 		tmp.snp.position <- tmp.snp.position[snpsel]
 		tmp.snp.allele <- tmp.snp.allele[snpsel]
 	}
 
 	if (length(samp.id) <= 0)
-		stop("There is no common sample between `hla' and `genotype'.")
+		stop("There is no common sample between 'hla' and 'snp'.")
 	if (length(dim(snp.geno)[1]) <= 0)
 		stop("There is no valid SNP markers.")
 
@@ -1678,7 +1859,7 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 	# training ...
 	# add new individual classifers
 	rv <- .C("HIBAG_NewClassifiers", ABmodel, as.integer(nclassifier),
-		as.integer(mtry), as.logical(prune), verbose, verbose.detail, debug=FALSE,
+		as.integer(mtry), as.logical(prune), verbose, verbose.detail,
 		err=integer(1), NAOK = TRUE, PACKAGE = "HIBAG")
 	if (rv$err != 0) stop(hlaErrMsg())
 
@@ -1687,9 +1868,13 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 		snp.id = tmp.snp.id, snp.position = tmp.snp.position,
 		snp.allele = tmp.snp.allele,
 		snp.allele.freq = 0.5*rowMeans(snp.geno, na.rm=TRUE),
-		hla.locus = hla$locus, hla.allele = levels(H), hla.freq = prop.table(table(H)),
+		hla.locus = hla$locus, hla.allele = levels(H),
+		hla.freq = prop.table(table(H)),
+		assembly = as.character(snp$assembly)[1],
 		model = ABmodel,
-		appendix = list(platform = genotype$assembly))
+		appendix = list())
+	if (is.na(rv$assembly)) rv$assembly <- "unknown"
+
 	class(rv) <- "hlaAttrBagClass"
 	return(rv)
 }
@@ -1699,111 +1884,64 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 # To fit an attribute bagging model for predicting
 #
 
-hlaParallelAttrBagging <- function(cl, hla, genotype, auto.save="",
+hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 	nclassifier=100, mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
-	verbose=TRUE)
+	stop.cluster=FALSE, verbose=TRUE)
 {
-    if (!require(parallel, warn.conflicts=FALSE))
-	{
-		stop("The `parallel' package should be installed.")
-	}
-
 	# check
-    stopifnot(inherits(cl, "cluster"))
+	stopifnot(is.null(cl) | inherits(cl, "cluster"))
 	stopifnot(inherits(hla, "hlaAlleleClass"))
-	stopifnot(inherits(genotype, "hlaSNPGenoClass"))
+	stopifnot(inherits(snp, "hlaSNPGenoClass"))
 
 	stopifnot(is.character(auto.save) & (length(auto.save)==1))
 	stopifnot(is.numeric(nclassifier))
 	stopifnot(is.character(mtry) | is.numeric(mtry))
 	stopifnot(is.logical(prune))
 	stopifnot(is.logical(rm.na))
+	stopifnot(is.logical(stop.cluster))
 	stopifnot(is.logical(verbose))
+
+	if (!is.null(cl))
+	{
+	    if (!require(parallel, warn.conflicts=FALSE))
+			stop("The `parallel' package should be installed.")
+	}
 
 	if (verbose)
 	{
-		cat(sprintf("Build a HIBAG model of %d individual classifiers in parallel with %d nodes:\n",
-			as.integer(nclassifier), length(cl)))
+		if (!is.null(cl))
+		{
+			cat(sprintf(
+				"Build a HIBAG model of %d individual classifier%s in parallel with %d node%s:\n",
+				nclassifier, if (nclassifier>1) "s" else "",
+				length(cl), if (length(cl)>1) "s" else ""
+			))
+		} else {
+			cat(sprintf(
+				"Build a HIBAG model of %d individual classifier%s:\n",
+				nclassifier, if (nclassifier>1) "s" else ""
+			))
+		}
 		if (auto.save != "")
 			cat("The model is autosaved in '", auto.save, "'.\n", sep="")
 	}
 
-
-	##################################################################
-
-	DynamicClusterCall <- function(cl, fun, combine.fun, msg.fn, n, ...)
-	{
-		# the functions are all defined in 'parallel/R/snow.R'
-
-		postNode <- function(con, type, value = NULL, tag = NULL)
-		{
-			parallel:::sendData(con, list(type = type, data = value, tag = tag))
-		}
-
-		sendCall <- function(con, fun, args, return = TRUE, tag = NULL)
-		{
-			postNode(con, "EXEC",
-				list(fun = fun, args = args, return = return, tag = tag))
-			NULL
-		}
-
-		recvOneResult <- function(cl)
-		{
-			v <- parallel:::recvOneData(cl)
-			list(value = v$value$value, node = v$node, tag = v$value$tag)
-		}
-
-
-		#########################################################################
-		# check
-		stopifnot(inherits(cl, "cluster"))
-		stopifnot(is.function(fun))
-		stopifnot(is.function(combine.fun))
-		stopifnot(is.function(msg.fn))
-		stopifnot(is.numeric(n))
-
-		val <- NULL
-		p <- length(cl)
-		if (n > 0L && p)
-		{
-			## **** this closure is sending to all nodes
-			argfun <- function(i) c(i, list(...))
-
-			submit <- function(node, job)
-				sendCall(cl[[node]], fun, argfun(job), tag = job)
-
-			for (i in 1:min(n, p)) submit(i, i)
-			for (i in 1:n)
-			{
-				d <- recvOneResult(cl)
-				j <- i + min(n, p)
-				if (j <= n) submit(d$node, j)
-
-				dv <- d$value
-				if (inherits(dv, "try-error"))
-					stop("One node produced an error: ", as.character(dv))
-				msg.fn(d$node, dv)
-				val <- combine.fun(val, dv)
-			}
-		}
-
-		val
-	}
-
-
 	# set random number
-	RNGkind("L'Ecuyer-CMRG")
-	rand <- .Random.seed
-	clusterSetRNGStream(cl)
+	if (!is.null(cl))
+	{
+		RNGkind("L'Ecuyer-CMRG")
+		rand <- .Random.seed
+		clusterSetRNGStream(cl)
+	}
 
 	ans <- local({
 		total <- 0
 
-		DynamicClusterCall(cl,
-			fun = function(job, hla, genotype, mtry, prune, rm.na)
+		.DynamicClusterCall(cl,
+			fun = function(job, hla, snp, mtry, prune, rm.na)
 			{
 				library(HIBAG)
-				model <- hlaAttrBagging(hla=hla, genotype=genotype, nclassifier=1,
+				model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=1,
 					mtry=mtry, prune=prune, rm.na=rm.na,
 					verbose=FALSE, verbose.detail=FALSE)
 				mobj <- hlaModelToObj(model)
@@ -1837,23 +1975,27 @@ hlaParallelAttrBagging <- function(cl, hla, genotype, auto.save="",
 					total <<- total + 1
 					cat(date(), sprintf(
 						", %4d, job %3d, # of SNPs: %g, # of haplotypes: %g, accuracy: %0.1f%%\n",
-						total, job, z$info["num.snp", "Mean"], z$info["num.haplo", "Mean"],
+						total, as.integer(job), z$info["num.snp", "Mean"],
+						z$info["num.haplo", "Mean"],
 						z$info["accuracy", "Mean"]), sep="")
 				}
 			},
-			n = nclassifier,
-			hla=hla, genotype=genotype, mtry=mtry, prune=prune, rm.na=rm.na
+			n = nclassifier, stop.cluster = stop.cluster,
+			hla=hla, snp=snp, mtry=mtry, prune=prune, rm.na=rm.na
 		)
 	})
 
-	nextRNGStream(rand)
-	nextRNGSubStream(rand)
+	if (!is.null(cl) & !stop.cluster)
+	{
+		nextRNGStream(rand)
+		nextRNGSubStream(rand)
+	}
 
 	# return
 	if (auto.save == "")
 		return(hlaModelFromObj(ans))
 	else
-		return(invisible(NULL))
+		return(invisible())
 }
 
 
@@ -1867,7 +2009,8 @@ hlaClose <- function(model)
 	stopifnot(inherits(model, "hlaAttrBagClass"))
 
 	# class handler
-	rv <- .C("HIBAG_Close", model$model, err=integer(1), NAOK = TRUE, PACKAGE = "HIBAG")
+	rv <- .C("HIBAG_Close", model$model, err=integer(1),
+		NAOK = TRUE, PACKAGE = "HIBAG")
 	if (rv$err != 0) stop(hlaErrMsg())
 
 	# output
@@ -1879,12 +2022,16 @@ hlaClose <- function(model)
 # Check missing SNP predictors
 #
 
-hlaCheckSNPs <- function(model, object, match.pos=TRUE, verbose=TRUE)
+hlaCheckSNPs <- function(model, object,
+	match.type=c("RefSNP+Position", "RefSNP", "Position"), verbose=TRUE)
 {
 	# check
-	stopifnot(inherits(model, "hlaAttrBagClass") | inherits(model, "hlaAttrBagObj"))
+	stopifnot(inherits(model, "hlaAttrBagClass") |
+		inherits(model, "hlaAttrBagObj"))
 	stopifnot((is.vector(object) & is.character(object)) |
 		inherits(object, "hlaSNPGenoClass"))
+	match.type <- match.arg(match.type)
+	stopifnot(is.logical(verbose))
 
 	# initialize
 	if (inherits(model, "hlaAttrBagClass"))
@@ -1903,10 +2050,10 @@ hlaCheckSNPs <- function(model, object, match.pos=TRUE, verbose=TRUE)
 	if (is.vector(object))
 	{
 		target.snp <- as.character(object)
-		src.snp <- hlaSNPID(model, match.pos)
+		src.snp <- hlaSNPID(model, match.type)
 	} else {
-		target.snp <- hlaSNPID(object, match.pos)
-		src.snp <- hlaSNPID(model, match.pos)
+		target.snp <- hlaSNPID(object, match.type)
+		src.snp <- hlaSNPID(model, match.type)
 	}
 
 	NumOfSNP <- integer(length(model$classifiers))
@@ -1939,20 +2086,35 @@ hlaCheckSNPs <- function(model, object, match.pos=TRUE, verbose=TRUE)
 # Predict HLA types from unphased SNP data
 #
 
-predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"),
-	vote=c("prob", "majority"), allele.check=TRUE, match.pos=TRUE, verbose=TRUE, ...)
+predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
+	type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+	allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),
+	same.strand=FALSE, verbose=TRUE, ...)
 {
 	# check
 	stopifnot(inherits(object, "hlaAttrBagClass"))
+	stopifnot(is.null(cl) | inherits(cl, "cluster"))
 	stopifnot(is.logical(allele.check))
-	stopifnot(is.logical(match.pos))
+	stopifnot(is.logical(same.strand))
+	stopifnot(is.logical(verbose))
+
 	type <- match.arg(type)
 	vote <- match.arg(vote)
+	match.type <- match.arg(match.type)
 	vote_method <- match(vote, c("prob", "majority"))
+	if (!is.null(cl))
+	{
+	    if (!require(parallel, warn.conflicts=FALSE))
+			stop("The `parallel' package should be installed.")
+		if (length(cl) <= 1) cl <- NULL
+	}
 
 	# if warning
 	if (!is.null(object$appendix$warning))
+	{
 		message(object$appendix$warning)
+		warning(object$appendix$warning)
+	}
 
 	if (verbose)
 	{
@@ -1968,40 +2130,79 @@ predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"
 		if (vote_method == 1)
 			cat("Predicting based on the averaged posterior probabilities from all individual classifiers\n")
 		else
-			cat("Predicting by class majority voting from all individual classifiers\n")
+			cat("Predicting by voting from all individual classifiers\n")
+
+		if (!is.null(cl))
+		{
+			cat(sprintf(
+				"Run in parallel with %d computing node%s\n",
+				length(cl), if (length(cl)>1) "s" else ""
+			))
+		}
 	}
 
-	if (!inherits(genotypes, "hlaSNPGenoClass"))
+	if (!inherits(snp, "hlaSNPGenoClass"))
 	{
 		# it should be a vector or a matrix
-		stopifnot(is.numeric(genotypes))
-		stopifnot(is.vector(genotypes) | is.matrix(genotypes))
+		stopifnot(is.numeric(snp))
+		stopifnot(is.vector(snp) | is.matrix(snp))
 
-		if (is.vector(genotypes))
+		if (is.vector(snp))
 		{
-			stopifnot(length(genotypes) == object$n.snp)
-			if (!is.null(names(genotypes)))
-				stopifnot(all(names(genotypes) == object$snp.id))
-			genotypes <- matrix(genotypes, ncol=1)
+			stopifnot(length(snp) == object$n.snp)
+			snp <- matrix(snp, ncol=1)
 		} else {
-			stopifnot(nrow(genotypes) == object$n.snp)
-			if (!is.null(rownames(genotypes)))
-				stopifnot(all(rownames(genotypes) == object$snp.id))
+			stopifnot(nrow(snp) == object$n.snp)
 		}
-		geno.sampid <- 1:ncol(genotypes)
+		geno.sampid <- 1:ncol(snp)
 		assembly <- "auto"
 
 	} else {
 
 		# a 'hlaSNPGenoClass' object
-		geno.sampid <- genotypes$sample.id
-		if (!is.null(genotypes$assembly))
-			assembly <- genotypes$assembly
-		else
-			assembly <- "auto"
 
-		obj.id <- hlaSNPID(object, match.pos)
-		geno.id <- hlaSNPID(genotypes, match.pos)
+		##################################################
+		# check assembly first
+
+		model.assembly <- as.character(object$assembly)[1]
+		if (is.na(model.assembly))
+			model.assembly <- "unknown"
+		geno.assembly <- as.character(snp$assembly)[1]
+		if (is.na(geno.assembly))
+			geno.assembly <- "unknown"
+		refstr <- sprintf("Model assembly: %s, SNP assembly: %s",
+			model.assembly, geno.assembly)
+		if (verbose)
+			cat(refstr, "\n", sep="")
+
+		if (model.assembly != geno.assembly)
+		{
+			if (any(c(model.assembly, geno.assembly) %in% "unknown"))
+			{
+				if (verbose)
+					message("The human genome references might not match!")
+				if (geno.assembly == "unknown")
+					assembly <- model.assembly
+				else
+					assembly <- geno.assembly
+			} else {
+				if (verbose)
+					message("The human genome references do not match!")
+				warning("The human genome references do not match! ", refstr, ".")
+				assembly <- model.assembly
+			}
+		} else {
+			if (model.assembly != "unknown")
+				assembly <- model.assembly
+			else
+				assembly <- "auto"
+		}
+
+		##################################################
+
+		geno.sampid <- snp$sample.id
+		obj.id <- hlaSNPID(object, match.type)
+		geno.id <- hlaSNPID(snp, match.type)
 
 		# flag boolean
 		flag <- FALSE
@@ -2016,27 +2217,35 @@ predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"
 		{
 			if (allele.check)
 			{
-				genotypes <- hlaGenoSwitchStrand(genotypes, object, match.pos, verbose)$genotype
+				snp <- hlaGenoSwitchStrand(snp, object,
+					match.type, same.strand, verbose)$genotype
 			} else {
-				genotypes <- genotypes$genotype
+				snp <- snp$genotype
 			}
 		} else {
 
 			# snp selection
 			snp.sel <- match(obj.id, geno.id)
+			snp.allele <- snp$snp.allele
+			snp.allele[is.na(snp.allele)] <- ""
 
 			# tmp variable
-			tmp <- list(genotype = genotypes$genotype[snp.sel,],
-				sample.id = genotypes$sample.id,
+			tmp <- list(genotype = snp$genotype[snp.sel,],
+				sample.id = snp$sample.id,
 				snp.id = object$snp.id, snp.position = object$snp.position,
-				snp.allele = genotypes$snp.allele[snp.sel])
+				snp.allele = snp.allele[snp.sel],
+				assembly = snp$assembly)
+
 			flag <- is.na(tmp$snp.allele)
-			tmp$snp.allele[flag] <- object$snp.allele[match(tmp$snp.id[flag], object$snp.id)]
+			tmp$snp.allele[flag] <- object$snp.allele[
+				match(tmp$snp.id[flag], object$snp.id)]
+
 			if (is.vector(tmp$genotype))
 				tmp$genotype <- matrix(tmp$genotype, ncol=1)
+
 			class(tmp) <- "hlaSNPGenoClass"
 
-			# total number of missing genotypes
+			# the total number of missing snp
 			missing.cnt <- sum(flag)
 
 			# verbose
@@ -2044,35 +2253,40 @@ predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"
 			{
 				if (missing.cnt > 0)
 				{
-					if (missing.cnt > 1)
-					{
-						s <- "are"; ss <- "s"
-					} else {
-						s <- "is"; ss <- ""
-					}
 					cat(sprintf("There %s %d missing SNP%s (%0.1f%%).\n",
-						s, missing.cnt, ss, 100*missing.cnt/length(obj.id)))
+						if (missing.cnt > 1) "are" else "is",
+						missing.cnt,
+						if (missing.cnt > 1) "s" else "",
+						100*missing.cnt/length(obj.id)))
 				}
 			}
 
 			# try alternative matching if possible
-			if (match.pos)
+			if (match.type == "RefSNP+Position")
 			{
-				s1 <- hlaSNPID(object, FALSE)
-				s2 <- hlaSNPID(genotypes, FALSE)
-				mcnt <- length(s1) - length(intersect(s1, s2))
-				if ((mcnt < missing.cnt) & verbose)
+				# match by RefSNP IDs
+				s1 <- hlaSNPID(object, "RefSNP")
+				s2 <- hlaSNPID(snp, "RefSNP")
+				mcnt.id <- length(s1) - length(intersect(s1, s2))
+
+				# match by positions
+				s1 <- hlaSNPID(object, "Position")
+				s2 <- hlaSNPID(snp, "Position")
+				mcnt.pos <- length(s1) - length(intersect(s1, s2))
+
+				if (((mcnt.id < missing.cnt) | (mcnt.pos < missing.cnt)) & verbose)
 				{
-					message("Hint:\n",
-						"The current matching of SNPs requires both SNP ID and position, ",
-						sprintf("and a lower missing fraction (%0.1f%%) ", 100*mcnt/length(s1)),
-						"can be gained by matching reference SNP ID only.\n",
-						"Call 'predict(, match.pos=FALSE)' for this purpose.\n",
+					message(
+						"Hint:\n",
+						"The current SNP matching requires both RefSNP IDs and positions, and lower missing fraction(s) could be gained:\n",
+						sprintf("\t%0.1f%% by matching RefSNP IDs only, call 'predict(..., match.type=\"RefSNP\")'\n",
+							100*mcnt.id/length(s1)),
+						sprintf("\t%0.1f%% by matching positions only, call 'predict(..., match.type=\"Position\")'\n",
+							100*mcnt.pos/length(s1)),
 						"Any concern about SNP mismatching should be emailed to the genotyping platform provider.")
-					if (!is.null(object$appendix$assembly))
-						message("The platform of the HIBAG model: ", object$appendix$assembly)
-					if (!is.null(genotypes$assembly))
-						message("The platform of SNP data: ", genotypes$assembly)
+
+					if (!is.null(object$appendix$platform))
+						message("The supported platform(s): ", object$appendix$platform)
 				}
 			}
 
@@ -2087,47 +2301,119 @@ predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"
 			# switch
 			if (allele.check)
 			{
-				genotypes <- hlaGenoSwitchStrand(tmp, object, match.pos, verbose)$genotype
+				snp <- hlaGenoSwitchStrand(tmp, object, match.type,
+					same.strand, verbose)$genotype
 			} else {
-				genotypes <- genotypes$genotype
+				snp <- snp$genotype
 			}
 		}
 	}
 
+	# check
+	if (dim(snp)[1] != object$n.snp)
+		stop("Internal error! Please contact the author.")
+
 	# initialize ...
-	n.samp <- dim(genotypes)[2]
+	n.samp <- dim(snp)[2]
 	n.hla <- length(object$hla.allele)
 
-	# to predict HLA types
-	if (type == "response")
+	# parallel units
+	if (is.null(cl))
 	{
-		rv <- .C("HIBAG_Predict", object$model, as.integer(genotypes), n.samp,
-			as.integer(vote_method), as.logical(verbose),
-			H1=integer(n.samp), H2=integer(n.samp),
-			prob=double(n.samp), err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
-		if (rv$err != 0) stop(hlaErrMsg())
+		# to predict HLA types
+		if (type %in% c("response", "response+prob"))
+		{
+			# the best-guess prediction
 
-		res <- hlaAllele(geno.sampid,
-			H1 = object$hla.allele[rv$H1 + 1], H2 = object$hla.allele[rv$H2 + 1],
-			locus = object$hla.locus, prob = rv$prob, na.rm = FALSE,
-			assembly = assembly)
+			if (type == "response")
+			{
+				rv <- .C("HIBAG_Predict_Resp", object$model, as.integer(snp),
+					n.samp, as.integer(vote_method), as.logical(verbose),
+					H1=integer(n.samp), H2=integer(n.samp), prob=double(n.samp),
+					err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
+			} else {
+				rv <- .C("HIBAG_Predict_Resp_Prob", object$model, as.integer(snp),
+					n.samp, as.integer(vote_method), as.logical(verbose),
+					H1=integer(n.samp), H2=integer(n.samp), prob=double(n.samp), 
+					postprob=matrix(NaN, nrow=n.hla*(n.hla+1)/2, ncol=n.samp),
+					err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
+			}
+			if (rv$err != 0) stop(hlaErrMsg())
 
-		NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
+			res <- hlaAllele(geno.sampid,
+				H1=object$hla.allele[rv$H1 + 1], H2=object$hla.allele[rv$H2 + 1],
+				locus = object$hla.locus, prob = rv$prob, na.rm = FALSE,
+				assembly = assembly)
+			if (!is.null(rv$postprob))
+			{
+				res$postprob <- rv$postprob
+				colnames(res$postprob) <- geno.sampid
+				m <- outer(object$hla.allele, object$hla.allele,
+					function(x, y) paste(x, y, sep="/"))
+				rownames(res$postprob) <- m[lower.tri(m, diag=TRUE)]
+			}
 
+			NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
+
+		} else {
+			# all probabilites
+
+			rv <- .C("HIBAG_Predict_Prob", object$model, as.integer(snp),
+				n.samp, as.integer(vote_method), as.logical(verbose),
+				prob=matrix(NaN, nrow=n.hla*(n.hla+1)/2, ncol=n.samp),
+				err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
+			if (rv$err != 0) stop(hlaErrMsg())
+
+			res <- rv$prob
+			colnames(res) <- geno.sampid
+			m <- outer(object$hla.allele, object$hla.allele,
+				function(x, y) paste(x, y, sep="/"))
+			rownames(res) <- m[lower.tri(m, diag=TRUE)]
+
+			NA.cnt <- sum(colSums(res) <= 0)
+		}
 	} else {
-		rv <- .C("HIBAG_Predict_Prob", object$model, as.integer(genotypes),
-			n.samp, as.integer(vote_method), as.logical(verbose),
-			prob=matrix(NaN, nrow=n.hla*(n.hla+1)/2, ncol=n.samp),
-			err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
-		if (rv$err != 0) stop(hlaErrMsg())
 
-		res <- rv$prob
-		colnames(res) <- geno.sampid
-		m <- outer(object$hla.allele, object$hla.allele, function(x, y) paste(x, y, sep="."))
-		rownames(res) <- m[lower.tri(m, diag=TRUE)]
+		# in parallel
+		rv <- clusterApply(cl=cl, splitIndices(n.samp, length(cl)), 
+			fun = function(idx, mobj, snp, type, vote)
+			{
+				if (length(idx) > 0)
+				{
+					library(HIBAG)
+					m <- hlaModelFromObj(mobj)
+					pd <- predict(m, snp[,idx], type=type, vote=vote, verbose=FALSE)
+					hlaClose(m)
+					return(pd)
+				} else {
+					return(NULL)
+				}
+			}, mobj=hlaModelToObj(object), snp=snp, type=type, vote=vote
+		)
 
-		NA.cnt <- sum(colSums(res) <= 0)
-	}
+		if (type %in% c("response", "response+prob"))
+		{
+			res <- rv[[1]]
+			for (i in 2:length(rv))
+			{
+				if (!is.null(rv[[i]]))
+					res <- hlaCombineAllele(res, rv[[i]])
+			}
+			res$value$sample.id <- geno.sampid
+			if (!is.null(res$postprob))
+				colnames(res$postprob) <- geno.sampid
+			NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
+		} else {
+			res <- rv[[1]]
+			for (i in 2:length(rv))
+			{
+				if (!is.null(rv[[i]]))
+					res <- cbind(res, rv[[i]])
+			}
+			colnames(res) <- geno.sampid
+			NA.cnt <- sum(colSums(res) <= 0)
+		}
+	} 
 
 	if (NA.cnt > 0)
 	{
@@ -2140,6 +2426,133 @@ predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"
 	# return
 	return(res)
 }
+
+
+#######################################################################
+# Merge predictions by voting
+#
+
+hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
+{
+	# check "..."
+	pdlist <- list(...)
+	if (length(pdlist) <= 0)
+		stop("No object is passed to 'hlaPredMerge'.")
+	for (i in 1:length(pdlist))
+	{
+		if (!inherits(pdlist[[i]], "hlaAlleleClass"))
+			stop("The object(s) passed to 'hlaPredMerge' should be 'hlaAlleleClass'.")
+		if (is.null(pdlist[[i]]$postprob))
+		{
+			stop("The object(s) passed to 'hlaPredMerge' should have a field of 'postprob',",
+				" returned by 'predict(..., type=\"response+prob\", vote=\"majority\")'.")
+		}
+	}
+
+	# check equivalence
+	stopifnot(is.null(equivalence) | is.data.frame(equivalence))
+	if (is.data.frame(equivalence))
+	{
+		if (ncol(equivalence) != 2)
+		{
+			stop("'equivalence' should have two columns: ",
+				"the first for new equivalent alleles, and the second for the ",
+				"alleles possibly existed in the object(s) passed to 'hlaPredMerge'.")
+		}
+	}
+
+	# check locus and sample.id
+	samp.id <- pdlist[[1]]$value$sample.id
+	locus <- pdlist[[1]]$locus
+	for (i in 1:length(pdlist))
+	{
+		if (!identical(samp.id, pdlist[[i]]$value$sample.id))
+			stop("The sample IDs should be the same.")
+		if (!identical(locus, pdlist[[i]]$locus))
+			stop("The locus should be the same.")
+	}
+
+	# check weight
+	if (!is.null(weight))
+	{
+		stopifnot(is.numeric(weight) & is.vector(weight))
+		if (length(pdlist) != length(weight))
+			stop("Invalid 'weight'.")
+		weight <- abs(weight)
+		weight <- weight / sum(weight)
+	} else {
+		weight <- rep(1/length(pdlist), length(pdlist))
+	}
+
+	#############################################################
+	# replace function
+	replace <- function(allele)
+	{
+		if (!is.null(equivalence))
+		{
+			i <- match(allele, equivalence[, 2])
+			flag <- !is.na(i)
+			i <- i[flag]
+			allele[flag] <- equivalence[i, 1]
+		}
+		allele
+	}
+
+
+	# all different alleles
+	hla.allele <- NULL
+	for (i in 1:length(pdlist))
+	{
+		h <- unique(unlist(strsplit(rownames(pdlist[[i]]$postprob), "/")))
+		hla.allele <- unique(c(hla.allele, replace(h)))
+	}
+	hla.allele <- hlaUniqueAllele(hla.allele)
+	n.hla <- length(hla.allele)
+	n.samp <- length(samp.id)
+
+	prob <- matrix(0.0, nrow=n.hla*(n.hla+1)/2, ncol=n.samp)
+	m <- outer(hla.allele, hla.allele, function(x, y) paste(x, y, sep="/"))
+	m <- m[lower.tri(m, diag=TRUE)]
+
+	# for-loop
+	for (i in 1:length(pdlist))
+	{
+		p <- pdlist[[i]]$postprob
+		h <- replace(unlist(strsplit(rownames(p), "/")))
+
+		h1 <- h[seq(1, length(h), 2)]; h2 <- h[seq(2, length(h), 2)]
+		j1 <- match(paste(h1, h2, sep="/"), m)
+		j2 <- match(paste(h2, h1, sep="/"), m)
+		j1[is.na(j1)] <- j2[is.na(j1)]
+
+		# check
+		stopifnot(!any(is.na(j1)))
+
+		p <- p * weight[i]
+		for (j in seq_len(length(j1)))
+			prob[j1[j], ] <- prob[j1[j], ] + p[j, ]
+	}
+	colnames(prob) <- samp.id
+	rownames(prob) <- m
+
+	pb <- apply(prob, 2, max)
+	pt <- unlist(strsplit(m[apply(prob, 2, which.max)], "/"))
+	assembly <- pdlist[[1]]$assembly
+	if (is.null(assembly)) assembly <- "auto"
+
+	rv <- hlaAllele(samp.id,
+		H1 = pt[seq(2, length(pt), 2)],
+		H2 = pt[seq(1, length(pt), 2)],
+		locus = locus,
+		locus.pos.start = pdlist[[1]]$pos.start,
+		locus.pos.end = pdlist[[1]]$pos.end,
+		prob = pb, na.rm = FALSE,
+		assembly = assembly)
+	rv$postprob <- prob
+	rv
+}
+
+
 
 
 #######################################################################
@@ -2177,38 +2590,31 @@ hlaModelToObj <- function(model)
 			err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
 		if (rv$err != 0) stop(hlaErrMsg())
 
-		# number of trios or samples
-		if ("n.trio" %in% names(model))
-			n.trio <- model$n.trio
-		else
-			n.trio <- model$n.samp
-
 		# call, get freq. and haplotypes
 		rv <- .C("HIBAG_Classifier_GetHaplos", model$model, as.integer(i),
-			freq=double(rv$NumHaplo), hla=integer(rv$NumHaplo), haplo=character(rv$NumHaplo),
-			snpidx = integer(rv$NumSNP), samp.num = integer(n.trio), acc = double(1),
+			freq=double(rv$NumHaplo), hla=integer(rv$NumHaplo),
+			haplo=character(rv$NumHaplo), snpidx = integer(rv$NumSNP),
+			samp.num = integer(model$n.samp), acc = double(1),
 			err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
 		if (rv$err != 0) stop(hlaErrMsg())
 
 		res[[i]] <- list(
 			samp.num = rv$samp.num,
-			haplos = data.frame(freq=rv$freq, hla=model$hla.allele[rv$hla], haplo=rv$haplo,
-				stringsAsFactors=FALSE),
+			haplos = data.frame(freq = rv$freq, hla = model$hla.allele[rv$hla],
+				haplo = rv$haplo, stringsAsFactors=FALSE),
 			snpidx = rv$snpidx,
 			outofbag.acc = rv$acc)
 	}
 
-	rv <- list(n.samp = model$n.samp, n.snp = model$n.snp)
-	if ("n.trio" %in% names(model))
-		rv$n.trio <- model$n.trio
-	rv <- c(rv, list(
+	rv <- list(n.samp = model$n.samp, n.snp = model$n.snp,
 		sample.id = model$sample.id, snp.id = model$snp.id,
 		snp.position = model$snp.position, snp.allele = model$snp.allele,
 		snp.allele.freq = model$snp.allele.freq,
-		hla.locus = model$hla.locus, hla.allele = model$hla.allele, hla.freq = model$hla.freq,
-		classifiers = res))
-	if (!is.null(model$appendix)) rv$appendix <- model$appendix
-
+		hla.locus = model$hla.locus,
+		hla.allele = model$hla.allele, hla.freq = model$hla.freq,
+		assembly = model$assembly,
+		classifiers = res,
+		appendix <- model$appendix)
 	class(rv) <- "hlaAttrBagObj"
 	return(rv)
 }
@@ -2223,19 +2629,21 @@ hlaCombineModelObj <- function(obj1, obj2)
 	# check
 	stopifnot(inherits(obj1, "hlaAttrBagObj"))
 	stopifnot(inherits(obj2, "hlaAttrBagObj"))
-	stopifnot(obj1$hla.locus == obj2$hla.locus)
-	stopifnot(length(obj1$snp.id) == length(obj2$snp.id))
-	stopifnot(all(obj1$snp.id == obj2$snp.id))
-	stopifnot(length(obj1$hla.allele) == length(obj2$hla.allele))
-	stopifnot(all(obj1$hla.allele == obj2$hla.allele))
+	stopifnot(identical(obj1$hla.locus, obj2$hla.locus))
+	stopifnot(identical(obj1$snp.id, obj2$snp.id))
+	stopifnot(identical(obj1$hla.allele, obj2$hla.allele))
+	stopifnot(identical(obj1$assembly, obj2$assembly))
 
 	samp.id <- unique(c(obj1$sample.id, obj2$sample.id))
 	if (!is.null(obj1$appendix) | !is.null(obj2$appendix))
 	{
 		appendix <- list(
-			platform = unique(c(obj1$appendix$platform, obj2$appendix$platform)),
-			information = unique(c(obj1$appendix$information, obj2$appendix$information)),
-			warning = unique(c(obj1$appendix$warning, obj2$appendix$warning))
+			platform =
+				unique(c(obj1$appendix$platform, obj2$appendix$platform)),
+			information =
+				unique(c(obj1$appendix$information, obj2$appendix$information)),
+			warning =
+				unique(c(obj1$appendix$warning, obj2$appendix$warning))
 		)
 	} else {
 		appendix <- NULL
@@ -2245,12 +2653,11 @@ hlaCombineModelObj <- function(obj1, obj2)
 		sample.id = samp.id, snp.id = obj1$snp.id,
 		snp.position = obj1$snp.position, snp.allele = obj1$snp.allele,
 		snp.allele.freq = (obj1$snp.allele.freq + obj2$snp.allele.freq)*0.5,
-		hla.locus = obj1$hla.locus,
-		hla.allele = obj1$hla.allele, hla.freq = (obj1$hla.freq + obj2$hla.freq)*0.5,
-		classifiers = c(obj1$classifiers, obj2$classifiers))
-	if (!is.null(appendix))
-		rv$appendix <- appendix
-
+		hla.locus = obj1$hla.locus, hla.allele = obj1$hla.allele,
+		hla.freq = (obj1$hla.freq + obj2$hla.freq)*0.5,
+		assembly = obj1$assembly,
+		classifiers = c(obj1$classifiers, obj2$classifiers),
+		appendix = appendix)
 	class(rv) <- "hlaAttrBagObj"
 	return(rv)
 }
@@ -2297,22 +2704,23 @@ hlaModelFromObj <- function(obj)
 			snum <- tree$samp.num
 		rv <- .C("HIBAG_NewClassifierHaplo", ABmodel, length(tree$snpidx),
 			as.integer(tree$snpidx-1), as.integer(snum), dim(tree$haplos)[1],
-			as.double(tree$haplos$freq), as.integer(hla), as.character(tree$haplos$haplo),
-			as.double(tree$outofbag.acc), err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
+			as.double(tree$haplos$freq), as.integer(hla),
+			as.character(tree$haplos$haplo), as.double(tree$outofbag.acc),
+			err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
 		if (rv$err != 0) stop(hlaErrMsg())
 	}
 
 	# output
-	rv <- list(n.samp = obj$n.samp, n.snp = obj$n.snp)
-	if ("n.trio" %in% names(obj))
-		rv$n.trio <- obj$n.trio
-	rv <- c(rv, list(
+	rv <- list(n.samp = obj$n.samp, n.snp = obj$n.snp,
 		sample.id = obj$sample.id, snp.id = obj$snp.id,
 		snp.position = obj$snp.position, snp.allele = obj$snp.allele,
 		snp.allele.freq = obj$snp.allele.freq,
-		hla.locus = obj$hla.locus, hla.allele = obj$hla.allele, hla.freq = obj$hla.freq,
-		model = ABmodel))
-	if (!is.null(obj$appendix)) rv$appendix <- obj$appendix
+		hla.locus = obj$hla.locus, hla.allele = obj$hla.allele,
+		hla.freq = obj$hla.freq,
+		assembly = as.character(obj$assembly)[1],
+		model = ABmodel,
+		appendix = obj$appendix)
+	if (is.na(rv$assembly)) rv$assembly <- "unknown"
 
 	class(rv) <- "hlaAttrBagClass"
 	return(rv)
@@ -2331,10 +2739,7 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 
 	if (show)
 	{
-		s <- obj$hla.locus
-		if (s %in% c("A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1"))
-			s <- paste0("HLA-", s)
-		cat("Gene: ", s, "\n", sep="")
+		cat("Gene: ", .hla_gene_name_string(obj$hla.locus), "\n", sep="")
 		cat("Training dataset:", obj$n.samp, "samples X",
 			length(obj$snp.id), "SNPs\n")
 		cat("\t# of HLA alleles: ", length(obj$hla.allele), "\n", sep="")
@@ -2368,13 +2773,22 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 	if (show)
 	{
 		cat("\t# of individual classifiers: ", length(obj$classifiers), "\n", sep="")
-		cat("\tTotal # of SNPs used: ", length(snpset), "\n", sep="")
-		cat(sprintf("\tAverage # of SNPs in an individual classifier: %0.2f, sd: %0.2f, min: %d, max: %d\n",
+		cat("\ttotal # of SNPs used: ", length(snpset), "\n", sep="")
+		cat(sprintf(
+			"\taverage # of SNPs in an individual classifier: %0.2f, sd: %0.2f, min: %d, max: %d\n",
 			mean(numsnp), sd(numsnp), min(numsnp), max(numsnp)))
-		cat(sprintf("\tAverage # of haplotypes in an individual classifier: %0.2f, sd: %0.2f, min: %d, max: %d\n",
+		cat(sprintf(
+			"\taverage # of haplotypes in an individual classifier: %0.2f, sd: %0.2f, min: %d, max: %d\n",
 			mean(numhaplo), sd(numhaplo), min(numhaplo), max(numhaplo)))
-		cat(sprintf("\tAverage out-of-bag accuracy in an individual classifier: %0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
-			mean(outofbag.acc), sd(outofbag.acc), min(outofbag.acc), max(outofbag.acc)))
+		cat(sprintf(
+			"\taverage out-of-bag accuracy: %0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
+			mean(outofbag.acc), sd(outofbag.acc), min(outofbag.acc),
+			max(outofbag.acc)))
+
+		if (is.null(obj$assembly))
+			cat("Genome assembly: unknown\n")
+		else
+			cat("Genome assembly: ", obj$assembly, "\n", sep="")
 
 		if (!is.null(obj$appendix$platform))
 			cat("Platform:", obj$appendix$platform, "\n")
@@ -2384,7 +2798,8 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 			message(obj$appendix$warning)
 	}
 
-	rv <- list(num.classifier = length(obj$classifiers), num.snp = length(snpset),
+	rv <- list(num.classifier = length(obj$classifiers),
+		num.snp = length(snpset),
 		snp.id = obj$snp.id, snp.position = obj$snp.position,
 		snp.hist = snp.hist, info = info)
 	return(invisible(rv))
@@ -2398,14 +2813,16 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 #
 
 hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
-	rm.unused.snp=TRUE, anonymize=TRUE)
+	rm.unused.snp=TRUE, anonymize=TRUE, verbose=TRUE)
 {
 	# check
-	stopifnot(inherits(mobj, "hlaAttrBagObj") | inherits(mobj, "hlaAttrBagClass"))
+	stopifnot(inherits(mobj, "hlaAttrBagObj") |
+		inherits(mobj, "hlaAttrBagClass"))
 	stopifnot(is.null(platform) | is.character(platform))
 	stopifnot(is.null(information) | is.character(information))
 	stopifnot(is.null(warning) | is.character(warning))
 	stopifnot(is.logical(rm.unused.snp) & (length(rm.unused.snp)==1))
+	stopifnot(is.logical(verbose))
 	if (inherits(mobj, "hlaAttrBagClass"))
 		mobj <- hlaModelToObj(mobj)
 
@@ -2431,6 +2848,14 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
 		}
 
 		flag <- (snp.hist > 0)
+		if (sum(flag) < mobj$n.snp)
+		{
+			if (verbose)
+			{
+				cnt <- mobj$n.snp - sum(flag)
+				cat(sprintf("Remove %d unused SNP%s.\n", cnt, if (cnt>1) "s" else ""))
+			}
+		}
 		mobj$n.snp <- sum(flag)
 		mobj$snp.id <- mobj$snp.id[flag]
 		mobj$snp.position <- mobj$snp.position[flag]
@@ -2442,9 +2867,8 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
 
 		for (i in 1:length(mobj$classifiers))
 		{
-			print(mobj$classifiers[[i]]$snpidx)
-			mobj$classifiers[[i]]$snpidx <- idx.list[ mobj$classifiers[[i]]$snpidx ]
-			print(mobj$classifiers[[i]]$snpidx)
+			mobj$classifiers[[i]]$snpidx <-
+				idx.list[ mobj$classifiers[[i]]$snpidx ]
 		}
 	}
 
@@ -2501,6 +2925,152 @@ hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
 	rv
 }
 
+
+##########################################################################
+# to create a report for evaluating accuracies
+#
+
+hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
+{
+	# check
+	stopifnot(is.list(object))
+	stopifnot(is.data.frame(object$detail))
+	stopifnot(is.character(export.fn))
+	type <- match.arg(type)
+
+	# create an output file
+	if (export.fn != "")
+	{
+		f <- file(export.fn, "wt")
+		on.exit(close(f))
+	} else {
+		f <- ""
+	}
+
+	###############################################################
+	# text format
+
+	d <- data.frame(Allele=object$detail$allele, stringsAsFactors=FALSE)
+
+	if (!is.null(object$detail$train.num))
+		d$NumTrain <- object$detail$train.num
+	if (!is.null(object$detail$train.freq))
+	{
+		d$FreqTrain <- sprintf("%0.4f", object$detail$train.freq)
+		d$FreqTrain[d$NumTrain <= 0] <- "0"
+
+		L1 <- c("Allele", "Num.", "Freq.", "Num.", "Freq.",
+			"CR", "ACC", "SEN", "SPE", "PPV", "NPV", "Miscall")
+		L2 <- c("", "Train", "Train", "Valid.", "Valid.",
+			"(%)", "(%)", "(%)", "(%)", "(%)", "(%)", "(%)")
+		L2a <- c("", "Train", "Train", "Valid.", "Valid.",
+			"(\\%)", "(\\%)", "(\\%)", "(\\%)", "(\\%)", "(\\%)", "(\\%)")
+	} else {
+		L1 <- c("Allele", "Num.", "Freq.",
+			"CR", "ACC", "SEN", "SPE", "PPV", "NPV", "Miscall")
+		L2 <- c("", "Valid.", "Valid.",
+			"(%)", "(%)", "(%)", "(%)", "(%)", "(%)", "(%)")
+		L2a <- c("", "Valid.", "Valid.",
+			"(\\%)", "(\\%)", "(\\%)", "(\\%)", "(\\%)", "(\\%)", "(\\%)")
+	}
+
+	d$NumValid <- object$detail$valid.num
+	d$FreqValid <- sprintf("%0.4f", object$detail$valid.freq)
+	d$FreqValid[d$NumValid <= 0] <- "0"
+
+	d$CR <- sprintf("%0.1f", object$detail$call.rate*100)
+	d$CR[object$detail$call.rate < 0.0005] <- "--"
+
+	d$ACC <- sprintf("%0.1f", object$detail$accuracy*100)
+	d$ACC[!is.finite(object$detail$accuracy)] <- "--"
+
+	d$SEN <- sprintf("%0.1f", object$detail$sensitivity*100)
+	d$SEN[!is.finite(object$detail$sensitivity)] <- "--"
+
+	d$SPE <- sprintf("%0.1f", object$detail$specificity*100)
+	d$SPE[!is.finite(object$detail$specificity)] <- "--"
+
+	d$PPV <- sprintf("%0.1f", object$detail$ppv*100)
+	d$PPV[!is.finite(object$detail$ppv)] <- "--"
+
+	d$NPV <- sprintf("%0.1f", object$detail$npv*100)
+	d$NPV[!is.finite(object$detail$npv)] <- "--"
+
+	d$Miscall <- sprintf("%s (%0.0f)",
+		object$detail$miscall, object$detail$miscall.prop*100)
+	d$Miscall[is.na(object$detail$miscall) | !is.finite(object$detail$miscall.prop)] <- "--"
+
+
+	if (type == "txt")
+	{
+		cat(L1, file=f, sep="\t", append=TRUE)
+		cat("\n", file=f, append=TRUE)
+		cat(L2, file=f, sep="\t", append=TRUE)
+		cat("\n", file=f, append=TRUE)
+		cat("----\n", file=f, append=TRUE)
+		cat(sprintf("overall accuracy: %0.1f%%, call rate: %0.1f%%\n",
+			object$overall$acc.haplo*100, object$overall$call.rate*100),
+			file=f, append=TRUE)
+		write.table(d, file=f, append=TRUE, quote=FALSE, sep="\t",
+			row.names=FALSE, col.names=FALSE)
+
+	} else if (type == "tex")
+	{
+		cat("% -------- BEGIN TABLE --------\n", file=f, append=TRUE)
+		if (!is.null(object$detail$train.freq))
+		{
+			cat("\\begin{longtable}{rrrrr | rrrrrrl}\n", file=f, append=TRUE)
+		} else {
+			cat("\\begin{longtable}{rrr | rrrrrrl}\n", file=f, append=TRUE)
+		}
+		cat(c("\\caption{The sensitivity (SEN), specificity (SPE),",
+			"positive predictive value (PPV) and negative predictive value",
+			"(NPV).}\n"), file=f, append=TRUE, sep=" ")
+		cat("\\label{tab:XX} \\\\\n", file=f, append=TRUE)
+
+		cat(L1, file=f, sep=" & ", append=TRUE)
+		cat(" \\\\\n", file=f, append=TRUE)
+		cat(L2a, file=f, sep=" & ", append=TRUE)
+		cat(" \\\\\n", file=f, append=TRUE)
+		cat("\\hline\\hline\n\\endfirsthead\n", file=f, append=TRUE)
+
+		if (!is.null(object$detail$train.freq))
+			cat("\\multicolumn{12}{c}{{\\normalsize \\tablename\\ \\thetable{} -- Continued from previous page}} \\\\\n", file=f, append=TRUE)
+		else
+			cat("\\multicolumn{10}{c}{{\\normalsize \\tablename\\ \\thetable{} -- Continued from previous page}} \\\\\n", file=f, append=TRUE)
+
+		cat(L1, file=f, sep=" & ", append=TRUE)
+		cat(" \\\\\n", file=f, append=TRUE)
+		cat(L2a, file=f, sep=" & ", append=TRUE)
+		cat(" \\\\\n", file=f, append=TRUE)
+		cat("\\hline\\hline\n\\endhead\n\\hline\n", file=f, append=TRUE)
+
+		if (!is.null(object$detail$train.freq))
+			cat("\\multicolumn{12}{r}{Continued on next page ...} \\\\\n", file=f, append=TRUE)
+		else
+			cat("\\multicolumn{10}{r}{Continued on next page ...} \\\\\n", file=f, append=TRUE)
+
+		cat("\\hline\n\\endfoot\n\\hline\\hline\n\\endlastfoot\n", file=f, append=TRUE)
+
+		if (!is.null(object$detail$train.freq))
+		{
+			cat(sprintf("\\multicolumn{12}{l}{\\it overall accuracy: %0.1f\\%%, call rate: %0.1f\\%%} \\\\\n",
+				object$overall$acc.haplo*100, object$overall$call.rate*100),
+				file=f, append=TRUE)
+		} else {
+			cat(sprintf("\\multicolumn{10}{l}{\\it overall accuracy: %0.1f\\%%, call rate: %0.1f\\%%} \\\\\n",
+				object$overall$acc.haplo*100, object$overall$call.rate*100),
+				file=f, append=TRUE)
+		}
+
+		write.table(d, file=f, append=TRUE, quote=FALSE, sep=" & ",
+			row.names=FALSE, col.names=FALSE, eol=" \\\\\n")
+
+		cat("\\end{longtable}\n% -------- END TABLE --------\n", file=f, append=TRUE)
+	}
+
+	invisible()
+}
 
 
 ##########################################################################
@@ -2590,16 +3160,18 @@ print.hlaAttrBagClass <- function(x, ...)
 #
 
 plot.hlaAttrBagObj <- function(x, xlab=NULL, ylab=NULL,
-	locus.color="red", locus.lty=2, locus.cex=1.25, assembly="auto", ...)
+	locus.color="red", locus.lty=2, locus.cex=1.25,
+	assembly=c("auto", "hg18", "hg19", "unknown"), ...)
 {
 	# check
 	stopifnot(inherits(x, "hlaAttrBagObj"))
+	assembly <- match.arg(assembly)
 
 	# the starting and ending positions of HLA locus
 	if (assembly == "auto")
 	{
-		if (!is.null(x$appendix$platform))
-			assembly <- x$appendix$platform
+		if (!is.null(x$assembly))
+			assembly <- x$assembly
 	}
 	info <- hlaLociInfo(assembly)
 	pos.start <- info$pos.HLA.start[[x$hla.locus]]/1000
@@ -2629,6 +3201,149 @@ print.hlaAttrBagObj <- function(x, ...)
 
 
 
+
+
+#######################################################################
+#
+# the functions for GPU computing
+#
+#######################################################################
+
+.hlaInstallGPU <- function(type=c("CUDA", "OpenCL"),
+	gcc.compiler=NULL, gpu.compiler=NULL, gcc.flags=NULL, gpu.flags=NULL,
+	inc.path=NULL, lib.path=NULL, lib.name=NULL, src.path=NULL,
+	verbose=TRUE)
+{
+	# check
+	type <- match.arg(type)
+	stopifnot(is.logical(verbose))
+
+	if (is.null(gcc.compiler)) gcc.compiler <- "g++"
+	if (is.null(gcc.flags)) gcc.flags <- "-O2 -arch x86_64"
+
+	if (type == "CUDA")
+	{
+		if (is.null(gpu.compiler))
+			gpu.compiler <- "nvcc"
+		if (is.null(gpu.flags))
+		{
+			gpu.flags <- paste("-O -m64",
+				"-gencode arch=compute_10,code=sm_10",
+				"-gencode arch=compute_20,code=sm_20",
+				"-gencode arch=compute_30,code=sm_30",
+				"-gencode arch=compute_35,code=sm_35")
+		}
+
+		if (is.null(src.path))
+		{
+			src.path <- system.file("extdata", "GPU", "CUDA",
+				package="HIBAG", mustWork=TRUE)
+		}
+
+		if (is.null(inc.path))
+			inc.path <- c("/Developer/NVIDIA/CUDA-5.0/include", src.path)
+		inc.path <- paste(paste("-I", inc.path, sep=""), collapse=" ")
+
+		if (is.null(lib.path))
+			lib.path <- "-L/Developer/NVIDIA/CUDA-5.0/lib"
+		else
+			lib.path <- paste(paste("-L", lib.path, sep=""), collapse=" ")
+
+		if (is.null(lib.name))
+			lib.name <- "-lcudart"
+		else
+			lib.name <- paste(paste("-l", lib.name, sep=""), collapse=" ")
+
+	} else if (type == "openclc")
+	{
+		stop("Not support currently.")
+	} else
+		stop("Invalid 'type'.")
+
+	if (verbose)
+	{
+		cat("Variables in calling:\n")
+		cat("  GCC: ", gcc.compiler, "\n", sep="")
+		cat("  GCC FLAGS: ", gcc.flags, "\n", sep="")
+		cat("  GPU compiler: ", gpu.compiler, "\n", sep="")
+		cat("  GPU FLAGS: ", gpu.flags, "\n", sep="")
+		cat("  INCLUDE: ", inc.path, "\n", sep="")
+		cat("  LIBRARY PATH: ", lib.path, "\n", sep="")
+		cat("  LIBRARY: ", lib.name, "\n", sep="")
+		cat("  SOURCE PATH: ", src.path, "\n", sep="")
+		cat("\n")
+	}
+
+
+	lib.fn <- file.path(system.file("extdata", "GPU", package="HIBAG",
+		mustWork=TRUE), "GPU_HLA_IMPUTATION.so")
+	unlink(lib.fn, force=TRUE)
+	lib.fn1 <- file.path(src.path, "GPU_HLA_IMPUTATION.so")
+	unlink(lib.fn1, force=TRUE)
+
+	# compile 
+	cmd <- paste(gpu.compiler, gpu.flags, inc.path,
+		file.path(src.path, "gpuHLA.cu"), "-c",
+		"-o", file.path(src.path, "gpuHLA.o"))
+	if (verbose) cat(cmd, "\n", sep="")
+	system(cmd)
+
+	# make a shared library
+	cmd <- paste(gcc.compiler, gcc.flags,
+		"-dynamiclib -Wl,-headerpad_max_install_names -undefined dynamic_lookup -single_module -multiply_defined suppress",
+		file.path(src.path, "gpuHLA.o"), "-o", lib.fn1,
+		lib.path, lib.name)
+	if (verbose) cat(cmd, "\n", sep="")
+	system(cmd)	
+
+	if (file.exists(lib.fn1))
+	{
+		# copy
+		if (verbose)
+			cat("\nCopy ", lib.fn1, " to ", lib.fn, "\n", sep="")
+		file.copy(lib.fn1, lib.fn, overwrite=TRUE)
+	} else {
+		stop("It fails to install GPU library!")
+	}
+
+	invisible()
+}
+
+.hlaGPU <- function(lib.fn=NULL, precision=c("double", "single"))
+{
+	# check
+	stopifnot(is.null(lib.fn) | is.character(lib.fn))
+	stopifnot(length(lib.fn) != 1)
+	precision <- match.arg(precision)
+	precision <- match(precision, c("double", "single"))
+
+	if (is.null(lib.fn))
+	{
+		lib.fn <- file.path(system.file("extdata", "GPU", package="HIBAG",
+			mustWork=TRUE), "GPU_HLA_IMPUTATION.so")
+	}
+
+	cat("Load: ", lib.fn, "\n\n", sep="")
+
+	# initialize GPU
+	rv <- .C("HIBAG_GPU_Init", lib.fn, precision, err=integer(1),
+		PACKAGE="HIBAG")
+	if (rv$err != 0) stop(hlaErrMsg())
+
+	invisible()
+}
+
+.hlaUninstallGPU <- function()
+{
+	lib.fn <- file.path(system.file("extdata", "GPU", package="HIBAG",
+		mustWork=TRUE), "GPU_HLA_IMPUTATION.so")
+	unlink(lib.fn, force=TRUE)
+}
+
+
+
+
+
 #######################################################################
 # To get the error message
 #
@@ -2648,7 +3363,14 @@ hlaErrMsg <- function()
 .onAttach <- function(lib, pkg)
 {
 	# initialize HIBAG
-	.C("HIBAG_Init", PACKAGE="HIBAG")
+	rv <- .C("HIBAG_Init", SSE.Flag=integer(1), PACKAGE="HIBAG")
+
+	# information
+	packageStartupMessage(
+		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.1")
+	if (rv$SSE.Flag != 0)
+		packageStartupMessage("Supported by Streaming SIMD Extensions 2 (SSE2)")
+
 	TRUE
 }
 

@@ -8,7 +8,7 @@
 }
 \usage{
 hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
-	import.chr="xMHC", assembly=c("auto", "hg19", "hg18", "NCBI37", "NCBI36"),
+	import.chr="xMHC", assembly=c("auto", "hg18", "hg19", "unknown"),
 	verbose=TRUE)
 }
 \arguments{
@@ -16,9 +16,10 @@ hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 	\item{fam.fn}{family, individual information, etc}
 	\item{bim.fn}{extended MAP file: two extra cols = allele names}
 	\item{rm.invalid.allele}{if TRUE, remove SNPs with invalid alleles}
-	\item{import.chr}{the chromosome, "1" .. "22", "X", "Y", "XY", "MT", "xMHC", or "",
-		where "xMHC" implies the extended MHC on chromosome 6, and "" for all SNPs}
-	\item{assembly}{genome assembly: "hg19" (default), "hg18", "NCBI37" or "NCBI36";
+	\item{import.chr}{the chromosome, "1" .. "22", "X", "Y", "XY", "MT",
+		"xMHC", or "", where "xMHC" implies the extended MHC on chromosome 6,
+		and "" for all SNPs}
+	\item{assembly}{the human genome reference: "hg19" (default), "hg18",
 		"auto" refers to "hg19"}
 	\item{verbose}{if TRUE, show information}
 }
@@ -40,6 +41,5 @@ hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 summary(hapmap.ceu)
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

@@ -4,8 +4,8 @@
 	Build a model from ``hlaAttrBagObj''
 }
 \description{
-	Build a model from an object of \code{\link{hlaAttrBagObj}}, which is stored in an
-R object file.
+	Build a model from an object of \code{\link{hlaAttrBagObj}}, which is
+stored in an R object file.
 }
 \usage{
 hlaModelFromObj(obj)
@@ -22,5 +22,4 @@ hlaModelFromObj(obj)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

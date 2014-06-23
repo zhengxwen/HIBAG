@@ -12,5 +12,3 @@ hlaErrMsg()
 \author{Xiuwen Zheng}
 
 \keyword{HLA}
-\keyword{GWAS}
-\keyword{genetics}

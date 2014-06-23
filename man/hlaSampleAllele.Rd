@@ -11,8 +11,10 @@ hlaSampleAllele(TrueHLA, allele.limit=NULL, max.resolution="")
 }
 \arguments{
 	\item{TrueHLA}{an object of \code{\link{hlaAlleleClass}}}
-	\item{allele.limit}{a list of HLA alleles, the validation samples are limited to
-		those having HLA alleles in \code{allele.limit}}
+	\item{allele.limit}{a list of HLA alleles, the validation samples are
+		limited to those having HLA alleles in \code{allele.limit}, or
+		\code{NULL} for no limit. \code{allele.limit} could be character-type,
+		\code{\link{hlaAttrBagClass}} or \code{\link{hlaAttrBagObj}}}
 	\item{max.resolution}{"2-digit", "4-digit", "6-digit", "8-digit", "allele",
 		"protein", "2", "4", "6", "8", "full" or "": "allele" = "2-digit",
 		"protein" = "4-digit", "full" and "" mean no limit on resolution}
@@ -22,11 +24,8 @@ hlaSampleAllele(TrueHLA, allele.limit=NULL, max.resolution="")
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
-	\code{\link{hlaHaploSubset}}, \code{\link{hlaGenoSubset}}
-	\code{\link{hlaCompareAllele}}.
+	\code{\link{hlaCompareAllele}}
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

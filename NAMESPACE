@@ -1,5 +1,6 @@
 # Load the shared object
 useDynLib(HIBAG)
 
-# Export all names
-exportPattern(".")
+# Export function names
+exportPattern("^[^\\.]")
+export(.onAttach, .Last.lib)

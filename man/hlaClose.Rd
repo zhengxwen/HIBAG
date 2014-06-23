@@ -5,7 +5,8 @@
 }
 \description{
 	Release all resources stored in the \code{\link{hlaAttrBagClass}} object.
-HIBAG allows up to 256 \code{\link{hlaAttrBagClass}} objects.
+The HIBAG package allows up to 256 \code{\link{hlaAttrBagClass}} objects
+stored in memory.
 }
 \usage{
 hlaClose(model)
@@ -22,5 +23,4 @@ hlaClose(model)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

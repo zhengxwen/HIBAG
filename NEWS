@@ -1,6 +1,27 @@
+Changes in 1.2.0.1:
+
+	* support Windows platform
+
+
+Changes in 1.2.0:
+
+	* optimize the C code: replace some intensive 'exp' and 'log' calculations by precalculated values, roughly 250% ~ 400% speedup
+	* optimize the C code of the hamming distance calculation between genotypes and two haplotypes by SSE2 intrinsics, ~50% faster for large datasets
+	* the code optimization guarantees the same training and predictive accuracies as version 1.1.0
+
+	* add a new function 'hlaPredMerge' to merge predictions from multiple models via voting
+	* add assembly information (like hg19) to the objects of 'hlaAttrBagClass' and 'hlaAttrBagObj'
+	* remove unused row names in the function 'hlaCompareAllele'
+	* add an argument 'stop.cluster' to 'hlaParallelAttrBagging'
+	* allow imputing HLA alleles in parallel at a single locus
+	* allow matching SNPs by positions only
+	* improve the function 'hlaPublish'
+	* improve documents
+
+
 Changes in 1.1.0:
 
-	* add genome assembly information (such like hg19, NCBI37)
+	* add genome assembly information (such like hg18, hg19)
 	* allow class majority voting in 'predict.hlaAttrBagClass'
 	* add an autosave function to 'hlaParallelAttrBagging'
 	* add a new function 'hlaPublish'

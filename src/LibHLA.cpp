@@ -23,51 +23,110 @@
 // along with HIBAG.
 // If not, see <http://www.gnu.org/licenses/>.
 
-// ===========================================================
-// Name        : LibHLA
-// Author      : Xiuwen Zheng
-// Version     : 1.1.0
-// Copyright   : Xiuwen Zheng (GPL v3.0)
-// Created     : 11/14/2011
-// Description : HLA Genotype Imputation with Attribute Bagging
-// ===========================================================
+// ===============================================================
+// Name           : LibHLA
+// Author         : Xiuwen Zheng
+// Version        : 1.2.0
+// Copyright      : Xiuwen Zheng (GPL v3.0)
+// Created        : 11/14/2011
+// Last modified  : 07/20/2013
+// Description    : HLA Genotype Imputation with Attribute Bagging
+// ===============================================================
+
+
+#if defined(unix) || defined(__unix) || defined(__unix__) || defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+#  define HIBAG_SYS_UNIX
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(_WIN32_WCE)
+#  define HIBAG_SYS_WIN
+#endif
+
+
+#include <StructHLA.h>
+
+#ifdef HIBAG_GPU_SUPPORT
+#  if defined(HIBAG_SYS_UNIX)
+#    include <dlfcn.h>
+#  elif defined(HIBAG_SYS_WIN)
+#    include <windows.h>
+#  else
+#    error "not supported"
+#  endif
+#endif
 
 #include <LibHLA.h>
+
+#define HIBAG_TIMING	0
+// 0: No timing
+// 1: Spends ~90% of time on 'CVariableSelection::_OutOfBagAccuracy'
+//    and 'CVariableSelection::_InBagLogLik'
+//    Could be improved on speed by GPU programming
+// 2: ~9.2% of time on CAlg_EM::ExpectationMaximization
+// 3: ~0.5% of time on CAlg_EM::PrepareHaplotypes
+
+#if (HIBAG_TIMING > 0)
+#  include <time.h>
+#endif
+
 
 using namespace std;
 using namespace HLA_LIB;
 
 
-// ******************************************************************************* //
-// ******************************************************************************* //
+// ************************************************************************* //
+// ************************************************************************* //
 
 // parameters -- EM algorithm
 /// The max number of iterations
 int HLA_LIB::EM_MaxNum_Iterations = 500;
-/// The reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
-double HLA_LIB::EM_FuncRelTol = sqrt(DBL_EPSILON);
 /// The initial value of EM algorithm
-static const double EM_INIT_VAL_FRAC = 0.001;
+static const TFLOAT EM_INIT_VAL_FRAC = 0.001;
+/// The reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
+TFLOAT HLA_LIB::EM_FuncRelTol = sqrt(FLOAT_EPSILON);
 
 // parameters -- reduce the number of possible haplotypes
 /// The minimum rare frequency to store haplotypes
-static const double MIN_RARE_FREQ = 1e-5;
+static const TFLOAT MIN_RARE_FREQ = 1e-5;
 /// The fraction of one haplotype that can be ignored
-static const double FRACTION_HAPLO = 1.0/10;
+static const TFLOAT FRACTION_HAPLO = 1.0/10;
 
 
 
 // the parameter of searching SNP markers
 
 /// The reltol for the stopping rule of adding a new SNP marker
-static const double STOP_RELTOL_LOGLIK_ADDSNP = 0.001; // sqrt(sqrt(DBL_EPSILON));
+static const TFLOAT STOP_RELTOL_LOGLIK_ADDSNP = 0.001;
 /// The reltol for erasing the SNP marker is prune = TRUE
-static const double PRUNE_RELTOL_LOGLIK = 0.1; // sqrt(sqrt(DBL_EPSILON));
+static const TFLOAT PRUNE_RELTOL_LOGLIK = 0.1;
 
 
 
-// ******************************************************************************* //
-// ******************************************************************************* //
+#ifdef HIBAG_GPU_SUPPORT
+
+// whether run in double precision, depending on the device
+static bool _gpuRunInDoublePrecision = false;
+
+typedef void (*TGPUFunc)();
+typedef void (*TGPUInitFunc)(UINT8 *hamdist);
+typedef int (*TGPU_OutOfBagAcc_F32)(int nHLA, int *_HLA_HapIdx,
+	int nHaplo, TGPU_Haplotype_F32 *_HapList,
+	int nGeno, TGPU_Genotype *_GList, int nSNP);
+typedef int (*TGPU_OutOfBagAcc_F64)(int nHLA, int *_HLA_HapIdx,
+	int nHaplo, TGPU_Haplotype_F64 *_HapList,
+	int nGeno, TGPU_Genotype *_GList, int nSNP);
+
+static TGPUInitFunc _gpuInitialize = NULL;
+static TGPUFunc     _gpuFinalize = NULL;
+static TGPUFunc     _gpuDeviceQuery = NULL;
+static TGPU_OutOfBagAcc_F32  _gpuOutOfBagAcc_F32 = NULL;
+static TGPU_OutOfBagAcc_F64  _gpuOutOfBagAcc_F64 = NULL;
+
+#endif
+
+
+
+
+// ************************************************************************* //
+// ************************************************************************* //
 
 // return 0 .. (Range-1)
 static inline int RandomNum(int Range)
@@ -78,41 +137,106 @@ static inline int RandomNum(int Range)
 }
 
 
-// ******************************************************************************* //
-// ******************************************************************************* //
+
+// ************************************************************************* //
+
+/// Frequency Calculation
+#define FREQ_MUTANT(p, cnt)    ((p) * EXP_LOG_MIN_RARE_FREQ[cnt]);
+
+/// exp(cnt * log(MIN_RARE_FREQ)), cnt is the hamming distance
+static TFLOAT EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
+
+/// the hamming distance
+/// SNP genotypes (first dimension) and a pair of haplotypes (second dimension)
+static UINT8 _Packed_HammingDistance[256][256] HIBAG_SSE_VAR_ALIGN;
+
+#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+// 32 -- the length of genotypes
+static __m128 _Packed_HamLenMask[32] HIBAG_SSE_VAR_ALIGN;
+#endif
 
 class CInit
 {
 public:
-	/// the difference, SNP genotypes (first dimension) and a pair of haplotypes (second dimension)
-	UINT8 Diff_Pack_Mat[256][256];
-	
 	CInit()
 	{
+		for (int i=0; i < HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2; i++)
+			EXP_LOG_MIN_RARE_FREQ[i] = FLOAT_EXP(i * FLOAT_LOG(MIN_RARE_FREQ));
+		EXP_LOG_MIN_RARE_FREQ[0] = 1;
+		for (int i=0; i < HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2; i++)
+		{
+			if (!R_finite(EXP_LOG_MIN_RARE_FREQ[i]))
+				EXP_LOG_MIN_RARE_FREQ[i] = 0;
+		}
+
+		// the hamming distance
 		for (int I1=0; I1 < 256; I1++)
 		{
-			int G[4] = { I1 & 0x03, (I1 >> 2) & 0x03, (I1 >> 4) & 0x03, (I1 >> 6) & 0x03 };
+			int G[4] = { I1 & 0x03, (I1 >> 2) & 0x03,
+				(I1 >> 4) & 0x03, (I1 >> 6) & 0x03 };
 			for (int I2=0; I2 < 256; I2++)
 			{
-				int H1[4] = { (I2 >> 0) & 0x01, (I2 >> 2) & 0x01, (I2 >> 4) & 0x01, (I2 >> 6) & 0x01 };
-				int H2[4] = { (I2 >> 1) & 0x01, (I2 >> 3) & 0x01, (I2 >> 5) & 0x01, (I2 >> 7) & 0x01 };
+				int H1[4] = { (I2 >> 0) & 0x01, (I2 >> 2) & 0x01,
+					(I2 >> 4) & 0x01, (I2 >> 6) & 0x01 };
+				int H2[4] = { (I2 >> 1) & 0x01, (I2 >> 3) & 0x01,
+					(I2 >> 5) & 0x01, (I2 >> 7) & 0x01 };
 				int sum = 0;
 				for (int k=0; k < 4; k++)
 				{
 					if (G[k] <= 2)
 						sum += abs(G[k] - H1[k] - H2[k]);
 				}
-				Diff_Pack_Mat[I1][I2] = sum;
+				_Packed_HammingDistance[I1][I2] = sum;
 			}
 		}
+
+	#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+
+		// the hamming mask for length
+		memset(_Packed_HamLenMask, 0, sizeof(_Packed_HamLenMask));
+
+		for (int Length=1; Length < 32; Length++)
+		{
+			UINT8 *p = (UINT8*)(&_Packed_HamLenMask[Length]);
+			int L = Length;
+			for (; L >= 4; L-=4, p+=2)
+				p[0] = p[1] = 0xFF;
+			if (L > 0)
+				p[0] = p[1] = ~(0xFF << (L*2));
+		}
+
+	#endif
 	}
 };
 
-CInit Init;
+static CInit _Init;
 
 
-// ******************************************************************************* //
-// ******************************************************************************* //
+// ************************************************************************* //
+
+#if (HIBAG_TIMING > 0)
+
+static clock_t _timing_ = 0;
+static clock_t _timing_last_point;
+
+static inline void _put_timing()
+{
+	_timing_last_point = clock();
+}
+static inline void _inc_timing()
+{
+	clock_t t = clock();
+	_timing_ += t - _timing_last_point;
+	_timing_last_point = t;
+}
+
+#endif
+
+
+
+
+// ************************************************************************* //
+// ************************************************************************* //
 
 // CdProgression
 
@@ -135,7 +259,7 @@ void CdProgression::Init(long TotalCnt, bool ShowInit)
 bool CdProgression::Forward(long step, bool Show)
 {
 	fCurrent += step;
-	int p = int(double(TotalPercent)*fCurrent / fTotal);
+	int p = int(TFLOAT(TotalPercent)*fCurrent / fTotal);
 	if ((p != fPercent) || (p == TotalPercent))
 	{
 		clock_t Now = clock();
@@ -156,9 +280,12 @@ void CdProgression::ShowProgress()
 	string s(ctime(&tm));
 	s.erase(s.size()-1, 1);
 	if (Info.empty())
+	{
 		Rprintf("%s\t%d%%\n", s.c_str(), int(fPercent*StepPercent));
-	else
-		Rprintf("%s\t%s\t%d%%\n", Info.c_str(), s.c_str(), int(fPercent*StepPercent));
+	} else {
+		Rprintf("%s\t%s\t%d%%\n", Info.c_str(), s.c_str(),
+			int(fPercent*StepPercent));
+	}
 }
 
 
@@ -167,81 +294,92 @@ CdProgression HLA_LIB::Progress;
 
 
 
-// ******************************************************************************* //
-// ******************************************************************************* //
+// ************************************************************************* //
+// ************************************************************************* //
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The class of haplotype structure
 
-THaplotype::THaplotype(const double _freq)
+THaplotype::THaplotype()
 {
-	memset(PackedSNPs, 0, sizeof(PackedSNPs));
+	memset(PackedHaplo, 0, sizeof(PackedHaplo));
+}
+
+THaplotype::THaplotype(const TFLOAT _freq)
+{
+	memset(PackedHaplo, 0, sizeof(PackedHaplo));
 	Frequency = _freq;
 	OldFreq = 0;
 }
 
-THaplotype::THaplotype(const char *str, const double _freq)
+THaplotype::THaplotype(const char *str, const TFLOAT _freq)
 {
-	memset(PackedSNPs, 0, sizeof(PackedSNPs));
+	memset(PackedHaplo, 0, sizeof(PackedHaplo));
 	Frequency = _freq;
 	OldFreq = 0;
-	StringToSNP(str);
+	StrToHaplo(str);
 }
 
-UINT8 THaplotype::GetSNP(const int idx) const
+UINT8 THaplotype::GetAllele(const int idx) const
 {
-	CHECKING((idx<0) || (idx>=MAXNUM_SNP_IN_CLASSIFIER),
-		"THaplotype::GetSNP, invalid index.");
-	UINT8 ch = PackedSNPs[idx >> 2];
+	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+		"THaplotype::GetAllele, invalid index.");
+	UINT8 ch = PackedHaplo[idx >> 2];
 	return (ch >> (2*(idx & 0x03))) & 0x01;
 }
 
-void THaplotype::SetSNP(const int idx, UINT8 val)
+void THaplotype::SetAllele(const int idx, UINT8 val)
 {
-	CHECKING((idx<0) || (idx>=MAXNUM_SNP_IN_CLASSIFIER),
-		"THaplotype::GetSNP, invalid index.");
-	CHECKING(val!=0 && val!=1,
-		"THaplotype::SetSNP, the value should be 0 or 1.");
-	UINT8 &ch = PackedSNPs[idx >> 2];
-	int shift = (idx & 0x03)*2;
-	UINT8 mask = ~(0x03 << shift);
+	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+		"THaplotype::SetAllele, invalid index.");
+	HIBAG_CHECKING(val!=0 && val!=1,
+		"THaplotype::SetAllele, the value should be 0 or 1.");
+	UTYPE &ch = PackedHaplo[idx >> 2];
+	UINT8 shift = (idx & 0x03)*2;
+	UTYPE mask = ~(0x03 << shift);
 	ch = (ch & mask) | (val << shift);
 }
 
-string THaplotype::SNPToString(const int Length) const
+string THaplotype::HaploToStr(const int Length) const
 {
-	CHECKING(Length > MAXNUM_SNP_IN_CLASSIFIER,
-		"THaplotype::SNPToString, the length is too large.");
+	HIBAG_CHECKING((Length<0) || (Length>HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+		"THaplotype::HaploToStr, the length is invalid.");
 	string rv;
 	if (Length > 0)
 	{
 		rv.resize(Length);
-		for (int i=0; i < Length; i++) rv[i] = (GetSNP(i)==0) ? '0' : '1';
+		for (int i=0; i < Length; i++)
+			rv[i] = (GetAllele(i)==0) ? '0' : '1';
 	}
 	return rv;
 }
 
-void THaplotype::StringToSNP(const string &str)
+void THaplotype::StrToHaplo(const string &str)
 {
-	CHECKING((int)str.size() > MAXNUM_SNP_IN_CLASSIFIER,
-		"THaplotype::StringToSNP, the input string is too long.");
+	HIBAG_CHECKING((int)str.size() > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"THaplotype::StrToHaplo, the input string is too long.");
 	for (int i=0; i < (int)str.size(); i++)
 	{
 		char ch = str[i];
-		CHECKING(ch!='0' && ch!='1',
-			"THaplotype::StringToSNP, the input string should be '0' or '1'");
-		SetSNP(i, ch-'0');
+		HIBAG_CHECKING(ch!='0' && ch!='1',
+			"THaplotype::StrToHaplo, the input string should be '0' or '1'");
+		SetAllele(i, ch-'0');
 	}
 }
 
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The class of genotype structure
+
+TGenotype::TGenotype()
+{
+	memset(PackedSNPs, 0, sizeof(PackedSNPs));
+}
 
 UINT8 TGenotype::GetSNP(const int idx) const
 {
-	CHECKING((idx<0) || (idx>=MAXNUM_SNP_IN_CLASSIFIER),
+	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
 		"TGenotype::GetSNP, invalid index.");
 	UINT8 ch = PackedSNPs[idx >> 2];
 	return (ch >> (2*(idx & 0x03))) & 0x03;
@@ -249,7 +387,7 @@ UINT8 TGenotype::GetSNP(const int idx) const
 
 void TGenotype::SetSNP(const int idx, int val)
 {
-	CHECKING((idx<0) || (idx>=MAXNUM_SNP_IN_CLASSIFIER),
+	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
 		"TGenotype::SetSNP, invalid index.");
 	if (val<0 || val>2) val = 3;
 	_SetSNP(idx, val);
@@ -257,15 +395,15 @@ void TGenotype::SetSNP(const int idx, int val)
 
 void TGenotype::_SetSNP(const int idx, UINT8 val)
 {
-	UINT8 &ch = PackedSNPs[idx >> 2];
-	int shift = (idx & 0x03)*2;
-	UINT8 mask = ~(0x03 << shift);
+	UTYPE &ch = PackedSNPs[idx >> 2];
+	UINT8 shift = (idx & 0x03)*2;
+	UTYPE mask = ~(0x03 << shift);
 	ch = (ch & mask) | (val << shift);
 }
 
 string TGenotype::SNPToString(const int Length) const
 {
-	CHECKING(Length > MAXNUM_SNP_IN_CLASSIFIER,
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::SNPToString, the length is too large.");
 	string rv;
 	if (Length > 0)
@@ -282,12 +420,12 @@ string TGenotype::SNPToString(const int Length) const
 
 void TGenotype::StringToSNP(const string &str)
 {
-	CHECKING((int)str.size() > MAXNUM_SNP_IN_CLASSIFIER,
+	HIBAG_CHECKING((int)str.size() > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::StringToSNP, the input string is too long.");
 	for (int i=0; i < (int)str.size(); i++)
 	{
 		char ch = str[i];
-		CHECKING(ch!='0' && ch!='1' && ch!='2' && ch!='?',
+		HIBAG_CHECKING(ch!='0' && ch!='1' && ch!='2' && ch!='?',
 			"TGenotype::StringToSNP, the input string should be '0', '1', '2' or '?'.");
 		SetSNP(i, ch-'0');
 	}
@@ -295,40 +433,16 @@ void TGenotype::StringToSNP(const string &str)
 
 void TGenotype::SNPToInt(const int Length, int OutArray[]) const
 {
-	CHECKING(Length > MAXNUM_SNP_IN_CLASSIFIER,
-		"TGenotype::SNPToInt, the length is too large.");
+	HIBAG_CHECKING((Length<0) || (Length>HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+		"TGenotype::SNPToInt, the length is invalid.");
 	for (int i=0; i < Length; i++) OutArray[i] = GetSNP(i);
-}
-
-void TGenotype::IntToSNP(int Length, const int InArray[])
-{
-	CHECKING(Length > MAXNUM_SNP_IN_CLASSIFIER,
-		"TGenotype::IntToSNP, the input integer array is too long.");
-	UINT8 *p = &PackedSNPs[0];
-	for (; Length >= 4; Length-=4, InArray+=4)
-	{
-		int g0 = InArray[0]; if (g0<0 || g0>2) g0 = 3;
-		int g1 = InArray[1]; if (g1<0 || g1>2) g1 = 3;
-		int g2 = InArray[2]; if (g2<0 || g2>2) g2 = 3;
-		int g3 = InArray[3]; if (g3<0 || g3>2) g3 = 3;
-		*p++ = g0 | (g1 << 2) | (g2 << 4) | (g3 << 6);
-	}
-	if (Length > 0)
-	{
-		*p = 0;
-		for (int i=0; i < Length; i++)
-		{
-			int g = *InArray++; if (g<0 || g>2) g = 3;
-			*p |= (g << (2*i));
-		}
-	}
 }
 
 void TGenotype::IntToSNP(int Length, const int InBase[], const int Index[])
 {
-	CHECKING(Length > MAXNUM_SNP_IN_CLASSIFIER,
-		"TGenotype::IntToSNP, the input integer array is too long.");
-	UINT8 *p = &PackedSNPs[0];
+	HIBAG_CHECKING((Length<0) || (Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+		"TGenotype::IntToSNP, the length is invalid.");
+	UTYPE *p = &PackedSNPs[0];
 	for (; Length >= 4; Length-=4, Index+=4)
 	{
 		int g0 = InBase[Index[0]]; if (g0<0 || g0>2) g0 = 3;
@@ -348,36 +462,121 @@ void TGenotype::IntToSNP(int Length, const int InBase[], const int Index[])
 	}
 }
 
-int TGenotype::Diff(int Length, const THaplotype &H1, const THaplotype &H2) const
+int TGenotype::HammingDistance(int Length,
+	const THaplotype &H1, const THaplotype &H2) const
 {
-	CHECKING(Length > MAXNUM_SNP_IN_CLASSIFIER,
-		"THaplotype::SNPToString, the length is too large.");
-	return _Diff(Length, H1, H2);
+	HIBAG_CHECKING((Length<0) || (Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+		"THaplotype::HammingDistance, the length is too large.");
+	return _HamDist(Length, H1, H2);
 }
 
-int TGenotype::_Diff(int Length, const THaplotype &H1, const THaplotype &H2) const
+inline int TGenotype::_HamDist(int Length,
+	const THaplotype &H1, const THaplotype &H2) const
 {
-	const UINT8 *p1 = &H1.PackedSNPs[0], *p2 = &H2.PackedSNPs[0];
-	const UINT8 *s = &PackedSNPs[0];
+	const UTYPE *p1 = &H1.PackedHaplo[0];
+	const UTYPE *p2 = &H2.PackedHaplo[0];
+	const UTYPE *s = &PackedSNPs[0];
 	int rv = 0;
 
-	for (; Length >= 4; Length -= 4, p1++, p2++, s++)
+#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+
+	// UTYPE = UINT16
+	static UINT16 offset[8] HIBAG_SSE_VAR_ALIGN;
+
+	while (Length > 0)
 	{
-		rv += Init.Diff_Pack_Mat[*s][(*p1) | (*p2 << 1)];
+		// two haplotypes
+		__m128i h1 = _mm_loadu_si128((__m128i*)p1); p1 += 8;
+		__m128i h2 = _mm_loadu_si128((__m128i*)p2); p2 += 8;
+		// h1 = h1 | (h2 << 1)
+		h1 = (__m128i)_mm_or_ps((__m128)h1, (__m128)_mm_slli_epi16(h2, 1));
+
+		// SNP genotypes
+		__m128i g = _mm_loadu_si128((__m128i*)s); s += 8;
+		g = (__m128i)_mm_or_ps((__m128)_mm_slli_si128(g, 1), (__m128)h1);
+
+
+		#define HAM_BASE	(&_Packed_HammingDistance[0][0])
+
+		// consider Length
+		if (Length >= 32)
+		{
+			// store in offset
+			_mm_store_si128((__m128i*)offset, g);
+
+			// sum
+			rv += HAM_BASE[offset[0]] + HAM_BASE[offset[1]] +
+				HAM_BASE[offset[2]] + HAM_BASE[offset[3]] +
+				HAM_BASE[offset[4]] + HAM_BASE[offset[5]] +
+				HAM_BASE[offset[6]] + HAM_BASE[offset[7]];
+
+			// decrease Length
+			Length -= 32;
+
+		} else {
+			// set mask
+			g = (__m128i)_mm_and_ps((__m128)g, _Packed_HamLenMask[Length]);
+			// stored in offset
+			_mm_store_si128((__m128i*)offset, g);
+
+			// sum
+			const UINT16 *pl = offset;
+			if (Length >= 16)  // 4 bytes
+			{
+				rv += HAM_BASE[offset[0]] + HAM_BASE[offset[1]] +
+					HAM_BASE[offset[2]] + HAM_BASE[offset[3]];
+				Length -= 16; pl += 4;
+			}
+			if (Length >= 8)  // 2 bytes
+			{
+				rv += HAM_BASE[pl[0]] + HAM_BASE[pl[1]];
+				Length -= 8; pl += 2;
+			}
+			if (Length >= 4)
+			{
+				rv += HAM_BASE[pl[0]];
+				Length -= 4; pl ++;
+			}
+			if (Length > 0)
+			{
+				rv += HAM_BASE[pl[0]];
+				Length = 0;
+			}
+		}
+
+		#undef HAM_BASE
+	}
+
+#else
+
+	// UTYPE = UINT8
+	// potential vectorization for compiler
+	for (; Length >= 16; Length -= 16)  // four bytes
+	{
+		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
+		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
+		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
+		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
+	}
+	for (; Length >= 4; Length -= 4)  // one byte
+	{
+		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
 	}
 	if (Length > 0)
 	{
 		static const UINT8 MaskAry[4] = { 0x00, 0x03, 0x0F, 0x3F };
 		UINT8 mask = MaskAry[Length];
-		rv += Init.Diff_Pack_Mat[*s & mask][((*p1) | (*p2 << 1)) & mask];
+		rv += _Packed_HammingDistance[*s & mask][((*p1) | (*p2 << 1)) & mask];
 	}
+
+#endif
 
 	return rv;
 }
 
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The class of haplotype list
 
 CHaplotypeList::CHaplotypeList()
@@ -387,7 +586,7 @@ CHaplotypeList::CHaplotypeList()
 
 void CHaplotypeList::DoubleHaplos(CHaplotypeList &OutHaplos) const
 {
-	CHECKING(Num_SNP >= MAXNUM_SNP_IN_CLASSIFIER,
+	HIBAG_CHECKING(Num_SNP >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"CHaplotypeList::DoubleHaplos, there are too many SNP markers.");
 
 	OutHaplos.Num_SNP = Num_SNP + 1;
@@ -402,25 +601,26 @@ void CHaplotypeList::DoubleHaplos(CHaplotypeList &OutHaplos) const
 		for (int j=0; j < (int)src.size(); j++)
 		{
 			dst[2*j+0] = src[j];
-			dst[2*j+0].SetSNP(Num_SNP, 0);
+			dst[2*j+0].SetAllele(Num_SNP, 0);
 			dst[2*j+1] = src[j];
-			dst[2*j+1].SetSNP(Num_SNP, 1);
+			dst[2*j+1].SetAllele(Num_SNP, 1);
 		}
 	}
 }
 
-void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const double AFreq) const
+void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos,
+	const TFLOAT AFreq) const
 {
 	static const char *msg =
 		"CHaplotypeList::DoubleHaplosInitFreq, the total number of haplotypes is not correct.";
-	CHECKING(List.size() != OutHaplos.List.size(), msg);
+	HIBAG_CHECKING(List.size() != OutHaplos.List.size(), msg);
 
-	const double p0 = 1-AFreq, p1 = AFreq;
+	const TFLOAT p0 = 1-AFreq, p1 = AFreq;
 	for (int i=0; i < (int)List.size(); i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
-		CHECKING(dst.size() != src.size()*2, msg);
+		HIBAG_CHECKING(dst.size() != src.size()*2, msg);
 
 		for (int j=0; j < (int)src.size(); j++)
 		{
@@ -430,7 +630,8 @@ void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const doubl
 	}
 }
 
-void CHaplotypeList::MergeDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const
+void CHaplotypeList::MergeDoubleHaplos(const TFLOAT RareProb,
+	CHaplotypeList &OutHaplos) const
 {
 	OutHaplos.Num_SNP = Num_SNP;
 	OutHaplos.List.resize(List.size());
@@ -461,11 +662,12 @@ void CHaplotypeList::MergeDoubleHaplos(const double RareProb, CHaplotypeList &Ou
 	}
 }
 
-void CHaplotypeList::EraseDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const
+void CHaplotypeList::EraseDoubleHaplos(const TFLOAT RareProb,
+	CHaplotypeList &OutHaplos) const
 {
 	OutHaplos.Num_SNP = Num_SNP;
 	OutHaplos.List.resize(List.size());
-	double sum = 0;
+	TFLOAT sum = 0;
 
 	for (int i=0; i < (int)List.size(); i++)
 	{
@@ -478,7 +680,7 @@ void CHaplotypeList::EraseDoubleHaplos(const double RareProb, CHaplotypeList &Ou
 		{
 			const THaplotype &p0 = src[j+0];
 			const THaplotype &p1 = src[j+1];
-			double sumfreq = p0.Frequency + p1.Frequency;
+			TFLOAT sumfreq = p0.Frequency + p1.Frequency;
 
 			if ((p0.Frequency < RareProb) || (p1.Frequency < RareProb))
 			{
@@ -515,7 +717,7 @@ void CHaplotypeList::SaveClearFrequency()
 	}
 }
 
-void CHaplotypeList::ScaleFrequency(const double scale)
+void CHaplotypeList::ScaleFrequency(const TFLOAT scale)
 {
 	vector< vector<THaplotype> >::iterator it;
 	for (it = List.begin(); it != List.end(); it++)
@@ -545,14 +747,155 @@ void CHaplotypeList::Print()
 		vector<THaplotype>::const_iterator it;
 		for (it=L.begin(); it != L.end(); it++)
 		{
-			Rprintf("%0.7f\tHLA: %4d, %s\n", it->Frequency, i, it->SNPToString(Num_SNP).c_str());
+			Rprintf("%0.7f\tHLA: %4d, %s\n", it->Frequency, i,
+				it->HaploToStr(Num_SNP).c_str());
 		}
 	}
-
 }
 
 
-// -------------------------------------------------------------------------------
+#ifdef HIBAG_GPU_SUPPORT
+
+void CHaplotypeList::InitGPUHostData(int *&_HLA_HapIdx, void *&_HapList)
+{
+	// HLA allele index
+	_HLA_HapIdx = new int[nHLA()*2];
+	int st = 0;
+	for (int i=0; i < (int)List.size(); i++)
+	{
+		_HLA_HapIdx[2*i + 0] = st;
+		_HLA_HapIdx[2*i + 1] = List[i].size();
+		st += List[i].size();
+	}
+
+
+	// haplotype list
+#if (HIBAG_FLOAT_TYPE_ID == 0)
+
+	if (_gpuRunInDoublePrecision)
+	{
+		_HapList = new TGPU_Haplotype_F64[TotalNumOfHaplo()];
+		TGPU_Haplotype_F64 *pH = (TGPU_Haplotype_F64 *)_HapList;
+
+		vector< vector<THaplotype> >::iterator it;
+		vector<THaplotype>::iterator p;
+		for (it = List.begin(); it != List.end(); it++)
+		{
+			for (p = it->begin(); p != it->end(); p++)
+			{
+			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+				// UTYPE = UINT16
+				UINT8  *d = &(pH->PackedHaplo[0]);
+				UINT16 *s = &(p->PackedHaplo[0]);
+				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
+					*d ++ = *s ++;
+			#else
+				memcpy(&(pH->PackedHaplo[0]), &(p->PackedHaplo[0]),
+					HIBAG_PACKED_UTYPE_MAXNUM_SNP);
+			#endif
+				pH->Frequency = p->Frequency;
+				pH ++;
+			}
+		}
+	} else {
+		_HapList = new TGPU_Haplotype_F32[TotalNumOfHaplo()];
+		TGPU_Haplotype_F32 *pH = (TGPU_Haplotype_F32 *)_HapList;
+
+		vector< vector<THaplotype> >::iterator it;
+		vector<THaplotype>::iterator p;
+		for (it = List.begin(); it != List.end(); it++)
+		{
+			for (p = it->begin(); p != it->end(); p++)
+			{
+			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+				// UTYPE = UINT16
+				UINT8  *d = &(pH->PackedHaplo[0]);
+				UINT16 *s = &(p->PackedHaplo[0]);
+				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
+					*d ++ = *s ++;
+			#else
+				memcpy(&(pH->PackedHaplo[0]), &(p->PackedHaplo[0]),
+					HIBAG_PACKED_UTYPE_MAXNUM_SNP);
+			#endif
+				pH->Frequency = p->Frequency;
+				pH ++;
+			}
+		}
+	}
+
+#elif (HIBAG_FLOAT_TYPE_ID == 1)
+
+	_HapList = new TGPU_Haplotype_F32[TotalNumOfHaplo()];
+	TGPU_Haplotype_F32 *pH = (TGPU_Haplotype_F32 *)_HapList;
+
+	vector< vector<THaplotype> >::iterator it;
+	vector<THaplotype>::iterator p;
+	for (it = List.begin(); it != List.end(); it++)
+	{
+		for (p = it->begin(); p != it->end(); p++)
+		{
+		#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+			// UTYPE = UINT16
+			UINT8  *d = &(pH->PackedHaplo[0]);
+			UINT16 *s = &(p->PackedHaplo[0]);
+			for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
+				*d ++ = *s ++;
+		#else
+			memcpy(&(pH->PackedHaplo[0]), &(p->PackedHaplo[0]),
+				HIBAG_PACKED_UTYPE_MAXNUM_SNP);
+		#endif
+			pH->Frequency = p->Frequency;
+			pH ++;
+		}
+	}
+
+#else
+#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+#endif
+}
+#endif
+
+
+#ifdef HIBAG_GPU_SUPPORT
+inline void CHaplotypeList::FreqGPUHostData(int *&_HLA_HapIdx, void *&_HapList)
+{
+	// no worry if _HLA_HapIdx == NULL
+	delete[] _HLA_HapIdx;
+	_HLA_HapIdx = NULL;
+
+#if (HIBAG_FLOAT_TYPE_ID == 0)
+
+	if (_HapList)
+	{
+		if (_gpuRunInDoublePrecision)
+		{
+			TGPU_Haplotype_F64 *tmp = (TGPU_Haplotype_F64*)_HapList;
+			delete[] tmp;
+		} else {
+			TGPU_Haplotype_F32 *tmp = (TGPU_Haplotype_F32*)_HapList;
+			delete[] tmp;
+		}
+		_HapList = NULL;
+	}
+
+#elif (HIBAG_FLOAT_TYPE_ID == 1)
+
+	if (_HapList)
+	{
+		TGPU_Haplotype_F32 *tmp = (TGPU_Haplotype_F32*)_HapList;
+		delete[] tmp;
+		_HapList = NULL;
+	}
+
+#else
+#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+#endif
+}
+#endif
+
+
+
+// -------------------------------------------------------------------------
 // The class of SNP genotype list
 
 CSNPGenoMatrix::CSNPGenoMatrix()
@@ -572,7 +915,7 @@ int *CSNPGenoMatrix::Get(const int IdxSamp)
 }
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The class of SNP genotype list
 
 CGenotypeList::CGenotypeList()
@@ -582,9 +925,9 @@ CGenotypeList::CGenotypeList()
 
 void CGenotypeList::AddSNP(int IdxSNP, const CSNPGenoMatrix &SNPMat)
 {
-	CHECKING(nSamp() != SNPMat.Num_Total_Samp,
+	HIBAG_CHECKING(nSamp() != SNPMat.Num_Total_Samp,
 		"CGenotypeList::AddSNP, SNPMat should have the same number of samples.");
-	CHECKING(Num_SNP >= MAXNUM_SNP_IN_CLASSIFIER,
+	HIBAG_CHECKING(Num_SNP >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"CGenotypeList::AddSNP, there are too many SNP markers.");
 	
 	const int *pG = SNPMat.pGeno + IdxSNP;
@@ -600,7 +943,8 @@ void CGenotypeList::AddSNP(int IdxSNP, const CSNPGenoMatrix &SNPMat)
 
 void CGenotypeList::ReduceSNP()
 {
-	CHECKING(Num_SNP <= 0, "CGenotypeList::ReduceSNP, there is no SNP marker.");
+	HIBAG_CHECKING(Num_SNP <= 0,
+		"CGenotypeList::ReduceSNP, there is no SNP marker.");
 	Num_SNP --;
 }
 
@@ -611,17 +955,17 @@ void CGenotypeList::Print()
 	for (it = List.begin(); it != List.end(); it++)
 	{
 		idx ++;
-		Rprintf("%d\t[%d]\t%s\n", idx, it->BootstrapCount, it->SNPToString(Num_SNP).c_str());
+		Rprintf("%d\t[%d]\t%s\n", idx, it->BootstrapCount,
+			it->SNPToString(Num_SNP).c_str());
 	}
 }
 
 
-// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------
 // A list of HLA types
 
-CHLATypeList::CHLATypeList()
-{
-}
+CHLATypeList::CHLATypeList() { }
 
 int CHLATypeList::Compare(const THLAType &H1, const THLAType &H2)
 {
@@ -638,7 +982,7 @@ int CHLATypeList::Compare(const THLAType &H1, const THLAType &H2)
 }
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // CSamplingWithoutReplace
 
 CSamplingWithoutReplace::CSamplingWithoutReplace()
@@ -707,15 +1051,20 @@ int &CSamplingWithoutReplace::operator[] (int idx)
 
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The class of SNP genotype list
 
 CAlg_EM::CAlg_EM() {}
 
 void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
-	const CGenotypeList &GenoList, const CHLATypeList &HLAList, CHaplotypeList &NextHaplo)
+	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
+	CHaplotypeList &NextHaplo)
 {
-	CHECKING(GenoList.nSamp() != HLAList.nSamp(),
+#if (HIBAG_TIMING == 3)
+	_put_timing();
+#endif
+
+	HIBAG_CHECKING(GenoList.nSamp() != HLAList.nSamp(),
 		"CAlg_EM::PrepareHaplotypes, GenoList and HLAList should have the same number of samples.");
 
 	_SampHaploPair.clear();
@@ -746,7 +1095,7 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				{
 					for (p2 = pH2.begin(); p2 != pH2.end(); p2++)
 					{
-						int d = pG._Diff(CurHaplo.Num_SNP, *p1, *p2);
+						int d = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
@@ -759,7 +1108,7 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 					{
 						for (p2 = pH2.begin(); p2 != pH2.end(); p2++)
 						{
-							if (pG._Diff(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
+							if (pG._HamDist(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
 								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 						}
 					}
@@ -769,7 +1118,7 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				{
 					for (p2 = p1; p2 != pH1.end(); p2++)
 					{
-						int d = pG._Diff(CurHaplo.Num_SNP, *p1, *p2);
+						int d = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
@@ -782,7 +1131,7 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 					{
 						for (p2 = p1; p2 != pH1.end(); p2++)
 						{
-							if (pG._Diff(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
+							if (pG._HamDist(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
 								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 						}
 					}
@@ -790,14 +1139,19 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 			}
 		}
 	}
+
+#if (HIBAG_TIMING == 3)
+	_inc_timing();
+#endif
 }
 
 bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
-	const CSNPGenoMatrix &SNPMat, CGenotypeList &GenoList, CHaplotypeList &NextHaplo)
+	const CSNPGenoMatrix &SNPMat, CGenotypeList &GenoList,
+	CHaplotypeList &NextHaplo)
 {
-	CHECKING((NewSNP<0) || (NewSNP>=SNPMat.Num_Total_SNP),
+	HIBAG_CHECKING((NewSNP<0) || (NewSNP>=SNPMat.Num_Total_SNP),
 		"CAlg_EM::PrepareNewSNP, invalid NewSNP.");
-	CHECKING(SNPMat.Num_Total_Samp != GenoList.nSamp(),
+	HIBAG_CHECKING(SNPMat.Num_Total_Samp != GenoList.nSamp(),
 		"CAlg_EM::PrepareNewSNP, SNPMat and GenoList should have the same number of SNPs.");
 
 	// compute the allele frequency of NewSNP
@@ -815,7 +1169,7 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 	if ((allele_cnt==0) || (allele_cnt==valid_cnt)) return false;
 
 	// initialize the haplotype frequencies
-	CurHaplo.DoubleHaplosInitFreq(NextHaplo, double(allele_cnt)/valid_cnt);
+	CurHaplo.DoubleHaplosInitFreq(NextHaplo, TFLOAT(allele_cnt)/valid_cnt);
 
 	// update haplotype pair
 	const int IdxNewSNP = NextHaplo.Num_SNP - 1;
@@ -831,7 +1185,8 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 			// for -- loop
 			for (p = it->PairList.begin(); p != it->PairList.end(); p++)
 			{
-				p->Flag = ((p->H1->GetSNP(IdxNewSNP) + p->H2->GetSNP(IdxNewSNP)) == geno);
+				p->Flag = ((p->H1->GetAllele(IdxNewSNP) +
+					p->H2->GetAllele(IdxNewSNP)) == geno);
 			}
 		} else {
 			// for -- loop
@@ -845,15 +1200,19 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 
 void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 {
+#if (HIBAG_TIMING == 2)
+	_put_timing();
+#endif
+
 	// the converage tolerance
-	double ConvTol, LogLik = -1e+30;
+	TFLOAT ConvTol, LogLik = -1e+30;
 
 	// iterate ...
 	for (int iter=0; iter <= EM_MaxNum_Iterations; iter++)
 	{
 		// save old values
 		// old log likelihood
-		double Old_LogLik = LogLik;
+		TFLOAT Old_LogLik = LogLik;
 		// old haplotype frequencies
 		NextHaplo.SaveClearFrequency();
 
@@ -865,9 +1224,10 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 
 		for (s = _SampHaploPair.begin(); s != _SampHaploPair.end(); s++)
 		{
+			// always "s->BootstrapCount > 0"
 			TotalNumSamp += s->BootstrapCount;
 
-			double psum = 0;
+			TFLOAT psum = 0;
 			for (p = s->PairList.begin(); p != s->PairList.end(); p++)
 			{
 				if (p->Flag)
@@ -877,15 +1237,15 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 					psum += p->Freq;
 				}
 			}
-			LogLik += s->BootstrapCount * log(psum);
-			psum = double(s->BootstrapCount) / psum;
+			LogLik += s->BootstrapCount * FLOAT_LOG(psum);
+			psum = TFLOAT(s->BootstrapCount) / psum;
 
 			// update
 			for (p = s->PairList.begin(); p != s->PairList.end(); p++)
 			{
 				if (p->Flag)
 				{
-					double r = p->Freq * psum;
+					TFLOAT r = p->Freq * psum;
 					p->H1->Frequency += r; p->H2->Frequency += r;
 				}
 			}
@@ -903,6 +1263,10 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 			if (ConvTol < 0) ConvTol = 0;
 		}
 	}
+
+#if (HIBAG_TIMING == 2)
+	_inc_timing();
+#endif
 }
 
 void CAlg_EM::THaploPairList::Print(const int Length)
@@ -910,28 +1274,21 @@ void CAlg_EM::THaploPairList::Print(const int Length)
 	vector<THaploPair>::const_iterator it;
 	for (it = PairList.begin(); it != PairList.end(); it++)
 	{
-		Rprintf("%s, %s\n", it->H1->SNPToString(Length).c_str(),
-			it->H2->SNPToString(Length).c_str());
+		Rprintf("%s, %s\n", it->H1->HaploToStr(Length).c_str(),
+			it->H2->HaploToStr(Length).c_str());
 	}
 }
 
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The algorithm of prediction
-
-// Frequency Calculation
-static inline double FREQ_MUTANT(double freq, int error_cnt)
-{
-	return (error_cnt <= 0) ? freq : ( freq * exp(error_cnt*log(MIN_RARE_FREQ)) );
-}
-
 
 CAlg_Prediction::CAlg_Prediction() { }
 
 void CAlg_Prediction::InitPrediction(int n_hla)
 {
-	CHECKING(n_hla<=0, "CAlg_Prediction::Init, n_hla error.");
+	HIBAG_CHECKING(n_hla<=0, "CAlg_Prediction::Init, n_hla error.");
 
 	_nHLA = n_hla;
 	const int size = n_hla*(n_hla+1)/2;
@@ -941,21 +1298,21 @@ void CAlg_Prediction::InitPrediction(int n_hla)
 
 void CAlg_Prediction::InitPostProbBuffer()
 {
-	memset(&_PostProb[0], 0, _PostProb.size()*sizeof(double));
+	memset(&_PostProb[0], 0, _PostProb.size()*sizeof(TFLOAT));
 }
 
 void CAlg_Prediction::InitSumPostProbBuffer()
 {
-	memset(&_SumPostProb[0], 0, _SumPostProb.size()*sizeof(double));
+	memset(&_SumPostProb[0], 0, _SumPostProb.size()*sizeof(TFLOAT));
 	_Sum_Weight = 0;
 }
 
-void CAlg_Prediction::AddProbToSum(const double weight)
+void CAlg_Prediction::AddProbToSum(const TFLOAT weight)
 {
 	if (weight > 0)
 	{
-		double *p = &_PostProb[0];
-		double *s = &_SumPostProb[0];
+		TFLOAT *p = &_PostProb[0];
+		TFLOAT *s = &_SumPostProb[0];
 		for (size_t n = _SumPostProb.size(); n > 0; n--, s++, p++)
 			*s += (*p) * weight;
 		_Sum_Weight += weight;
@@ -966,30 +1323,31 @@ void CAlg_Prediction::NormalizeSumPostProb()
 {
 	if (_Sum_Weight > 0)
 	{
-		const double scale = 1.0 / _Sum_Weight;
-		double *s = &_SumPostProb[0];
+		const TFLOAT scale = 1.0 / _Sum_Weight;
+		TFLOAT *s = &_SumPostProb[0];
 		for (size_t n = _SumPostProb.size(); n > 0; n--)
 			*s++ *= scale;
 	}
 }
 
-double &CAlg_Prediction::IndexPostProb(int H1, int H2)
+TFLOAT &CAlg_Prediction::IndexPostProb(int H1, int H2)
 {
 	if (H1 > H2) std::swap(H1, H2);
 	return _PostProb[H2 + H1*(2*_nHLA-H1-1)/2];
 }
 
-double &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
+TFLOAT &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
 {
 	if (H1 > H2) std::swap(H1, H2);
 	return _SumPostProb[H2 + H1*(2*_nHLA-H1-1)/2];
 }
 
-void CAlg_Prediction::Predict(const CHaplotypeList &Haplo, const TGenotype &Geno)
+void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
+	const TGenotype &Geno)
 {
 	vector<THaplotype>::const_iterator i1;
 	vector<THaplotype>::const_iterator i2;
-	double *pProb = &_PostProb[0];
+	TFLOAT *pProb = &_PostProb[0];
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
@@ -1003,7 +1361,7 @@ void CAlg_Prediction::Predict(const CHaplotypeList &Haplo, const TGenotype &Geno
 			{
 				*pProb += FREQ_MUTANT((i1 != i2) ?
 					(2 * i1->Frequency * i2->Frequency) : (i1->Frequency * i2->Frequency),
-					Geno._Diff(Haplo.Num_SNP, *i1, *i2));
+					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 			}
 		}
 		pProb ++;
@@ -1018,7 +1376,7 @@ void CAlg_Prediction::Predict(const CHaplotypeList &Haplo, const TGenotype &Geno
 				for (i2=L2.begin(); i2 != L2.end(); i2++)
 				{
 					*pProb += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
-						Geno._Diff(Haplo.Num_SNP, *i1, *i2));
+						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 				}
 			}
 			pProb ++;
@@ -1026,21 +1384,127 @@ void CAlg_Prediction::Predict(const CHaplotypeList &Haplo, const TGenotype &Geno
 	}
 
 	// normalize
-	double sum = 0;
-	double *p = &_PostProb[0];
+	TFLOAT sum = 0;
+	TFLOAT *p = &_PostProb[0];
 	for (size_t n = _PostProb.size(); n > 0; n--) sum += *p++;
 	sum = 1.0 / sum;
 	p = &_PostProb[0];
 	for (size_t n = _PostProb.size(); n > 0; n--) *p++ *= sum;
 }
 
-THLAType CAlg_Prediction::MaxProb()
+THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
+	const TGenotype &Geno)
+{
+	THLAType rv;
+	rv.Allele1 = rv.Allele2 = NA_INTEGER;
+	TFLOAT max=0, prob;
+
+	vector<THaplotype>::const_iterator i1;
+	vector<THaplotype>::const_iterator i2;
+
+	for (int h1=0; h1 < _nHLA; h1++)
+	{
+		const vector<THaplotype> &L1 = Haplo.List[h1];
+
+		// diag value
+		prob = 0;
+		for (i1=L1.begin(); i1 != L1.end(); i1++)
+		{
+			for (i2=i1; i2 != L1.end(); i2++)
+			{
+				prob += FREQ_MUTANT((i1 != i2) ?
+					(2 * i1->Frequency * i2->Frequency) : (i1->Frequency * i2->Frequency),
+					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+			}
+		}
+		if (max < prob)
+		{
+			max = prob;
+			rv.Allele1 = rv.Allele2 = h1;
+		}
+
+		// off-diag value
+		for (int h2=h1+1; h2 < _nHLA; h2++)
+		{
+			const vector<THaplotype> &L2 = Haplo.List[h2];
+			prob = 0;
+			for (i1=L1.begin(); i1 != L1.end(); i1++)
+			{
+				for (i2=L2.begin(); i2 != L2.end(); i2++)
+				{
+					prob += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
+						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+				}
+			}
+			if (max < prob)
+			{
+				max = prob;
+				rv.Allele1 = h1; rv.Allele2 = h2;
+			}
+		}
+	}
+
+	return rv;
+}
+
+TFLOAT CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
+	const TGenotype &Geno, const THLAType &HLA)
+{
+	int H1=HLA.Allele1, H2=HLA.Allele2;
+	if (H1 > H2) std::swap(H1, H2);
+	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
+	int idx = 0;
+
+	TFLOAT sum=0, hlaProb=0, prob;
+	vector<THaplotype>::const_iterator i1;
+	vector<THaplotype>::const_iterator i2;
+
+	for (int h1=0; h1 < _nHLA; h1++)
+	{
+		const vector<THaplotype> &L1 = Haplo.List[h1];
+
+		// diag value
+		prob = 0;
+		for (i1=L1.begin(); i1 != L1.end(); i1++)
+		{
+			for (i2=i1; i2 != L1.end(); i2++)
+			{
+				prob += FREQ_MUTANT((i1 != i2) ?
+					(2 * i1->Frequency * i2->Frequency) : (i1->Frequency * i2->Frequency),
+					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+			}
+		}
+		if (IxHLA == idx) hlaProb = prob;
+		idx ++; sum += prob;
+
+		// off-diag value
+		for (int h2=h1+1; h2 < _nHLA; h2++)
+		{
+			const vector<THaplotype> &L2 = Haplo.List[h2];
+			prob = 0;
+			for (i1=L1.begin(); i1 != L1.end(); i1++)
+			{
+				for (i2=L2.begin(); i2 != L2.end(); i2++)
+				{
+					prob += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
+						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+				}
+			}
+			if (IxHLA == idx) hlaProb = prob;
+			idx ++; sum += prob;
+		}
+	}
+
+	return hlaProb / sum;
+}
+
+THLAType CAlg_Prediction::BestGuess()
 {
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 
-	double *p = &_PostProb[0];
-	double max = 0;
+	TFLOAT *p = &_PostProb[0];
+	TFLOAT max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
 		for (int h2=h1; h2 < _nHLA; h2++, p++)
@@ -1056,13 +1520,13 @@ THLAType CAlg_Prediction::MaxProb()
 	return rv;
 }
 
-THLAType CAlg_Prediction::MaxSumProb()
+THLAType CAlg_Prediction::BestGuessEnsemble()
 {
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 
-	double *p = &_SumPostProb[0];
-	double max = 0;
+	TFLOAT *p = &_SumPostProb[0];
+	TFLOAT max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
 		for (int h2=h1; h2 < _nHLA; h2++, p++)
@@ -1080,7 +1544,7 @@ THLAType CAlg_Prediction::MaxSumProb()
 
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The algorithm of variable selection
 
 CVariableSelection::CVariableSelection()
@@ -1089,11 +1553,11 @@ CVariableSelection::CVariableSelection()
 	_HLAList = NULL;
 }
 
-void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat, CHLATypeList &hlaList,
-	const int _BootstrapCnt[])
+void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
+	CHLATypeList &hlaList, const int _BootstrapCnt[])
 {
-	CHECKING(snpMat.Num_Total_Samp != hlaList.nSamp(),
-		"CVariableSelection::Init, snpMat and hlaList should have the same number of samples.");
+	HIBAG_CHECKING(snpMat.Num_Total_Samp != hlaList.nSamp(),
+		"CVariableSelection::InitSelection, snpMat and hlaList should have the same number of samples.");
 
 	_SNPMat = &snpMat;
 	_HLAList = &hlaList;
@@ -1119,7 +1583,7 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 		SumCnt += cnt;
 	}
 
-	const double scale = 0.5 / SumCnt;
+	const TFLOAT scale = 0.5 / SumCnt;
 	Haplo.Num_SNP = 0;
 	Haplo.List.clear();
 	Haplo.List.resize(_HLAList->Num_HLA_Allele());
@@ -1130,82 +1594,131 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 	}
 }
 
-double CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
+TFLOAT CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
-	CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
+#if (HIBAG_TIMING == 1)
+	_put_timing();
+#endif
+
+	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 
-	vector<TGenotype>::const_iterator it  = _GenoList.List.begin();
-	vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
-	int TotalCnt = 0, CorrectCnt = 0;
+	int TotalCnt, CorrectCnt;
 
-	for (; it != _GenoList.List.end(); it++, pHLA++)
+#ifdef HIBAG_GPU_SUPPORT
+	if (_gpuOutOfBagAcc_F64 || _gpuOutOfBagAcc_F32)
 	{
-		if (it->BootstrapCount <= 0)
+		int *_HLA_HapIdx = NULL;
+		void *_HapList = NULL;
+		TGPU_Genotype *_GList = NULL;
+
+		Haplo.InitGPUHostData(_HLA_HapIdx, _HapList);
+		TotalCnt = InitGPUHostData_OutOfBag(_GList);
+
+		if (_gpuRunInDoublePrecision)
 		{
-			_Predict.Predict(Haplo, *it);
-			CorrectCnt += CHLATypeList::Compare(_Predict.MaxProb(), *pHLA);
-			TotalCnt += 2;
+			CorrectCnt = (*_gpuOutOfBagAcc_F64)(nHLA(), _HLA_HapIdx,
+				Haplo.TotalNumOfHaplo(), (TGPU_Haplotype_F64*)_HapList,
+				TotalCnt, _GList, _GenoList.Num_SNP);
+		} else {
+			CorrectCnt = (*_gpuOutOfBagAcc_F32)(nHLA(), _HLA_HapIdx,
+				Haplo.TotalNumOfHaplo(), (TGPU_Haplotype_F32*)_HapList,
+				TotalCnt, _GList, _GenoList.Num_SNP);
 		}
+
+		Haplo.FreqGPUHostData(_HLA_HapIdx, _HapList);
+		FreqGPUHostData(_GList);
+
+		TotalCnt *= 2;
+	} else {
+#endif
+
+		TotalCnt = CorrectCnt = 0;
+		vector<TGenotype>::const_iterator it  = _GenoList.List.begin();
+		vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
+
+		for (; it != _GenoList.List.end(); it++, pHLA++)
+		{
+			if (it->BootstrapCount <= 0)
+			{
+				CorrectCnt += CHLATypeList::Compare(
+					_Predict._PredBestGuess(Haplo, *it), *pHLA);
+				TotalCnt += 2;
+			}
+		}
+
+#ifdef HIBAG_GPU_SUPPORT
 	}
-	
-	return (TotalCnt>0) ? double(CorrectCnt)/TotalCnt : 1;
+#endif
+
+#if (HIBAG_TIMING == 1)
+	_inc_timing();
+#endif
+
+	return (TotalCnt>0) ? TFLOAT(CorrectCnt)/TotalCnt : 1;
 }
 
-double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
+TFLOAT CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 {
-	CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
+#if (HIBAG_TIMING == 1)
+	_put_timing();
+#endif
+
+	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
+
+#ifdef HIBAG_GPU_SUPPORT
+
+#endif
 
 	vector<TGenotype>::const_iterator it   = _GenoList.List.begin();
 	vector<THLAType>::const_iterator  pHLA = _HLAList->List.begin();
-	double LogLik = 0;
+	TFLOAT LogLik = 0;
 
 	for (; it != _GenoList.List.end(); it++, pHLA++)
 	{
 		if (it->BootstrapCount > 0)
 		{
-			_Predict.Predict(Haplo, *it);
 			LogLik += it->BootstrapCount *
-				log(_Predict.IndexPostProb(pHLA->Allele1, pHLA->Allele2));
+				FLOAT_LOG(_Predict._PredPostProb(Haplo, *it, *pHLA));
 		}
 	}
 
+#if (HIBAG_TIMING == 1)
+	_inc_timing();
+#endif
 	return -2 * LogLik;
 }
 
-void CVariableSelection::Search(CBaseSampling &VarSampling, CHaplotypeList &OutHaplo,
-	vector<int> &OutSNPIndex, double &Out_Global_Max_OutOfBagAcc,
-	int mtry, bool prune, bool verbose, bool verbose_detail, bool debug)
+void CVariableSelection::Search(CBaseSampling &VarSampling,
+	CHaplotypeList &OutHaplo, vector<int> &OutSNPIndex,
+	TFLOAT &Out_Global_Max_OutOfBagAcc, int mtry, bool prune,
+	bool verbose, bool verbose_detail)
 {
 	// rare probability
-	const double RARE_PROB = std::max(FRACTION_HAPLO/(2*nSamp()), MIN_RARE_FREQ);
+	const TFLOAT RARE_PROB = std::max(FRACTION_HAPLO/(2*nSamp()), MIN_RARE_FREQ);
 
 	// initialize output
 	_InitHaplotype(OutHaplo);
 	OutSNPIndex.clear();
 
 	// initialize internal variables
-	double Global_Max_OutOfBagAcc = 0;
-	double Global_Min_Loss = 1e+30;
+	TFLOAT Global_Max_OutOfBagAcc = 0;
+	TFLOAT Global_Min_Loss = 1e+30;
 
 	CHaplotypeList NextHaplo, NextReducedHaplo, MinHaplo;
 
-	while ((VarSampling.TotalNum()>0) && ((int)OutSNPIndex.size() < MAXNUM_SNP_IN_CLASSIFIER))
+	while ((VarSampling.TotalNum()>0) &&
+		((int)OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER))
 	{
-		// sample mtry from all candidate SNP markers
-		if (debug)
-		{
-			OutHaplo.Print(); getchar();
-		}
-
 		// prepare for growing the individual classifier
 		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);
 
-		double max_OutOfBagAcc = Global_Max_OutOfBagAcc;
-		double min_loss = Global_Min_Loss;
+		TFLOAT max_OutOfBagAcc = Global_Max_OutOfBagAcc;
+		TFLOAT min_loss = Global_Min_Loss;
 		int min_i = -1;
 
+		// sample mtry from all candidate SNP markers
 		VarSampling.RandomSelect(mtry);
 		for (int i=0; i < VarSampling.NumOfSelection(); i++)
 		{
@@ -1217,8 +1730,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling, CHaplotypeList &OutH
 
 				// evaluate losses
 				_GenoList.AddSNP(VarSampling[i], *_SNPMat);
-				double loss = 0;
-				double acc = _OutOfBagAccuracy(NextReducedHaplo);
+				TFLOAT loss = 0;
+				TFLOAT acc = _OutOfBagAccuracy(NextReducedHaplo);
 				if (acc >= max_OutOfBagAcc)
 					loss = _InBagLogLik(NextReducedHaplo);
 				_GenoList.ReduceSNP();
@@ -1273,7 +1786,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling, CHaplotypeList &OutH
 		if (sign)
 		{
 			// add a new SNP predictor
-			Global_Max_OutOfBagAcc = max_OutOfBagAcc; Global_Min_Loss = min_loss;
+			Global_Max_OutOfBagAcc = max_OutOfBagAcc;
+			Global_Min_Loss = min_loss;
 			OutHaplo = MinHaplo;
 			OutSNPIndex.push_back(VarSampling[min_i]);
 			_GenoList.AddSNP(VarSampling[min_i], *_SNPMat);
@@ -1300,10 +1814,98 @@ void CVariableSelection::Search(CBaseSampling &VarSampling, CHaplotypeList &OutH
 	Out_Global_Max_OutOfBagAcc = Global_Max_OutOfBagAcc;
 }
 
+#ifdef HIBAG_GPU_SUPPORT
+
+int CVariableSelection::InitGPUHostData_OutOfBag(TGPU_Genotype *&_GList)
+{
+	int Cnt = 0;
+	vector<TGenotype>::iterator it;
+	for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++)
+	{
+		if (it->BootstrapCount <= 0)
+			Cnt ++;
+	}
+
+	if (Cnt > 0)
+	{
+		_GList = new TGPU_Genotype[Cnt];
+		TGPU_Genotype *p = _GList;
+		vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
+
+		for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++, pHLA++)
+		{
+			if (it->BootstrapCount <= 0)
+			{
+			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+				UTYPE *s = it->PackedSNPs;
+				UINT8 *d = p->PackedSNPs;
+				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
+					*d ++ = *s ++;
+			#else
+				memcpy(p->PackedSNPs, it->PackedSNPs, HIBAG_PACKED_UTYPE_MAXNUM_SNP);
+			#endif
+				p->BootstrapCount = 0;
+				p->HLA = *pHLA;
+				p ++;
+			}
+		}
+	} else
+		_GList = NULL;
+
+	return Cnt;
+}
+
+int CVariableSelection::InitGPUHostData_InBag(TGPU_Genotype *&_GList)
+{
+	int Cnt = 0;
+	vector<TGenotype>::iterator it;
+	for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++)
+	{
+		if (it->BootstrapCount > 0)
+			Cnt ++;
+	}
+
+	if (Cnt > 0)
+	{
+		_GList = new TGPU_Genotype[Cnt];
+		TGPU_Genotype *p = _GList;
+		vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
+
+		for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++, pHLA++)
+		{
+			if (it->BootstrapCount > 0)
+			{
+			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+				UTYPE *s = it->PackedSNPs;
+				UINT8 *d = p->PackedSNPs;
+				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
+					*d ++ = *s ++;
+			#else
+				memcpy(p->PackedSNPs, it->PackedSNPs, HIBAG_PACKED_UTYPE_MAXNUM_SNP);
+			#endif
+				p->BootstrapCount = it->BootstrapCount;
+				p->HLA = *pHLA;
+				p ++;
+			}
+		}
+	} else
+		_GList = NULL;
+
+	return Cnt;
+}
+
+inline void CVariableSelection::FreqGPUHostData(TGPU_Genotype *&_GList)
+{
+	// no worry if _GList == NULL
+	delete []_GList;
+	_GList = NULL;
+}
+
+#endif
 
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // The individual classifier
 
 CAttrBag_Classifier::CAttrBag_Classifier(CAttrBag_Model &_owner)
@@ -1320,8 +1922,9 @@ void CAttrBag_Classifier::InitBootstrapCount(int SampCnt[])
 	_OutOfBag_Accuracy = 0;
 }
 
-void CAttrBag_Classifier::Assign(int n_snp, const int snpidx[], const int samp_num[],
-	int n_haplo, const double *freq, const int *hla, char *const haplo[], double *_acc)
+void CAttrBag_Classifier::Assign(int n_snp, const int snpidx[],
+	const int samp_num[], int n_haplo, const TFLOAT *freq, const int *hla,
+	char *const haplo[], TFLOAT *_acc)
 {
 	// SNP markers
 	_SNPIndex.assign(&snpidx[0], &snpidx[n_snp]);
@@ -1343,25 +1946,26 @@ void CAttrBag_Classifier::Assign(int n_snp, const int snpidx[], const int samp_n
 	_OutOfBag_Accuracy = (_acc) ? (*_acc) : 0;
 }
 
-void CAttrBag_Classifier::Grow(CBaseSampling &VarSampling, int mtry, bool prune,
-	bool verbose, bool verbose_detail, bool debug)
+void CAttrBag_Classifier::Grow(CBaseSampling &VarSampling, int mtry,
+	bool prune, bool verbose, bool verbose_detail)
 {
-	_Owner->_VarSelect.InitSelection(_Owner->_SNPMat, _Owner->_HLAList, &_BootstrapCount[0]);
-	_Owner->_VarSelect.Search(VarSampling, _Haplo, _SNPIndex, _OutOfBag_Accuracy,
-		mtry, prune, verbose, verbose_detail, debug);
+	_Owner->_VarSelect.InitSelection(_Owner->_SNPMat,
+		_Owner->_HLAList, &_BootstrapCount[0]);
+	_Owner->_VarSelect.Search(VarSampling, _Haplo, _SNPIndex,
+		_OutOfBag_Accuracy, mtry, prune, verbose, verbose_detail);
 }
 
 
-// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // the attribute bagging model
 
 CAttrBag_Model::CAttrBag_Model() { }
 
 void CAttrBag_Model::InitTraining(int n_snp, int n_samp, int n_hla)
 {
-	CHECKING(n_snp < 0, "CAttrBag_Model::InitTraining, n_snp error.")
-	CHECKING(n_samp < 0, "CAttrBag_Model::InitTraining, n_samp error.")
-	CHECKING(n_hla < 0, "CAttrBag_Model::InitTraining, n_hla error.")
+	HIBAG_CHECKING(n_snp < 0, "CAttrBag_Model::InitTraining, n_snp error.")
+	HIBAG_CHECKING(n_samp < 0, "CAttrBag_Model::InitTraining, n_samp error.")
+	HIBAG_CHECKING(n_hla < 0, "CAttrBag_Model::InitTraining, n_hla error.")
 
 	_SNPMat.Num_Total_Samp = n_samp;
 	_SNPMat.Num_Total_SNP = n_snp;
@@ -1371,11 +1975,12 @@ void CAttrBag_Model::InitTraining(int n_snp, int n_samp, int n_hla)
 	_HLAList.Str_HLA_Allele.resize(n_hla);
 }
 
-void CAttrBag_Model::InitTraining(int n_snp, int n_samp, int *snp_geno, int n_hla, int *H1, int *H2)
+void CAttrBag_Model::InitTraining(int n_snp, int n_samp, int *snp_geno,
+	int n_hla, int *H1, int *H2)
 {
-	CHECKING(n_snp < 0, "CAttrBag_Model::InitTraining, n_snp error.")
-	CHECKING(n_samp < 0, "CAttrBag_Model::InitTraining, n_samp error.")
-	CHECKING(n_hla < 0, "CAttrBag_Model::InitTraining, n_hla error.")
+	HIBAG_CHECKING(n_snp < 0, "CAttrBag_Model::InitTraining, n_snp error.")
+	HIBAG_CHECKING(n_samp < 0, "CAttrBag_Model::InitTraining, n_samp error.")
+	HIBAG_CHECKING(n_hla < 0, "CAttrBag_Model::InitTraining, n_hla error.")
 
 	_SNPMat.Num_Total_Samp = n_samp;
 	_SNPMat.Num_Total_SNP = n_snp;
@@ -1385,8 +1990,10 @@ void CAttrBag_Model::InitTraining(int n_snp, int n_samp, int *snp_geno, int n_hl
 	_HLAList.Str_HLA_Allele.resize(n_hla);
 	for (int i=0; i < n_samp; i++)
 	{
-		CHECKING(H1[i]<0 || H1[i]>=n_hla, "CAttrBag_Model::InitTraining, H1 error.");
-		CHECKING(H2[i]<0 || H2[i]>=n_hla, "CAttrBag_Model::InitTraining, H2 error.");
+		HIBAG_CHECKING(H1[i]<0 || H1[i]>=n_hla,
+			"CAttrBag_Model::InitTraining, H1 error.");
+		HIBAG_CHECKING(H2[i]<0 || H2[i]>=n_hla,
+			"CAttrBag_Model::InitTraining, H2 error.");
 		_HLAList.List[i].Allele1 = H1[i];
 		_HLAList.List[i].Allele2 = H2[i];
 	}
@@ -1431,8 +2038,13 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 }
 
 void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
-	bool verbose, bool verbose_detail, bool debug)
+	bool verbose, bool verbose_detail)
 {
+#if (HIBAG_TIMING > 0)
+	_timing_ = 0;
+	clock_t _start_time = clock();
+#endif
+
 	CSamplingWithoutReplace VarSampling;
 
 	for (int k=0; k < nclassifier; k++)
@@ -1440,23 +2052,33 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		VarSampling.Init(nSNP());
 
 		CAttrBag_Classifier *I = NewClassifierBootstrap();
-		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail, debug);
+		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
 		if (verbose)
 		{
 			time_t tm; time(&tm);
 			string s(ctime(&tm));
 			s.erase(s.size()-1, 1);
-			Rprintf("%s, %3d individual classifier, out-of-bag acc: %0.2f%%, # of SNPs: %d, # of haplo: %d\n",
+			Rprintf(
+				"%s, %3d individual classifier, out-of-bag acc: %0.2f%%, # of SNPs: %d, # of haplo: %d\n",
 				s.c_str(), k+1, I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
 		}
 	}
+
+#if (HIBAG_TIMING > 0)
+	Rprintf("It took %0.2f seconds, in %0.2f%%.\n",
+		((TFLOAT)_timing_)/CLOCKS_PER_SEC,
+		((TFLOAT)_timing_) / (clock() - _start_time) * 100.0);
+#endif
 }
 
 void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
-	int OutH1[], int OutH2[], double OutProb[], bool ShowInfo)
+	int OutH1[], int OutH2[], TFLOAT OutMaxProb[],
+	TFLOAT OutProbArray[], bool ShowInfo)
 {
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
+
+	const int nPairHLA = nHLA()*(nHLA()+1)/2;
 
 	_Predict.InitPrediction(nHLA());
 	Progress.Info = "Predicting:";
@@ -1469,20 +2091,26 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	{
 		_PredictHLA(genomat, &Weight[0], vote_method);
 
-		THLAType HLA = _Predict.MaxSumProb();
+		THLAType HLA = _Predict.BestGuessEnsemble();
 		OutH1[i] = HLA.Allele1; OutH2[i] = HLA.Allele2;
 
 		if ((HLA.Allele1 != NA_INTEGER) && (HLA.Allele2 != NA_INTEGER))
-			OutProb[i] = _Predict.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
+			OutMaxProb[i] = _Predict.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
 		else
-			OutProb[i] = 0;
+			OutMaxProb[i] = 0;
+
+		if (OutProbArray)
+		{
+			for (int j=0; j < nPairHLA; j++)
+				*OutProbArray++ = _Predict.SumPostProb()[j];
+		}
 
 		Progress.Forward(1, ShowInfo);
 	}
 }
 
 void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
-	int vote_method, double OutProb[], bool ShowInfo)
+	int vote_method, TFLOAT OutProb[], bool ShowInfo)
 {
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
@@ -1504,7 +2132,8 @@ void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
 	}
 }
 
-void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[], int vote_method)
+void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[],
+	int vote_method)
 {
 	TGenotype Geno;
 	_Predict.InitSumPostProbBuffer();
@@ -1527,21 +2156,23 @@ void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[], int vote_
 		if (nWeight > 0)
 		{
 			Geno.IntToSNP(n, geno, &(it->_SNPIndex[0]));
-			_Predict.Predict(it->_Haplo, Geno);
+			_Predict.PredictPostProb(it->_Haplo, Geno);
 
 			if (vote_method == 1)
 			{
 				// predicting based on the averaged posterior probabilities
-				_Predict.AddProbToSum(double(nWeight) / SumWeight);
+				_Predict.AddProbToSum(TFLOAT(nWeight) / SumWeight);
 			} else if (vote_method == 2)
 			{
 				// predicting by class majority voting
-				THLAType pd = _Predict.MaxProb();
+				THLAType pd = _Predict.BestGuess();
 				if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
 				{
 					_Predict.InitPostProbBuffer();  // fill by ZERO
 					_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
-					_Predict.AddProbToSum(double(nWeight) / SumWeight);
+
+					// _Predict.AddProbToSum(TFLOAT(nWeight) / SumWeight);
+					_Predict.AddProbToSum(1.0);
 				}
 			}
 		}
@@ -1563,3 +2194,109 @@ void CAttrBag_Model::_GetSNPWeights(int OutWeight[])
 			OutWeight[ it->_SNPIndex[i] ] ++;
 	}
 }
+
+
+
+// -------------------------------------------------------------------------
+// -------------------------------------------------------------------------
+
+template <typename TO, typename FROM> TO nasty_cast(FROM f)
+{
+	union {
+		FROM f; TO t;
+	} u;
+	u.f = f;
+	return u.t;
+}
+
+#if defined(HIBAG_SYS_UNIX)
+
+	static void* GDS_Handle = NULL;
+	#define LOAD(var, type, name)	\
+		var = nasty_cast<type>(dlsym(GDS_Handle, name)); \
+		if ((err = dlerror()) != NULL) \
+			{ Done_GPU_Support(); throw ErrHLA(err); }
+
+#elif defined(HIBAG_SYS_WIN)
+
+	static HMODULE GDS_Handle = NULL;
+	#define LOAD(var, type, name)	\
+		var = nasty_cast<type>(GetProcAddress(GDS_Handle, name)); \
+		if (var == NULL) \
+			{ Done_GPU_Support(); throw ErrHLA("No %s function.", name); }
+
+#else
+#  error "not supported"
+#endif
+
+
+//  throw errors if it fails
+void HLA_LIB::Init_GPU_Support(const char *lib_fn)
+{
+	if (!GDS_Handle)
+	{
+	#if defined(HIBAG_SYS_UNIX)
+		// open dll
+		GDS_Handle = dlopen(lib_fn, RTLD_LAZY);
+		if (!GDS_Handle) throw ErrHLA(dlerror());
+		dlerror();  // Clear any existing error
+		const char *err;
+	#elif defined(HIBAG_SYS_WIN)
+		GDS_Handle = LoadLibrary(lib_fn);
+		if (GDS_Handle == NULL)
+		{
+			char buf[1024];
+			memset((void*)buf, 0, sizeof(buf));
+			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ARGUMENT_ARRAY,
+				NULL, GetLastError(), 0, buf, sizeof(buf), NULL);
+			throw ErrHLA(buf);
+		}
+	#else
+	#  error "not supported"
+	#endif
+
+		// load functions
+		LOAD(_gpuInitialize, TGPUInitFunc, "hlaGPU_Initialize");
+		LOAD(_gpuFinalize, TGPUFunc, "hlaGPU_Finalize");
+		LOAD(_gpuDeviceQuery, TGPUFunc, "hlaGPU_DeviceQuery");
+		LOAD(_gpuOutOfBagAcc_F32, TGPU_OutOfBagAcc_F32, "hlaGPU_OutOfBagAcc_F32");
+		LOAD(_gpuOutOfBagAcc_F64, TGPU_OutOfBagAcc_F64, "hlaGPU_OutOfBagAcc_F64");
+
+		// initialize GPU
+		(*_gpuInitialize)(&_Packed_HammingDistance[0][0]);
+		(*_gpuDeviceQuery)();
+	}
+}
+
+
+// Finalize the GPU computing library
+void HLA_LIB::Done_GPU_Support()
+{
+	if (_gpuFinalize) (*_gpuFinalize)();
+
+	_gpuInitialize = NULL;
+	_gpuFinalize = NULL;
+	_gpuDeviceQuery = NULL;
+
+#if defined(HIBAG_SYS_UNIX)
+
+	if (GDS_Handle)
+	{
+		dlclose(GDS_Handle);
+		GDS_Handle = NULL;
+	}
+
+#elif defined(HIBAG_SYS_WIN)
+
+	if (GDS_Handle != NULL)
+	{
+		FreeLibrary(GDS_Handle);
+		GDS_Handle = NULL;
+	}
+
+#else
+#  error "not supported"
+#endif
+}
+

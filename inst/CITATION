@@ -6,7 +6,7 @@ citEntry(entry="Article",
 		as.person("Charles Cox"), as.person("Jonathan C. Wakefield"),
 		as.person("Margaret G. Ehm"), as.person("Matthew R. Nelson"),
 		as.person("Bruce S. Weir")),
-	journal = {"the Pharmacogenomics Journal"},
+	journal = {"The Pharmacogenomics Journal"},
 	year = "2013",
 	doi = "10.1038/tpj.2013.18.",
 	url = "http://dx.doi.org/10.1038/tpj.2013.18",
@@ -14,6 +14,6 @@ citEntry(entry="Article",
 	textVersion =
 		paste("Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS.",
 			"HIBAG -- HLA Genotype Imputation with Attribute Bagging.",
-			"the Pharmacogenomics Journal.", "doi: 10.1038/tpj.2013.18.",
+			"The Pharmacogenomics Journal.", "doi: 10.1038/tpj.2013.18.",
 			"http://dx.doi.org/10.1038/tpj.2013.18")
 )

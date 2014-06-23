@@ -1,5 +1,5 @@
 %\VignetteIndexEntry{HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging}
-%\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS, Random Forests, HIBAG}
+%\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS, Random Forests, Attribute Bagging, HIBAG}
 %\VignettePackage{HIBAG}
 
 \documentclass[12pt]{article}
@@ -23,7 +23,7 @@
 
 \title{HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging}
 \author{Xiuwen Zheng}
-\date{March 25, 2013}
+\date{June 12, 2013}
 
 
 \maketitle
@@ -49,7 +49,7 @@ Classical HLA genotyping methodologies have been predominantly developed for tis
 \end{figure}
 % -------- END FIGURE --------
 
-Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf BAG}ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples \cite{ZhengHIBAG2013}. It combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles deduced using bootstrap aggregating and random subsets of variables \cite{Breiman96baggingpredictors, springerlink:10.1023/A:1010933404324, Bryll20031291}, as shown in Figure~\ref{fig:HLA-AttrBag}. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers. Compared to other methods like HLA*IMP and BEAGLE, HIBAG has only the minimal assumption of Hardy-Weinberg equilibrium (HWE).
+Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf BAG}ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples \cite{Zheng:2013:Pharmacogenomics-J:23712092}. It combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles deduced using bootstrap aggregating and random subsets of variables \cite{Breiman96baggingpredictors, springerlink:10.1023/A:1010933404324, Bryll20031291}, as shown in Figure~\ref{fig:HLA-AttrBag}. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers. Compared to other methods like HLA*IMP and BEAGLE, HIBAG has only the minimal assumption of Hardy-Weinberg equilibrium (HWE).
 
 
 
@@ -99,16 +99,17 @@ head(model$snp.position)
 # plot SNP information
 plot(model)
 
-# best-guess genotypes
-pred.guess <- predict(model, yourgeno, type="response")
-# posterior probabilities
-pred.prob <- predict(model, yourgeno, type="prob")
+# best-guess genotypes and all posterior probabilities
+pred.guess <- predict(model, yourgeno, type="response+prob")
+summary(pred.guess)
+pred.guess$value
+pred.guess$postprob
 \end{Sinput}
 \end{Schunk}
 
 
-%     ---- Build your own HIBAG models for HLA imputation ----
-\subsection{Build your own HIBAG models for HLA imputation}
+%     ---- Build a HIBAG model for HLA genotype imputation ----
+\subsection{Build a HIBAG model for HLA genotype imputation}
 
 \begin{Schunk}
 \begin{Sinput}
@@ -118,7 +119,7 @@ library(HIBAG)
 geno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
 summary(geno)
 
-# HLA genotypes, 01:02/02:01, 05:01/03:01, ...
+# The HLA type of the first individual is 01:02/02:01, the second is 05:01/03:01, ...
 train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
     H2=c("02:01", "03:01", ...), locus="A")
 
@@ -133,6 +134,7 @@ train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
 train.geno <- hlaGenoSubset(geno, snp.sel=match(snpid, geno$snp.id))
 
 # Building ...
+set.seed(1000)
 model <- hlaAttrBagging(train.HLA, train.geno, nclassifier=100, verbose.detail=TRUE)
 summary(model)
 
@@ -141,10 +143,47 @@ model.obj <- hlaModelToObj(model)
 save(model.obj, file="your_model.RData")
 
 # Predict ...
-# best-guess genotypes
-pred.guess <- predict(model, newgeno, type="response")
-# posterior probabilities
-pred.prob <- predict(model, newgeno, type="prob")
+# best-guess genotypes and all posterior probabilities
+pred.guess <- predict(model, newgeno, type="response+prob")
+summary(pred.guess)
+pred.guess$value
+pred.guess$postprob
+\end{Sinput}
+\end{Schunk}
+
+
+%     ---- Build and predict in parallel ----
+\subsection{Build and predict in parallel}
+
+\begin{Schunk}
+\begin{Sinput}
+library(parallel)
+library(HIBAG)
+ 
+# Import your PLINK BED file
+geno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
+summary(geno)
+ 
+# The HLA type of the first individual is 01:02/02:01, the second is 05:01/03:01, ...
+train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
+    H2=c("02:01", "03:01", ...), locus="A")
+ 
+# Create an environment with an appropriate cluster size
+cl <- makeCluster(8)
+ 
+# Building ...
+set.seed(1000)
+hlaParallelAttrBagging(cl, train.HLA, geno, nclassifier=100,
+	auto.save="AutoSaveModel.RData", stop.cluster=TRUE)
+model.obj <- get(load("AutoSaveModel.RData"))
+model <- hlaModelFromObj(model.obj)
+summary(model)
+ 
+# best-guess genotypes and all posterior probabilities
+pred.guess <- predict(model, yourgeno, type="response+prob", cl=cl)
+summary(pred.guess)
+pred.guess$value
+pred.guess$postprob
 \end{Sinput}
 \end{Schunk}
 
@@ -157,7 +196,6 @@ pred.prob <- predict(model, newgeno, type="prob")
 \begin{enumerate}
 	\item Allele Frequency Net Database (AFND): \url{http://www.allelefrequencies.net}.
 	\item IMGT/HLA Database: \url{http://www.ebi.ac.uk/imgt/hla}.
-	\item GlaxoSmithKline (GSK): \url{http://www.gsk.com}.
 \end{enumerate}
 
 

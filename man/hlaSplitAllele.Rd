@@ -14,8 +14,8 @@ hlaSplitAllele(HLA, train.prop=0.5)
 	\item{train.prop}{the proporion of training set}
 }
 \details{
-	The algorithm tries to divide each HLA alleles into training and validation sets randomly
-with a training proportion "\code{train.prop}".
+	The algorithm tries to divide each HLA alleles into training and validation
+sets randomly with a training proportion \code{train.prop}.
 }
 \value{
 	Return a list:
@@ -24,8 +24,7 @@ with a training proportion "\code{train.prop}".
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
-\code{\link{hlaGenoSubset}}
+	\code{\link{hlaAllele}}
 }
 
 \examples{
@@ -35,8 +34,10 @@ data(HapMap_CEU_Geno, package="HIBAG")
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id, HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	HLA_Type_Table[, paste(hla.id, ".2", sep="")], locus=hla.id, assembly="hg19")
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+	locus=hla.id, assembly="hg19")
 
 # divide HLA types randomly
 set.seed(100)
@@ -48,5 +49,4 @@ summary(hlatab$validation)
 }
 
 \keyword{HLA}
-\keyword{GWAS}
 \keyword{genetics}

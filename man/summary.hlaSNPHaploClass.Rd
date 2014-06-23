@@ -1,10 +1,10 @@
 \name{summary.hlaSNPHaploClass}
 \alias{summary.hlaSNPHaploClass}
 \title{
-	Summarize the haplotype dataset
+	Summarize the haplotypic dataset
 }
 \description{
-	Summarize the haplotype dataset.
+	Summarize the haplotypic dataset.
 }
 \usage{
 \method{summary}{hlaSNPHaploClass}(object, show=TRUE, ...)
@@ -19,10 +19,10 @@
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}}, \code{\link{hlaHaploSubset}},
-\code{\link{hlaGenoSubset}}, \code{\link{summary.hlaSNPGenoClass}}
+	\code{\link{hlaMakeSNPGeno}}, \code{\link{hlaMakeSNPHaplo}},
+	\code{\link{hlaGenoSubset}}, \code{\link{hlaHaploSubset}},
+	\code{\link{summary.hlaSNPGenoClass}}
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}

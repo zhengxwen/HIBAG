@@ -7,23 +7,23 @@
 	Get the information of SNP ID with or without position.
 }
 \usage{
-hlaSNPID(obj, with.pos=TRUE)
+hlaSNPID(obj, type=c("RefSNP+Position", "RefSNP", "Position"))
 }
 \arguments{
-	\item{obj}{a genotype object of \code{\link{hlaSNPGenoClass}},
-		a haplotype object of \code{\link{hlaSNPHaploClass}},
-		an object of \code{\link{hlaAttrBagClass}}, or
-		an object of \code{\link{hlaAttrBagObj}}}
-	\item{with.pos}{if TRUE, return position information; otherwise, no position information}
+	\item{obj}{a genotypic object of \code{\link{hlaSNPGenoClass}},
+		a haplotypic object of \code{\link{hlaSNPHaploClass}},
+		a model object of \code{\link{hlaAttrBagClass}} or
+		a model object of \code{\link{hlaAttrBagObj}}}
+	\item{type}{\code{"RefSNP+Position"} (by default), \code{"RefSNP"} or
+		\code{"Position"}}
 }
 \value{
-	if \code{with.pos = TRUE},
-		return \code{paste(obj$snp.id, obj$snp.position, sep="-")},
+	If \code{type = "RefSNP+Position"},
+		return \code{paste(obj$snp.id, obj$snp.position, sep="-")};
+	if \code{type = "RefSNP"},
+		return \code{obj$snp.id};
 	otherwise,
-		return \code{obj$snp.id} only.
-}
-\details{
-	This function can be used to distinguish SNPs with both of SNP ID and position.
+		return \code{obj$snp.position}.
 }
 \author{Xiuwen Zheng}
 \seealso{
@@ -34,13 +34,15 @@ hlaSNPID(obj, with.pos=TRUE)
 # load SNP genotypes
 data(HapMap_CEU_Geno, package="HIBAG")
 
-x <- hlaSNPID(HapMap_CEU_Geno, TRUE)
+x <- hlaSNPID(HapMap_CEU_Geno)
 head(x)
 
-x <- hlaSNPID(HapMap_CEU_Geno, FALSE)
+x <- hlaSNPID(HapMap_CEU_Geno, "RefSNP")
+head(x)
+
+x <- hlaSNPID(HapMap_CEU_Geno, "Position")
 head(x)
 }
 
-\keyword{HLA}
-\keyword{GWAS}
+\keyword{SNP}
 \keyword{genetics}
