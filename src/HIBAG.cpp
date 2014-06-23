@@ -96,8 +96,9 @@ struct TAlleleItem
 {
 	vector<int> Index;
 	vector<string> Idx_Suffix;
+	int list_index;
 	
-	TAlleleItem(const char *str)
+	TAlleleItem(const char *str, int _idx)
 	{
 		string num, suffix;
 		bool prefix_num = true;
@@ -127,36 +128,34 @@ struct TAlleleItem
 				}
 			}
 		}
+
+		list_index = _idx;
 	}
 };
 
-static bool sortfn(const pair<TAlleleItem*, int> &I1,
-	const pair<TAlleleItem*, int> &I2)
+static bool sortfn(const TAlleleItem *I1, const TAlleleItem *I2)
 {
-	const TAlleleItem &p1 = *I1.first;
-	const TAlleleItem &p2 = *I2.first;
-
-	int smin = min((int)p1.Index.size(), (int)p2.Index.size());
+	int smin = min((int)I1->Index.size(), (int)I2->Index.size());
 	for (int i=0; i < smin; i++)
 	{
-		if (p1.Index[i] < p2.Index[i])
+		if (I1->Index[i] < I2->Index[i])
 		{
 			return true;
-		} else if (p1.Index[i] > p2.Index[i])
+		} else if (I1->Index[i] > I2->Index[i])
 		{
 			return false;
 		} else {
-			if (p1.Idx_Suffix[i] < p2.Idx_Suffix[i])
+			if (I1->Idx_Suffix[i] < I2->Idx_Suffix[i])
 			{
 				return true;
-			} else if (p1.Idx_Suffix[i] > p2.Idx_Suffix[i])
+			} else if (I1->Idx_Suffix[i] > I2->Idx_Suffix[i])
 			{
 				return false;
 			}		
 		}
 	}
 
-	return (p1.Index.size() <= p2.Index.size());
+	return (I1->Index.size() <= I2->Index.size());
 }
 
 /**
@@ -174,18 +173,18 @@ DLLEXPORT void HIBAG_SortAlleleStr(int *n_hla, char *const hlastr[],
 		// HLA alleles
 		vector<TAlleleItem> HLA;
 		for (int i=0; i < *n_hla; i++)
-			HLA.push_back(TAlleleItem(hlastr[i]));
+			HLA.push_back(TAlleleItem(hlastr[i], i));
 
-		vector< pair<TAlleleItem*, int> > list;
+		vector<TAlleleItem*> list;
 		for (int i=0; i < *n_hla; i++)
-			list.push_back(pair<TAlleleItem*, int>(&HLA[i], i));
+			list.push_back(&HLA[i]);
 
 		// sort
 		sort(list.begin(), list.end(), sortfn);
 
 		// output
 		for (int i=0; i < *n_hla; i++)
-			RStrAgn(hlastr[list[i].second], &outstr[i]);
+			RStrAgn(hlastr[list[i]->list_index], &outstr[i]);
 
 		*out_err = 0;
 	CORECATCH(*out_err = 1)

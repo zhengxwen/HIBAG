@@ -75,7 +75,8 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL, call.threshold=NaN,
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaAttrBagging}}, \code{\link{predict.hlaAttrBagClass}}
+	\code{\link{hlaAttrBagging}}, \code{\link{predict.hlaAttrBagClass}},
+	\code{\link{hlaReport}}
 }
 
 \keyword{HLA}

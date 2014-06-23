@@ -42,8 +42,8 @@ Classical HLA genotyping methodologies have been predominantly developed for tis
 
 % -------- BEGIN FIGURE --------
 \begin{figure}[!t]
-	\centering
-	\includegraphics[width=0.95\columnwidth]{HLA-HIBAG-model.png}
+    \centering
+    \includegraphics[width=0.95\columnwidth]{HLA-HIBAG-model.png}
 \caption{Overview of the HIBAG prediction algorithm. HIBAG is an ensemble classifier consisting of individual classifiers ($C_k$) with HLA and SNP haplotype probabilities estimated from bootstrapped samples ($B_k$) and SNP subsets ($\mathcal{S}_k$). The SNP subsets are determined by a variable selection algorithm with a random component. HLA type predictions are averaged over the posterior probabilities from all classifiers.}
 \label{fig:HLA-AttrBag}
 \end{figure}
@@ -57,11 +57,11 @@ Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf
 \section{Features}
 
 \begin{enumerate}
-	\item HIBAG can be used by researchers with published parameter estimates (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of requiring access to large training sample datasets.
-	\item A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
-	\item SNPs within the xMHC region (chromosome 6) are used for imputation.
-	\item HIBAG employs unphased genotypes of unrelated individuals as a training set.
-	\item HIBAG supports parallel computing with R.
+    \item HIBAG can be used by researchers with published parameter estimates (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/} \footnote{mirror site: \url{http://corearray.sourceforge.net/mirror/HIBAG/}}) instead of requiring access to large training sample datasets.
+    \item A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
+    \item SNPs within the xMHC region (chromosome 6) are used for imputation.
+    \item HIBAG employs unphased genotypes of unrelated individuals as a training set.
+    \item HIBAG supports parallel computing with R.
 \end{enumerate}
 
 
@@ -73,6 +73,7 @@ Here we propose a new method for {\bf H}LA {\bf I}mputation using attribute {\bf
 \subsection{The pre-fit HIBAG models for HLA imputation}
 
 \begin{Schunk}
+\singlespace
 \begin{Sinput}
 library(HIBAG)
 
@@ -112,6 +113,7 @@ pred.guess$postprob
 \subsection{Build a HIBAG model for HLA genotype imputation}
 
 \begin{Schunk}
+\singlespace
 \begin{Sinput}
 library(HIBAG)
 
@@ -153,6 +155,8 @@ model.obj <- hlaModelToObj(model)
 save(model.obj, file="your_model.RData")
 
 # Predict ...
+model.obj <- get(load("your_model.RData"))
+model <- hlaModelFromObj(model.obj)
 # best-guess genotypes and all posterior probabilities
 pred.guess <- predict(model, newgeno, type="response+prob")
 summary(pred.guess)
@@ -166,6 +170,7 @@ pred.guess$postprob
 \subsection{Build and predict in parallel}
 
 \begin{Schunk}
+\singlespace
 \begin{Sinput}
 library(parallel)
 library(HIBAG)
@@ -194,7 +199,7 @@ cl <- makeCluster(8)
 # Building ...
 set.seed(1000)
 hlaParallelAttrBagging(cl, train.HLA, geno, nclassifier=100,
-	auto.save="AutoSaveModel.RData", stop.cluster=TRUE)
+    auto.save="AutoSaveModel.RData", stop.cluster=TRUE)
 model.obj <- get(load("AutoSaveModel.RData"))
 model <- hlaModelFromObj(model.obj)
 summary(model)
@@ -209,14 +214,126 @@ pred.guess$postprob
 
 
 
+%     ---- Evaluate overall accuracy, sensitivity, specificity, etc ----
+\subsection{Evaluate overall accuracy, sensitivity, specificity, etc}
+
+\begin{Schunk}
+\singlespace
+\begin{Sinput}
+library(HIBAG)
+ 
+# load HLA types and SNP genotypes in the package
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
+
+# make a "hlaAlleleClass" object
+hla.id <- "A"
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+    H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+    H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+    locus=hla.id, assembly="hg19")
+
+# divide HLA types randomly
+set.seed(100)
+hlatab <- hlaSplitAllele(hla, train.prop=0.5)
+names(hlatab)
+# "training"   "validation"
+summary(hlatab$training)
+summary(hlatab$validation)
+
+# SNP predictors within the flanking region on each side
+region <- 500   # kb
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+    hla.id, region*1000, assembly="hg19")
+length(snpid)  # 275
+
+# training and validation genotypes
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+    snp.sel = match(snpid, HapMap_CEU_Geno$snp.id),
+    samp.sel = match(hlatab$training$value$sample.id, HapMap_CEU_Geno$sample.id))
+test.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+    samp.sel=match(hlatab$validation$value$sample.id, HapMap_CEU_Geno$sample.id))
+
+# train a HIBAG model
+set.seed(100)
+model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=100)
+summary(model)
+
+# validation
+pred <- predict(model, test.geno)
+
+# compare
+(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
+    call.threshold=0))
+
+# report overall accuracy, per-allele sensitivity, specificity, etc
+hlaReport(comp, type="txt")
+# Allele    Num.    Freq.   Num.    Freq.   CR  ACC SEN SPE PPV NPV Miscall
+#   Train   Train   Valid.  Valid.  (%) (%) (%) (%) (%) (%) (%)
+# ----
+# overall accuracy: 96.2%, call rate: 100.0%
+# 01:01 14  0.2059  11  0.2115  100.0   98.1    100.0   97.6    91.7    100.0   --
+# 02:01 23  0.3382  20  0.3846  100.0   98.1    95.0    100.0   100.0   97.0    29:02 (100)
+# 02:06 1   0.0147  0   0   --  --  --  --  --  --  --
+# 03:01 4   0.0588  5   0.0962  100.0   100.0   100.0   100.0   100.0   100.0   --
+# ......
+
+hlaReport(comp, type="tex")
+\end{Sinput}
+\end{Schunk}
+
+
+%     ---- Release a HIBAG model with no confidential information ----
+\subsection{Release a HIBAG model with no confidential information}
+
+\begin{Schunk}
+\singlespace
+\begin{Sinput}
+library(HIBAG)
+ 
+# load HLA types and SNP genotypes in the package
+data(HLA_Type_Table, package="HIBAG")
+data(HapMap_CEU_Geno, package="HIBAG")
+
+# make a "hlaAlleleClass" object
+hla.id <- "A"
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+    H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+    H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+    locus=hla.id, assembly="hg19")
+
+# training genotypes
+region <- 500   # kb
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+    hla.id, region*1000, assembly="hg19")
+train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
+    snp.sel = match(snpid, HapMap_CEU_Geno$snp.id),
+    samp.sel = match(hla$value$sample.id, HapMap_CEU_Geno$sample.id))
+
+set.seed(1000)
+model <- hlaAttrBagging(hla, train.geno, nclassifier=100)
+summary(model)
+
+# remove unused SNPs from the model and sample IDs
+mobj <- hlaPublish(model,
+    platform = "Illumina 1M Duo",
+    information = "Training set -- HapMap Phase II",
+    warning = NULL,
+    rm.unused.snp=TRUE, anonymize=TRUE)
+
+save(mobj, file="Your_HIBAG_Model.RData")
+\end{Sinput}
+\end{Schunk}
+
+
 
 % ---- Resources ----
 \section{Resources}
 
 \begin{enumerate}
-	\item Allele Frequency Net Database (AFND): \url{http://www.allelefrequencies.net}.
-	\item IMGT/HLA Database: \url{http://www.ebi.ac.uk/imgt/hla}.
-	\item HLA Nomenclature: \url{http://hla.alleles.org/alleles/g_groups.html}.
+    \item Allele Frequency Net Database (AFND): \url{http://www.allelefrequencies.net}.
+    \item IMGT/HLA Database: \url{http://www.ebi.ac.uk/imgt/hla}.
+    \item HLA Nomenclature: \url{http://hla.alleles.org/alleles/g_groups.html}.
 \end{enumerate}
 
 

@@ -1,3 +1,11 @@
+Changes in 1.2.2:
+
+	* make the C function 'HIBAG_SortAlleleStr' compatible with the clang compiler (Mac Mavericks)
+	* add a new function 'hlaOutOfBag' offering out-of-bag estimation of overall accuracy, per-allele sensitivity, etc
+	* improve the function 'hlaReport'
+	* improve document
+
+
 Changes in 1.2.1:
 
 	* add a new function 'hlaResource'

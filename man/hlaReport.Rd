@@ -7,13 +7,17 @@
 	Create a report for evaluating prediction accuracies.
 }
 \usage{
-hlaReport(object, export.fn="", type=c("txt", "tex"))
+hlaReport(object, export.fn="", type=c("txt", "tex", "html"),
+	header=TRUE)
 }
 \arguments{
 	\item{object}{an object returned by \code{\link{hlaCompareAllele}}}
 	\item{export.fn}{a file name for output, or "" for \code{stdout}}
-	\item{type}{\code{"txt"}, tab-delimited text format;
-		\code{"tex"}, tex format using the 'longtable' package}
+	\item{type}{\code{"txt"} -- tab-delimited text format;
+		\code{"tex"} -- tex format using the 'longtable' package;
+		\code{"html"} -- html file}
+	\item{header}{if \code{TRUE}, output the header of text file associated
+		corresponding format}
 }
 \value{
 	None.
@@ -74,6 +78,8 @@ pred <- predict(model, test.geno)
 hlaReport(comp, type="txt")
 
 hlaReport(comp, type="tex")
+
+hlaReport(comp, type="html")
 }
 
 \keyword{genetics}

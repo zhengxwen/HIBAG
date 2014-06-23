@@ -8,7 +8,7 @@
 }
 \usage{
 hlaAllele(sample.id, H1, H2, max.resolution="", locus="any",
-	assembly=c("auto", "hg18", "hg19", "unknown"),
+	assembly=c("auto", "auto-silent", "hg18", "hg19", "unknown"),
 	locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
 }
 \arguments{
@@ -22,7 +22,8 @@ hlaAllele(sample.id, H1, H2, max.resolution="", locus="any",
 		"DQA1", "DQB1", "DPB1", or "any", where "any" indicates any other
 		multiallelic locus}
 	\item{assembly}{the human genome reference: "hg19" (default), "hg18",
-		"auto" refers to "hg19"}
+		"auto" refers to "hg19"; "auto-silent" refers to "hg19" without any
+		warning}
 	\item{locus.pos.start}{the starting position in basepair}
 	\item{locus.pos.end}{the end position in basepair}
 	\item{prob}{the probabilities assigned to the samples}

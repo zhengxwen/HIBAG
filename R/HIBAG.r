@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.2.1
+# Package Name: HIBAG v1.2.2
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
@@ -983,13 +983,17 @@ hlaGenoMRate_Samp <- function(obj)
 # To get the starting and ending positions in basepair for HLA loci
 #
 
-hlaLociInfo <- function(assembly=c("auto", "hg18", "hg19", "unknown"))
+hlaLociInfo <- function(assembly =
+	c("auto", "auto-silent", "hg18", "hg19", "unknown"))
 {
 	# check
 	assembly <- match.arg(assembly)
 	if (assembly == "auto")
 	{
 		message("using the default genome assembly (assembly=\"hg19\")")
+		assembly <- "hg19"
+	} else if (assembly == "auto-silent")
+	{
 		assembly <- "hg19"
 	}
 
@@ -1143,7 +1147,7 @@ hlaUniqueAllele <- function(hla)
 #
 
 hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
-	assembly=c("auto", "hg18", "hg19", "unknown"),
+	assembly=c("auto", "auto-silent", "hg18", "hg19", "unknown"),
 	locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
 {
 	# check
@@ -2172,7 +2176,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 			stopifnot(nrow(snp) == object$n.snp)
 		}
 		geno.sampid <- 1:ncol(snp)
-		assembly <- "auto"
+		assembly <- "auto-silent"
 
 	} else {
 
@@ -2944,16 +2948,137 @@ hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
 
 
 ##########################################################################
+# Out-of-bag estimation of overall accuracy, per-allele sensitivity, etc
+#
+
+hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
+{
+	# check
+	stopifnot(inherits(model, "hlaAttrBagObj") |
+		inherits(model, "hlaAttrBagClass"))
+	stopifnot(inherits(hla, "hlaAlleleClass"))
+	stopifnot(inherits(snp, "hlaSNPGenoClass"))
+
+	stopifnot(is.numeric(call.threshold) & is.vector(call.threshold))
+	stopifnot(length(call.threshold) == 1)
+
+	stopifnot(is.logical(verbose) & is.vector(verbose))
+	stopifnot(length(verbose) == 1)
+
+
+	######################################################
+	# initialize ...
+	if (inherits(model, "hlaAttrBagClass"))
+	{
+		model <- hlaModelToObj(model)
+		if (verbose) print(model)
+	}
+
+	# map samples
+	if (is.null(model$sample.id))
+		stop("There is no sample ID in the model.")
+	samp.idx <- match(model$sample.id, snp$sample.id)
+	if (any(is.na(samp.idx)))
+		stop("Some of sample.id in the model do not exist in SNP genotypes.")
+	hla.samp.idx <- match(model$sample.id, hla$value$sample.id)
+	if (any(is.na(hla.samp.idx)))
+		stop("Some of sample.id in the model do not exist in HLA types.")
+
+	# map SNPs
+	snp.idx <- match(model$snp.id, snp$snp.id)
+	if (any(is.na(snp.idx)))
+		stop("Some of snp.id in the model do not exist in SNP genotypes.")
+
+	# genotypes and the number of classifiers
+	geno <- snp$genotype[snp.idx, samp.idx]
+	nclass <- length(model$classifiers)
+
+	# the returned value
+	ans <- NULL
+
+	# the column names of details
+	nm1 <- c("allele", "train.num", "train.freq")
+	nm2 <- c("call.rate", "accuracy", "sensitivity", "specificity", "ppv", "npv")
+
+	# for-loop
+	for (i in 1:nclass)
+	{
+		mx <- model
+		mx$classifiers <- mx$classifiers[i]
+		s <- mx$classifiers[[1]]$samp.num
+		if (is.null(s))
+			stop("There is no bootstrap sample index.")
+
+		tmp.model <- hlaModelFromObj(mx)
+		tmp.geno <- geno[, s == 0]
+		v <- predict(tmp.model, tmp.geno, verbose=FALSE)
+		hlaClose(tmp.model)
+		v$value$sample.id <- mx$sample.id[s == 0]
+		pam <- hlaCompareAllele(hla, v, allele.limit=mx,
+			call.threshold=call.threshold, verbose=FALSE)
+
+		if (!is.null(ans))
+		{
+			# overall
+			ans$overall <- ans$overall + pam$overall
+
+			# confusion matrix
+			ans$confusion <- ans$confusion + pam$confusion
+
+			# details
+			pam$detail <- pam$detail[, nm2]
+			ans$n.detail <- ans$n.detail + !is.na(pam$detail)
+			pam$detail[is.na(pam$detail)] <- 0
+			ans$detail <- ans$detail + pam$detail
+		} else {
+			ans <- pam
+			ans$detailhead <- ans$detail[, nm1]
+			colnames(ans$detailhead) <- c("allele", "valid.num", "valid.freq")
+			ans$detail <- ans$detail[, nm2]
+			ans$n.detail <- !is.na(ans$detail)
+			ans$detail[is.na(ans$detail)] <- 0
+		}
+
+		if (verbose)
+		{
+			cat(date(), sprintf(", passing the %d/%d classifiers.\n",
+				i, nclass), sep="")
+		}
+	}
+
+	# average
+	ans$overall <- ans$overall / nclass
+	ans$confusion <- ans$confusion / nclass
+	ans$detail <- ans$detail / ans$n.detail
+
+	# get miscall
+	rv <- ans$confusion; diag(rv) <- 0
+	m.max <- apply(rv, 2, max); m.idx <- apply(rv, 2, which.max)
+	s <- rownames(ans$confusion)[m.idx]; s[m.max<=0] <- NA
+	p <- m.max / apply(rv, 2, sum)
+
+	# output
+	ans$detail <- cbind(ans$detailhead, ans$detail,
+		miscall=s, miscall.prop=p, stringsAsFactors=FALSE)
+	ans$detailhead <- NULL
+	ans$n.detail <- NULL
+	ans
+}
+
+
+##########################################################################
 # to create a report for evaluating accuracies
 #
 
-hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
+hlaReport <- function(object, export.fn="", type=c("txt", "tex", "html"),
+	header=TRUE)
 {
 	# check
 	stopifnot(is.list(object))
 	stopifnot(is.data.frame(object$detail))
 	stopifnot(is.character(export.fn))
 	type <- match.arg(type)
+	stopifnot(is.logical(header))
 
 	# create an output file
 	if (export.fn != "")
@@ -3025,7 +3150,7 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
 		cat(L2, file=f, sep="\t", append=TRUE)
 		cat("\n", file=f, append=TRUE)
 		cat("----\n", file=f, append=TRUE)
-		cat(sprintf("overall accuracy: %0.1f%%, call rate: %0.1f%%\n",
+		cat(sprintf("Overall accuracy: %0.1f%%, Call rate: %0.1f%%\n",
 			object$overall$acc.haplo*100, object$overall$call.rate*100),
 			file=f, append=TRUE)
 		write.table(d, file=f, append=TRUE, quote=FALSE, sep="\t",
@@ -3033,6 +3158,18 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
 
 	} else if (type == "tex")
 	{
+		if (header)
+		{
+			cat("\\title{Imputation Evaluation}", "",
+				"\\documentclass[12pt]{article}", "",
+				"\\usepackage{fullpage}",
+				"\\usepackage{longtable}", "",
+				"\\begin{document}", "",
+				"\\maketitle", "",
+				"\\setlength{\\LTcapwidth}{6.4in}", "",
+				file=f, append=TRUE, sep="\n")
+		}
+
 		cat("% -------- BEGIN TABLE --------\n", file=f, append=TRUE)
 		if (!is.null(object$detail$train.freq))
 		{
@@ -3041,9 +3178,9 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
 			cat("\\begin{longtable}{rrr | rrrrrrl}\n", file=f, append=TRUE)
 		}
 		cat(c("\\caption{The sensitivity (SEN), specificity (SPE),",
-			"positive predictive value (PPV) and negative predictive value",
-			"(NPV).}\n"), file=f, append=TRUE, sep=" ")
-		cat("\\label{tab:XX} \\\\\n", file=f, append=TRUE)
+			"positive predictive value (PPV), negative predictive value",
+			"(NPV) and call rate (CR)}\n"), file=f, append=TRUE, sep=" ")
+		cat("\\label{tab:accuracy} \\\\\n", file=f, append=TRUE)
 
 		cat(L1, file=f, sep=" & ", append=TRUE)
 		cat(" \\\\\n", file=f, append=TRUE)
@@ -3052,9 +3189,13 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
 		cat("\\hline\\hline\n\\endfirsthead\n", file=f, append=TRUE)
 
 		if (!is.null(object$detail$train.freq))
-			cat("\\multicolumn{12}{c}{{\\normalsize \\tablename\\ \\thetable{} -- Continued from previous page}} \\\\\n", file=f, append=TRUE)
-		else
-			cat("\\multicolumn{10}{c}{{\\normalsize \\tablename\\ \\thetable{} -- Continued from previous page}} \\\\\n", file=f, append=TRUE)
+		{
+			cat("\\multicolumn{12}{c}{{\\normalsize \\tablename\\ \\thetable{} -- Continued from previous page}} \\\\\n",
+				file=f, append=TRUE)
+		} else {
+			cat("\\multicolumn{10}{c}{{\\normalsize \\tablename\\ \\thetable{} -- Continued from previous page}} \\\\\n",
+				file=f, append=TRUE)
+		}
 
 		cat(L1, file=f, sep=" & ", append=TRUE)
 		cat(" \\\\\n", file=f, append=TRUE)
@@ -3063,19 +3204,26 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
 		cat("\\hline\\hline\n\\endhead\n\\hline\n", file=f, append=TRUE)
 
 		if (!is.null(object$detail$train.freq))
-			cat("\\multicolumn{12}{r}{Continued on next page ...} \\\\\n", file=f, append=TRUE)
-		else
-			cat("\\multicolumn{10}{r}{Continued on next page ...} \\\\\n", file=f, append=TRUE)
+		{
+			cat("\\multicolumn{12}{r}{Continued on next page ...} \\\\\n",
+				file=f, append=TRUE)
+		} else {
+			cat("\\multicolumn{10}{r}{Continued on next page ...} \\\\\n",
+				file=f, append=TRUE)
+		}
 
-		cat("\\hline\n\\endfoot\n\\hline\\hline\n\\endlastfoot\n", file=f, append=TRUE)
+		cat("\\hline\n\\endfoot\n\\hline\\hline\n\\endlastfoot\n",
+			file=f, append=TRUE)
 
 		if (!is.null(object$detail$train.freq))
 		{
-			cat(sprintf("\\multicolumn{12}{l}{\\it overall accuracy: %0.1f\\%%, call rate: %0.1f\\%%} \\\\\n",
+			cat(sprintf(
+				"\\multicolumn{12}{l}{\\it Overall accuracy: %0.1f\\%%, Call rate: %0.1f\\%%} \\\\\n",
 				object$overall$acc.haplo*100, object$overall$call.rate*100),
 				file=f, append=TRUE)
 		} else {
-			cat(sprintf("\\multicolumn{10}{l}{\\it overall accuracy: %0.1f\\%%, call rate: %0.1f\\%%} \\\\\n",
+			cat(sprintf(
+				"\\multicolumn{10}{l}{\\it Overall accuracy: %0.1f\\%%, Call rate: %0.1f\\%%} \\\\\n",
 				object$overall$acc.haplo*100, object$overall$call.rate*100),
 				file=f, append=TRUE)
 		}
@@ -3083,7 +3231,57 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex"))
 		write.table(d, file=f, append=TRUE, quote=FALSE, sep=" & ",
 			row.names=FALSE, col.names=FALSE, eol=" \\\\\n")
 
-		cat("\\end{longtable}\n% -------- END TABLE --------\n", file=f, append=TRUE)
+		cat("\\end{longtable}\n% -------- END TABLE --------\n",
+			file=f, append=TRUE)
+
+		if (header)
+		{
+			cat("\n\\end{document}\n", file=f, append=TRUE)
+		}
+	} else if (type == "html")
+	{
+		if (header)
+		{
+			cat("<!DOCTYPE html>",
+				"<html>",
+				"<head>",
+				"  <title>Imputation Evaluation</title>",
+				"</head>",
+				"<body>",
+				file=f, append=TRUE, sep="\n")
+		}
+
+		cat("<h1>Imputation Evaluation</h1>",
+			"<p></p>",
+			"<h3><b>Table 1:</b> The sensitivity (SEN), specificity (SPE), positive predictive value (PPV), negative predictive value (NPV) and call rate (CR).</h3>",
+			file=f, append=TRUE, sep="\n")
+
+		cat("<table id=\"TB-Acc\" class=\"tabular\" border=\"1\"  CELLSPACING=\"1\">",
+			"<tr>", 
+				paste(paste("<th>", L1, " ", L2, "</th>", sep=""), collapse=" "),
+			"</tr>",
+			"<tr>",
+			paste("<td colspan=\"", length(L1), "\">", sep=""),
+			sprintf("<i> Overall accuracy: %0.1f%%, Call rate: %0.1f%% </i>",
+				object$overall$acc.haplo*100, object$overall$call.rate*100),
+			"</td>",
+			"</tr>",
+			file=f, append=TRUE, sep="\n")
+
+		for (i in 1:nrow(d))
+		{
+			cat("<tr>", 
+				paste(paste("<td>", d[i, ], "</td>", sep=""), collapse=" "),
+				"</tr>",
+				file=f, append=TRUE, sep="\n")
+		}
+
+		cat("</table>\n", file=f, append=TRUE)
+
+		if (header)
+		{
+			cat("\n</body>\n</html>\n", file=f, append=TRUE)
+		}
 	}
 
 	invisible()
@@ -3256,7 +3454,7 @@ hlaErrMsg <- function()
 
 	# information
 	packageStartupMessage(
-		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.1")
+		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.2")
 	if (rv$SSE.Flag != 0)
 		packageStartupMessage("Supported by Streaming SIMD Extensions 2 (SSE2)")
 

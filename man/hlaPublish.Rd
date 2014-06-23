@@ -18,8 +18,7 @@ hlaPublish(mobj, platform=NULL, information=NULL, warning=NULL,
 	\item{information}{the other information, like authors}
 	\item{warning}{any warning message}
 	\item{rm.unused.snp}{if \code{TRUE}, remove unused SNPs from the model}
-	\item{anonymize}{if \code{TRUE}, change the \code{sample.id} of the model
-		object to ``unmeaningful'' indices}
+	\item{anonymize}{if \code{TRUE}, remove sample IDs}
 	\item{verbose}{if TRUE, show information}
 }
 \value{
