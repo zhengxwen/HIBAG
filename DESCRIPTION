@@ -1,16 +1,17 @@
 Package: HIBAG
 Type: Package
 Title: HIBAG -- HLA Genotype Imputation with Attribute Bagging
-Version: 1.2.0.1
-Date: 2013-08-12
+Version: 1.2.1
+Date: 2013-10-29
 Depends: R (>= 2.14.0)
-Suggests: parallel
+Imports: parallel
 Author: Xiuwen Zheng, Bruce S. Weir
 Maintainer: Xiuwen Zheng <zhengx@u.washington.edu>
-Description: To impute HLA types from unphased SNP data using an attribute bagging method.
+Description: To impute HLA types from unphased SNP data using an attribute bagging method
 License: GPL-3
-URL: http://www.biostat.washington.edu/~bsweir/HIBAG/
-Packaged: 2013-08-12 19:50:25 UTC; foxsts
+URL: http://www.biostat.washington.edu/~bsweir/HIBAG/,
+        http://corearray.sourceforge.net/mirror/HIBAG/
+Packaged: 2013-10-30 07:09:06 UTC; foxsts
 NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2013-08-13 00:11:24
+Date/Publication: 2013-10-30 11:19:22

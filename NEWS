@@ -1,14 +1,14 @@
-Changes in 1.2.0.1:
+Changes in 1.2.1:
 
-	* support Windows platform
+	* add a new function 'hlaResource'
+	* minor improvement
 
 
 Changes in 1.2.0:
 
-	* optimize the C code: replace some intensive 'exp' and 'log' calculations by precalculated values, roughly 250% ~ 400% speedup
+	* optimize the C code: replace some intensive 'exp' and 'log' calculations by precalculated values, roughly 2.5x ~ 4x speedup
 	* optimize the C code of the hamming distance calculation between genotypes and two haplotypes by SSE2 intrinsics, ~50% faster for large datasets
 	* the code optimization guarantees the same training and predictive accuracies as version 1.1.0
-
 	* add a new function 'hlaPredMerge' to merge predictions from multiple models via voting
 	* add assembly information (like hg19) to the objects of 'hlaAttrBagClass' and 'hlaAttrBagObj'
 	* remove unused row names in the function 'hlaCompareAllele'
@@ -63,6 +63,6 @@ Changes in 0.9.2:
 	* minor fixes
 
 
-Changes in 0.9.1:
+Version 0.9.1:
 
 	* first public release of HIBAG

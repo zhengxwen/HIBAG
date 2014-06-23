@@ -8,7 +8,7 @@
 //
 // Copyright (C) 2013	Xiuwen Zheng (zhengx@u.washington.edu)
 //
-// This file is part of HIBAG package.
+// This file is part of HIBAG R package.
 //
 // HIBAG is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License Version 3 as
@@ -26,10 +26,10 @@
 // ===========================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.0
+// Version        : 1.2.1
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
-// Last modified  : 07/20/2013
+// Last modified  : 10/29/2013
 // Description    : HLA Genotype Imputation with Attribute Bagging
 // ===========================================================
 
@@ -45,7 +45,7 @@ extern "C" {
 
 
 /// Define macro for GPU computing
-#define HIBAG_GPU_SUPPORT
+#define HIBAG_ALLOW_GPU_SUPPORT
 
 
 /// Define unsigned integers
@@ -94,7 +94,7 @@ struct THLAType
 // ************************************************************************* //
 
 
-#ifdef HIBAG_GPU_SUPPORT
+#ifdef HIBAG_ALLOW_GPU_SUPPORT
 
 /// Packed SNP haplotype structure: 4 SNPs in a byte / short
 struct TGPU_Haplotype_F32

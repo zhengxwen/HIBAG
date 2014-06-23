@@ -8,7 +8,7 @@
 //
 // Copyright (C) 2013	Xiuwen Zheng (zhengx@u.washington.edu)
 //
-// This file is part of HIBAG package.
+// This file is part of HIBAG R package.
 //
 // HIBAG is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License Version 3 as
@@ -26,10 +26,10 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.0
+// Version        : 1.2.1
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
-// Last modified  : 07/20/2013
+// Last modified  : 10/29/2013
 // Description    : HLA Genotype Imputation with Attribute Bagging
 // ===============================================================
 
@@ -191,7 +191,7 @@ namespace HLA_LIB
 
 	protected:
 
-	#ifdef HIBAG_GPU_SUPPORT
+	#ifdef HIBAG_ALLOW_GPU_SUPPORT
 		void InitGPUHostData(int *&_HLA_HapIdx, void *&_HapList);
 		inline void FreqGPUHostData(int *&_HLA_HapIdx, void *&_HapList);
 	#endif
@@ -523,7 +523,7 @@ namespace HLA_LIB
 		TFLOAT _InBagLogLik(CHaplotypeList &Haplo);
 
 
-	#ifdef HIBAG_GPU_SUPPORT
+	#ifdef HIBAG_ALLOW_GPU_SUPPORT
 
 		int InitGPUHostData_OutOfBag(TGPU_Genotype *&_GList);
 		int InitGPUHostData_InBag(TGPU_Genotype *&_GList);
@@ -729,7 +729,7 @@ namespace HLA_LIB
 
 
 
-#ifdef HIBAG_GPU_SUPPORT
+#ifdef HIBAG_ALLOW_GPU_SUPPORT
 
 	/// Initialize the GPU computing library
 	//  throw errors if it fails

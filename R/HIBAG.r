@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.2.0
+# Package Name: HIBAG v1.2.1
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
@@ -41,10 +41,15 @@
 .DynamicClusterCall <- function(cl, fun, combine.fun, msg.fn, n,
 	stop.cluster, ...)
 {
+	# in order to use the internal functions accessed by ':::'
 	# the functions are all defined in 'parallel/R/snow.R'
+
+	.SendData <- parse(text="parallel:::sendData(con, list(type=type,data=value,tag=tag))")
+	.RecvOneData <- parse(text="parallel:::recvOneData(cl)")
+
 	postNode <- function(con, type, value = NULL, tag = NULL)
 	{
-		parallel:::sendData(con, list(type = type, data = value, tag = tag))
+		eval(.SendData)
 	}
 	sendCall <- function(con, fun, args, return = TRUE, tag = NULL)
 	{
@@ -54,7 +59,7 @@
 	}
 	recvOneResult <- function(cl)
 	{
-		v <- parallel:::recvOneData(cl)
+		v <- eval(.RecvOneData)
 		list(value = v$value$value, node = v$node, tag = v$value$tag)
 	}
 
@@ -93,7 +98,7 @@
 				} else {
 					if (stop.cluster)
 					{
-						stopCluster(cl[d$node])
+						parallel::stopCluster(cl[d$node])
 						cl <- cl[-d$node]
 						stopflag <- TRUE
 					}
@@ -103,7 +108,7 @@
 				if (inherits(dv, "try-error"))
 				{
 					if (stop.cluster)
-						stopCluster(cl)
+						parallel::stopCluster(cl)
 					stop("One node produced an error: ", as.character(dv))
 				}
 
@@ -805,7 +810,8 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
 		cat(sprintf("\t%d samples X %d SNPs\n",
 			length(geno$sample.id), length(geno$snp.id)))
 		cat(sprintf("\tSNPs range from %dbp to %dbp",
-			min(geno$snp.position, na.rm=TRUE), max(geno$snp.position, na.rm=TRUE)))
+			min(geno$snp.position, na.rm=TRUE),
+			max(geno$snp.position, na.rm=TRUE)))
 		if (!is.null(geno$assembly))
 			cat(" on ", geno$assembly, "\n", sep="")
 		else
@@ -1210,6 +1216,16 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
 		value = hla$value[samp.sel, ],
 		assembly = hla$assembly
 	)
+
+	if (!is.null(hla$postprob))
+	{
+		rv$postprob <- hla$postprob[, samp.sel]
+		if (is.vector(rv$postprob))
+		{
+			rv$postprob <- matrix(rv$postprob, ncol=1)
+		}
+	}
+
 	class(rv) <- "hlaAlleleClass"
 	return(rv)
 }
@@ -1849,7 +1865,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
 	if (verbose)
 	{
 		cat("Build a HIBAG model with", nclassifier, "individual classifiers:\n")
-		cat("# of SNPs randomly sampled as candidates for each selection: ", mtry, "\n", sep="")
+		cat("# of SNPs randomly sampled as candidates for each selection: ",
+			mtry, "\n", sep="")
 		cat("# of SNPs: ", n.snp, ", # of samples: ", n.samp, "\n", sep="")
 		cat("# of unique HLA alleles: ", n.hla, "\n", sep="")
 	}
@@ -1931,7 +1948,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 	{
 		RNGkind("L'Ecuyer-CMRG")
 		rand <- .Random.seed
-		clusterSetRNGStream(cl)
+		parallel::clusterSetRNGStream(cl)
 	}
 
 	ans <- local({
@@ -1987,8 +2004,8 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 
 	if (!is.null(cl) & !stop.cluster)
 	{
-		nextRNGStream(rand)
-		nextRNGSubStream(rand)
+		parallel::nextRNGStream(rand)
+		parallel::nextRNGSubStream(rand)
 	}
 
 	# return
@@ -2375,7 +2392,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 	} else {
 
 		# in parallel
-		rv <- clusterApply(cl=cl, splitIndices(n.samp, length(cl)), 
+		rv <- parallel::clusterApply(cl=cl, parallel::splitIndices(n.samp, length(cl)),
 			fun = function(idx, mobj, snp, type, vote)
 			{
 				if (length(idx) > 0)
@@ -3150,9 +3167,9 @@ print.hlaAttrBagClass <- function(x, ...)
 {
 	obj <- hlaModelToObj(x)
 	print(obj)
-	# output
-	return(invisible(NULL))
+	invisible()
 }
+
 
 
 ##########################################################################
@@ -3195,8 +3212,7 @@ plot.hlaAttrBagObj <- function(x, xlab=NULL, ylab=NULL,
 print.hlaAttrBagObj <- function(x, ...)
 {
 	summary(x)
-	# output
-	return(invisible(NULL))
+	invisible()
 }
 
 
@@ -3204,143 +3220,16 @@ print.hlaAttrBagObj <- function(x, ...)
 
 
 #######################################################################
+# To get the resources of HIBAG models
 #
-# the functions for GPU computing
-#
-#######################################################################
 
-.hlaInstallGPU <- function(type=c("CUDA", "OpenCL"),
-	gcc.compiler=NULL, gpu.compiler=NULL, gcc.flags=NULL, gpu.flags=NULL,
-	inc.path=NULL, lib.path=NULL, lib.name=NULL, src.path=NULL,
-	verbose=TRUE)
+hlaResource <- function()
 {
-	# check
-	type <- match.arg(type)
-	stopifnot(is.logical(verbose))
-
-	if (is.null(gcc.compiler)) gcc.compiler <- "g++"
-	if (is.null(gcc.flags)) gcc.flags <- "-O2 -arch x86_64"
-
-	if (type == "CUDA")
-	{
-		if (is.null(gpu.compiler))
-			gpu.compiler <- "nvcc"
-		if (is.null(gpu.flags))
-		{
-			gpu.flags <- paste("-O -m64",
-				"-gencode arch=compute_10,code=sm_10",
-				"-gencode arch=compute_20,code=sm_20",
-				"-gencode arch=compute_30,code=sm_30",
-				"-gencode arch=compute_35,code=sm_35")
-		}
-
-		if (is.null(src.path))
-		{
-			src.path <- system.file("extdata", "GPU", "CUDA",
-				package="HIBAG", mustWork=TRUE)
-		}
-
-		if (is.null(inc.path))
-			inc.path <- c("/Developer/NVIDIA/CUDA-5.0/include", src.path)
-		inc.path <- paste(paste("-I", inc.path, sep=""), collapse=" ")
-
-		if (is.null(lib.path))
-			lib.path <- "-L/Developer/NVIDIA/CUDA-5.0/lib"
-		else
-			lib.path <- paste(paste("-L", lib.path, sep=""), collapse=" ")
-
-		if (is.null(lib.name))
-			lib.name <- "-lcudart"
-		else
-			lib.name <- paste(paste("-l", lib.name, sep=""), collapse=" ")
-
-	} else if (type == "openclc")
-	{
-		stop("Not support currently.")
-	} else
-		stop("Invalid 'type'.")
-
-	if (verbose)
-	{
-		cat("Variables in calling:\n")
-		cat("  GCC: ", gcc.compiler, "\n", sep="")
-		cat("  GCC FLAGS: ", gcc.flags, "\n", sep="")
-		cat("  GPU compiler: ", gpu.compiler, "\n", sep="")
-		cat("  GPU FLAGS: ", gpu.flags, "\n", sep="")
-		cat("  INCLUDE: ", inc.path, "\n", sep="")
-		cat("  LIBRARY PATH: ", lib.path, "\n", sep="")
-		cat("  LIBRARY: ", lib.name, "\n", sep="")
-		cat("  SOURCE PATH: ", src.path, "\n", sep="")
-		cat("\n")
-	}
-
-
-	lib.fn <- file.path(system.file("extdata", "GPU", package="HIBAG",
-		mustWork=TRUE), "GPU_HLA_IMPUTATION.so")
-	unlink(lib.fn, force=TRUE)
-	lib.fn1 <- file.path(src.path, "GPU_HLA_IMPUTATION.so")
-	unlink(lib.fn1, force=TRUE)
-
-	# compile 
-	cmd <- paste(gpu.compiler, gpu.flags, inc.path,
-		file.path(src.path, "gpuHLA.cu"), "-c",
-		"-o", file.path(src.path, "gpuHLA.o"))
-	if (verbose) cat(cmd, "\n", sep="")
-	system(cmd)
-
-	# make a shared library
-	cmd <- paste(gcc.compiler, gcc.flags,
-		"-dynamiclib -Wl,-headerpad_max_install_names -undefined dynamic_lookup -single_module -multiply_defined suppress",
-		file.path(src.path, "gpuHLA.o"), "-o", lib.fn1,
-		lib.path, lib.name)
-	if (verbose) cat(cmd, "\n", sep="")
-	system(cmd)	
-
-	if (file.exists(lib.fn1))
-	{
-		# copy
-		if (verbose)
-			cat("\nCopy ", lib.fn1, " to ", lib.fn, "\n", sep="")
-		file.copy(lib.fn1, lib.fn, overwrite=TRUE)
-	} else {
-		stop("It fails to install GPU library!")
-	}
-
-	invisible()
+	read.table(
+		"http://dl.dropboxusercontent.com/u/51499461/HIBAG/ResourceList.txt",
+		header=TRUE, stringsAsFactors=FALSE, sep="\t",
+		colClasses="character")
 }
-
-.hlaGPU <- function(lib.fn=NULL, precision=c("double", "single"))
-{
-	# check
-	stopifnot(is.null(lib.fn) | is.character(lib.fn))
-	stopifnot(length(lib.fn) != 1)
-	precision <- match.arg(precision)
-	precision <- match(precision, c("double", "single"))
-
-	if (is.null(lib.fn))
-	{
-		lib.fn <- file.path(system.file("extdata", "GPU", package="HIBAG",
-			mustWork=TRUE), "GPU_HLA_IMPUTATION.so")
-	}
-
-	cat("Load: ", lib.fn, "\n\n", sep="")
-
-	# initialize GPU
-	rv <- .C("HIBAG_GPU_Init", lib.fn, precision, err=integer(1),
-		PACKAGE="HIBAG")
-	if (rv$err != 0) stop(hlaErrMsg())
-
-	invisible()
-}
-
-.hlaUninstallGPU <- function()
-{
-	lib.fn <- file.path(system.file("extdata", "GPU", package="HIBAG",
-		mustWork=TRUE), "GPU_HLA_IMPUTATION.so")
-	unlink(lib.fn, force=TRUE)
-}
-
-
 
 
 

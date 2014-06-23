@@ -23,7 +23,7 @@
 
 \title{HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging}
 \author{Xiuwen Zheng}
-\date{June 12, 2013}
+\date{Oct 29, 2013}
 
 
 \maketitle
@@ -123,6 +123,16 @@ summary(geno)
 train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
     H2=c("02:01", "03:01", ...), locus="A")
 
+# Or the HLA types are saved in a text file "YourHLATypes.txt":
+#   SampleID Allele1 Allele2
+#   NA001101 01:02 02:01
+#   NA001201 05:01 03:01
+#   ...
+D <- read.table("YourHLATypes.txt", header=TRUE, stringsAsFactors=FALSE)
+train.HLA <- hlaAllele(D$SampleID, H1=D$Allele1, H2=D$Allele2, locus="A")
+
+summary(train.HLA)
+
 # Selected SNPs, two options:
 # 1) the flanking region of 500kb on each side,
 #    or an appropriate flanking size without sacrificing predictive accuracy
@@ -168,6 +178,16 @@ summary(geno)
 train.HLA <- hlaAllele(geno$sample.id, H1=c("01:02", "05:01", ...),
     H2=c("02:01", "03:01", ...), locus="A")
  
+# Or the HLA types are saved in a text file "YourHLATypes.txt":
+#   SampleID Allele1 Allele2
+#   NA001101 01:02 02:01
+#   NA001201 05:01 03:01
+#   ...
+D <- read.table("YourHLATypes.txt", header=TRUE, stringsAsFactors=FALSE)
+train.HLA <- hlaAllele(D$SampleID, H1=D$Allele1, H2=D$Allele2, locus="A")
+
+summary(train.HLA)
+
 # Create an environment with an appropriate cluster size
 cl <- makeCluster(8)
  
@@ -196,6 +216,7 @@ pred.guess$postprob
 \begin{enumerate}
 	\item Allele Frequency Net Database (AFND): \url{http://www.allelefrequencies.net}.
 	\item IMGT/HLA Database: \url{http://www.ebi.ac.uk/imgt/hla}.
+	\item HLA Nomenclature: \url{http://hla.alleles.org/alleles/g_groups.html}.
 \end{enumerate}
 
 

@@ -10,7 +10,7 @@
 //
 // Copyright (C) 2013	Xiuwen Zheng (zhengx@u.washington.edu)
 //
-// This file is part of HIBAG package.
+// This file is part of HIBAG R package.
 //
 // HIBAG is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License Version 3 as
@@ -130,7 +130,8 @@ struct TAlleleItem
 	}
 };
 
-static bool sortfn(const pair<TAlleleItem*, int> &I1, const pair<TAlleleItem*, int> &I2)
+static bool sortfn(const pair<TAlleleItem*, int> &I1,
+	const pair<TAlleleItem*, int> &I2)
 {
 	const TAlleleItem &p1 = *I1.first;
 	const TAlleleItem &p2 = *I2.first;
@@ -166,8 +167,8 @@ static bool sortfn(const pair<TAlleleItem*, int> &I1, const pair<TAlleleItem*, i
  *  \param outstr     the pointer to output allele strings
  *  \param out_err    output the error information, 0 -- no error, 1 -- an error exists
 **/
-DLLEXPORT void HIBAG_SortAlleleStr(int *n_hla, char *const hlastr[], char *outstr[],
-	LongBool *out_err)
+DLLEXPORT void HIBAG_SortAlleleStr(int *n_hla, char *const hlastr[],
+	char *outstr[], LongBool *out_err)
 {
 	CORETRY
 		// HLA alleles
@@ -984,7 +985,7 @@ DLLEXPORT void HIBAG_Done()
 {
 	try {
 
-	#ifdef HIBAG_GPU_SUPPORT
+	#ifdef HIBAG_ALLOW_GPU_SUPPORT
 		Done_GPU_Support();
 	#endif
 
