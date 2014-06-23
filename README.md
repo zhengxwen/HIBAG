@@ -12,7 +12,7 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Citation
 
-Zheng, X. et al. HIBAG-HLA genotype imputation with attribute bagging. *The pharmacogenomics journal* 14, 192–200 (2014). [http://dx.doi.org/10.1038/tpj.2013.18](http://dx.doi.org/10.1038/tpj.2013.18).
+Zheng, X. et al. HIBAG-HLA genotype imputation with attribute bagging. *The pharmacogenomics journal* 14, 192–200 (2014). [http://dx.doi.org/10.1038/tpj.2013.18](http://dx.doi.org/10.1038/tpj.2013.18)
 
 
 ## Installation
