@@ -1,10 +1,10 @@
 \name{hlaGenoSwitchStrand}
 \alias{hlaGenoSwitchStrand}
 \title{
-	Determine the ordered pair of A and B alleles
+	Allele switching
 }
 \description{
-	To get a genotype object, using the allele information provided by \code{template}.
+	Determine the ordered pair of A and B alleles, using the allele information provided by \code{template}.
 }
 \usage{
 hlaGenoSwitchStrand(target, template, verbose=TRUE)
@@ -30,8 +30,8 @@ hlaGenoSwitchStrand(target, template, verbose=TRUE)
 # load SNP genotypes
 data(hla.snp.geno, package="HIBAG")
 summary(hla.snp.geno)
-# A/C A/G C/A C/T G/A G/T T/C T/G 
-#  64 369  64 305 276  69 337  80 
+# A/C A/G C/T G/T 
+# 136 655 632 141 
 
 # import a PLINK BED file
 bed.fn <- system.file("extdata", "hapmap.ceu.bed", package="HIBAG")

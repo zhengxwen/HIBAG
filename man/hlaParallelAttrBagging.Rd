@@ -1,16 +1,18 @@
-\name{hlaAttrBagging}
-\alias{hlaAttrBagging}
+\name{hlaParallelAttrBagging}
+\alias{hlaParallelAttrBagging}
 \title{
-	Build a HIBAG model
+	Build a HIBAG model via parallel computation
 }
 \description{
-	To build an attribute bagging model for predicting HLA types
+	To build an attribute bagging model for predicting HLA types via parallel computation
 }
 \usage{
-hlaAttrBagging(hla, genotype, nclassifier=100, mtry=c("sqrt", "all", "one"),
+hlaParallelAttrBagging(cl, hla, genotype, nclassifier=100, mtry=c("sqrt", "all", "one"),
 	prune=TRUE, rm.na=TRUE, verbose=TRUE, verbose.detail=FALSE)
 }
 \arguments{
+	\item{cl}{a cluster object, created by this package or by the package
+		\link[parallel]{parallel} or \href{http://CRAN.R-project.org/package=snow}{snow}}
 	\item{hla}{training HLA types, an object of \code{\link{hlaAlleleClass}}}
 	\item{genotype}{training genotypes, a genotype object of \code{\link{hlaSNPGenoClass}}}
 	\item{nclassifier}{the total number of individual classifiers}
@@ -85,56 +87,30 @@ train.geno <- hlaGenoSubset(hla.snp.geno, snp.sel=match(snpid, hla.snp.geno$snp.
 test.geno <- hlaGenoSubset(hla.snp.geno,
 	samp.sel=match(hlatab$validation$value$sample.id, hla.snp.geno$sample.id))
 
-# train an attribute bagging model
+
+#############################################################################
+
+library(parallel)
+# Use option cl.core to choose an appropriate cluster size.
+cl <- makeCluster(getOption("cl.cores", 2))
 set.seed(100)
+
+# train an attribute bagging model
 # please try "nclassifier=25" or "nclassifier=100" when you use HIBAG for real data
-model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=2, verbose.detail=TRUE)
+model <- hlaParallelAttrBagging(cl, hlatab$training, train.geno, nclassifier=4)
 summary(model)
 
 # validation
 pred <- predict(model, test.geno)
 # compare
-(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          23            49 0.8846154 0.9423077              0     26         1
-(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0.5))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          20            42 0.9090909 0.9545455            0.5     22 0.8461538
+comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
+	call.threshold=0.5)
+comp
+# total.num.ind crt.num.ind crt.num.haplo  acc.ind acc.haplo call.threshold n.call call.rate
+#            26          20            41 0.952381 0.9761905            0.5     21 0.8076923
 
-
-# save the parameter file
-mobj <- hlaModelToObj(model)
-save(mobj, file="HIBAG_model.RData")
-save(test.geno, file="testgeno.RData")
-save(hlatab, file="HLASplit.RData")
-
-# Clear Workspace
-hlaClose(model)  # release all resources of model
-rm(list = ls())
-
-
-######################################################################
-
-# NOW, load a HIBAG model from the parameter file
-mobj <- get(load("HIBAG_model.RData"))
-model <- hlaModelfromObj(mobj)
-
-# validation
-test.geno <- get(load("testgeno.RData"))
-hlatab <- get(load("HLASplit.RData"))
-
-pred <- predict(model, test.geno, type="response")
-# compare
-(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          23            49 0.8846154 0.9423077              0     26         1
-(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0.5))
-# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
-#            26          20            42 0.9090909 0.9545455            0.5     22 0.8461538
+# stop parallel nodes
+stopCluster(cl)
 }
 
 \keyword{HLA}

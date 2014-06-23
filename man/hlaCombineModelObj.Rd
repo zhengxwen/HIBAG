@@ -19,7 +19,7 @@ hlaCombineModelObj(obj1, obj2)
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 \seealso{
-	\code{\link{hlaAttrBagging}}, \code{\link{hlaClusterAttrBagging}}
+	\code{\link{hlaAttrBagging}}, \code{\link{hlaParallelAttrBagging}}
 }
 
 \keyword{HLA}

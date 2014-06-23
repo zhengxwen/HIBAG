@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.0
+# Package Name: HIBAG v0.9.2
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
@@ -154,9 +154,15 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL)
 	if (is.logical(snp.sel))
 		stopifnot(length(snp.sel) == length(genoobj$snp.id))
 	if (is.integer(samp.sel))
+	{
+		stopifnot(!any(is.na(samp.sel)))
 		stopifnot(length(unique(samp.sel)) == length(samp.sel))
+	}
 	if (is.integer(snp.sel))
+	{
+		stopifnot(!any(is.na(snp.sel)))
 		stopifnot(length(unique(snp.sel)) == length(snp.sel))
+	}
 
 	# subset
 	if (is.null(samp.sel))
@@ -276,8 +282,16 @@ hlaGenoSwitchStrand <- function(target, template, verbose=TRUE)
 		target$snp.allele, target.afreq, I2, length(s), out = logical(length(s)),
 		err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
 	if (gz$err != 0) stop(hlaErrMsg())
+
 	if (verbose)
-		cat(sprintf("The allele pairs of %d SNPs need to be switched.\n", sum(gz$out)))
+	{
+		x <- sum(gz$out)
+		if (x > 0)
+		{
+			if (x > 1) { s <- "s" } else { s <- "" }
+			cat(sprintf("The allele%s of %d SNP%s are switched.\n", s, x, s))
+		}
+	}
 
 	# result
 	if (class(target) == "hlaSNPGenoClass")
@@ -995,6 +1009,9 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 		{ if (x %in% LT) { return(x) } else { return("...") } }
 
 	acc.array <- rep(NaN, n)
+	ind.truehla <- character(n)
+	ind.predhla <- character(n)
+
 	if (n > 0)
 	{
 		for (i in 1:n)
@@ -1024,6 +1041,9 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 
 				# correct count of haplotypes
 				s <- c(ts1[i], ts2[i]); p <- c(ps1[i], ps2[i])
+				ind.truehla[i] <- paste(s[order(s)], collapse="/")
+				ind.predhla[i] <- paste(p[order(p)], collapse="/")
+				
 				hnum <- 0
 				if ((s[1]==p[1]) | (s[1]==p[2]))
 				{
@@ -1129,11 +1149,14 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 	s <- names(PredNum)[m.idx]; s[m.max<=0] <- NA
 	p <- m.max / apply(rv, 2, sum)
 	detail <- cbind(detail, miscall=s, miscall.prop=p, stringsAsFactors=FALSE)
+	rownames(detail) <- NULL
 
 	# output
 	rv <- list(overall=overall, confusion=confusion, detail=detail)
 	if (output.individual)
-		rv$individual <- data.frame(sample.id=samp.id, accuracy=acc.array, stringsAsFactors=FALSE)
+		rv$individual <- data.frame(sample.id=samp.id,
+			true.hla=ind.truehla, pred.hla=ind.predhla,
+			accuracy=acc.array, stringsAsFactors=FALSE)
 	return(rv)
 }
 
@@ -1392,7 +1415,7 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 			print(summary(prior))
 		}
 	} else {
-		if (verbose) cat("Sampling variables with flat prior probability.\n")
+		# if (verbose) cat("Sampling variables with flat prior probability.\n")
 	}
 
 
@@ -1486,7 +1509,7 @@ hlaAttrBagging <- function(hla, genotype, nclassifier=100, mtry=c("sqrt", "all",
 # To fit an attribute bagging model for predicting
 #
 
-hlaClusterAttrBagging <- function(cl, hla, genotype, nclassifier=100,
+hlaParallelAttrBagging <- function(cl, hla, genotype, nclassifier=100,
 	mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
 	verbose=TRUE, verbose.detail=FALSE)
 {
@@ -1649,7 +1672,16 @@ predict.hlaAttrBagClass <- function(object, genotypes, type=c("response", "prob"
 	stopifnot(is.logical(allele.check))
 
 	if (verbose)
-		cat(sprintf("There are %d SNP predictors in the model.\n", length(object$snp.id)))
+	{
+		# call, get the number of classifiers
+		rv <- .C("hlaAB_GetNumClassifiers", object$model, CNum = integer(1),
+			err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
+		if (rv$err != 0) stop(hlaErrMsg())
+
+		if (rv$CNum > 1) { s <- "s" } else { s <- "" }
+		cat(sprintf("HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
+			rv$CNum, s, length(object$snp.id), length(object$hla.allele)))
+	}
 
 	if (class(genotypes) != "hlaSNPGenoClass")
 	{
@@ -1772,12 +1804,12 @@ hlaModelToObj <- function(model)
 	stopifnot(class(model)=="hlaAttrBagClass")
 
 	# call, get the number of classifiers
-	rv <- .C("hlaAB_GetNumClassifiers", model$model, TreeNum = integer(1),
+	rv <- .C("hlaAB_GetNumClassifiers", model$model, CNum = integer(1),
 		err=integer(1), NAOK=TRUE, PACKAGE="HIBAG")
 	if (rv$err != 0) stop(hlaErrMsg())
 
 	# for each tree
-	res <- vector("list", rv$TreeNum)
+	res <- vector("list", rv$CNum)
 	for (i in 1:length(res))
 	{
 		# call, get the number of haplotypes
@@ -1924,7 +1956,7 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 	if (show)
 	{
 		cat("HLA locus: ", obj$hla.locus, "\n", sep="")
-		cat("Training dataset:", length(obj$sample.id), "samples X",
+		cat("Training dataset:", obj$n.samp, "samples X",
 			length(obj$snp.id), "SNPs\n")
 		cat("\t# of HLA alleles: ", length(obj$hla.allele), "\n", sep="")
 	}

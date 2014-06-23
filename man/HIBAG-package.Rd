@@ -2,7 +2,7 @@
 \alias{HIBAG-package}
 \alias{HIBAG}
 \docType{package}
-\title{HIBAG -- HLA Genotype Imputation with Attribute Bagging}
+\title{HLA Genotype Imputation with Attribute Bagging}
 \description{
 	To impute HLA types from unphased SNP data using an attribute bagging method.
 }
@@ -10,17 +10,18 @@
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 0.9.1\cr
-		Date:    \tab 2012-06-20\cr
+		Version: \tab 0.9.2\cr
+		Date:    \tab 2012-08-04\cr
 		License: \tab GPL version 3\cr
 	}
 }
 \references{
-	\url{http://students.washington.edu/zhengx/HIBAG/}
+	\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}
 
-	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.
-	HIBAG -- HLA Genotype Imputation with Attribute Bagging.
-	submitted.
+	X. Zheng, J. Shen, C. Cox, J. Wakefield, M. Ehm, M. Nelson, B. Weir.,
+	HIBAG -- HLA Genotype Imputation with Attribute Bagging; (Abstract 294, Oral Talk);
+	Presented at the 62nd Annual Meeting of The American Society of Human Genetics,
+	November 9, 2012 in San Francisco, California.
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 
@@ -100,9 +101,12 @@ summary(model)
 # validation
 pred <- predict(model, test.geno)
 # compare
-comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0.5)
-comp
+(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
+	call.threshold=0))
+# total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
+#            26          23            49 0.8846154 0.9423077              0     26         1
+(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
+	call.threshold=0.5))
 # total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
 #            26          20            42 0.9090909 0.9545455            0.5     22 0.8461538
 
@@ -130,9 +134,8 @@ hlatab <- get(load("HLASplit.RData"))
 
 pred <- predict(model, test.geno)
 # compare
-comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
-	call.threshold=0.5)
-comp
+(comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model$hla.allele,
+	call.threshold=0.5))
 # total.num.ind crt.num.ind crt.num.haplo   acc.ind acc.haplo call.threshold n.call call.rate
 #            26          20            42 0.9090909 0.9545455            0.5     22 0.8461538
 

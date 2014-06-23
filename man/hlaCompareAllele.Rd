@@ -24,9 +24,10 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL,
 	\item{verbose}{if TRUE, show information}
 }
 \value{
-	Return a \code{list(overall=overall, confusion=confusion, detail=detail))}
+	Return a \code{list(overall, confusion, detail)}, or
+\code{list(overall, confusion, detail, individual)} if \code{output.individual=TRUE}.
 
-	overall (data.frame):
+	\code{overall} (data.frame):
 	\item{total.num.ind}{the total number of individuals}
 	\item{crt.num.ind}{the number of individuals with correct HLA types}
 	\item{crt.num.haplo}{the number of chromosomes with correct HLA alleles}
@@ -39,9 +40,9 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL,
 	\item{n.call}{the number of individuals with call}
 	\item{call.rate}{overall call rate}
 
-	confusion (matrix): a confusion matrix.
+	\code{confusion} (matrix): a confusion matrix.
 
-	detail (data.frame):
+	\code{detail} (data.frame):
 	\item{allele}{HLA alleles}
 	\item{train.num}{the number of training haplotypes}
 	\item{train.freq}{the training haplotype frequencies}
@@ -55,6 +56,12 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL,
 	\item{npv}{negative predictive value}
 	\item{miscall}{the most likely miss-called alleles}
 	\item{miscall.prop}{the proportions of the most likely miss-called allele in all miss-called alleles}
+
+	\code{individual} (data.frame):
+	\item{sample.id}{sample id}
+	\item{true.hla}{the true HLA type}
+	\item{pred.hla}{the prediction of HLA type}
+	\item{accuracy}{accuracy, 0, 0.5, or 1}
 }
 \author{Xiuwen Zheng \email{zhengx@u.washington.edu}}
 \seealso{

@@ -91,7 +91,7 @@ namespace HLA_LIB
 
 		UINT8 GetSNP(int idx) const;
 		void SetSNP(int idx, UINT8 val);
-		string SNPToString(int Length) const;
+		string SNPToString(const int Length) const;
 		void StringToSNP(const string &str);
 	};
 
