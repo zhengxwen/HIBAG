@@ -10,6 +10,10 @@ Version: 1.2.3
 
 HIBAG is a state of the art software package for imputing HLA types using SNP data, and it uses the R statistical programming language. HIBAG can be used by researchers with published parameter estimates instead of requiring access to large training sample datasets. It combines the concepts of attribute bagging, an ensemble classifier method, with haplotype inference for SNPs and HLA types. Attribute bagging is a technique which improves the accuracy and stability of classifier ensembles using bootstrap aggregating and random variable selection.
 
+
+## Wiki
+[Wiki Page](https://github.com/zhengxwen/SNPRelate/wiki)
+
 ## License
 
 GPL-3
