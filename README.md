@@ -29,7 +29,7 @@ Zheng, X. et al. HIBAG-HLA genotype imputation with attribute bagging. *The phar
 
 ## Installation
 
-* From CRAN (stable release 1.0.+)
+* From CRAN (stable release 1.0.+) [http://cran.r-project.org/web/packages/HIBAG/index.html](http://cran.r-project.org/web/packages/HIBAG/index.html)
 
 * Development version from Github:
 ```
