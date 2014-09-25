@@ -1,7 +1,7 @@
 HIBAG -- HLA Genotype Imputation with Attribute Bagging
 ==
 
-Version: 1.2.3
+Version: 1.2.4
 
 [![Build Status](https://travis-ci.org/zhengxwen/HIBAG.png)](https://travis-ci.org/zhengxwen/HIBAG)
 
@@ -24,7 +24,7 @@ Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com) / [zhengx@u.washington.
 
 ## Citation
 
-Zheng, X. et al. HIBAG-HLA genotype imputation with attribute bagging. *The pharmacogenomics journal* 14, 192–200 (2014). [http://dx.doi.org/10.1038/tpj.2013.18](http://dx.doi.org/10.1038/tpj.2013.18)
+Zheng, X. *et al*. HIBAG-HLA genotype imputation with attribute bagging. *The pharmacogenomics journal* 14, 192–200 (2014). [http://dx.doi.org/10.1038/tpj.2013.18](http://dx.doi.org/10.1038/tpj.2013.18)
 
 
 ## Installation

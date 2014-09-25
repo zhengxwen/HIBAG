@@ -26,7 +26,7 @@
 // ===========================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.3
+// Version        : 1.2.4
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
 // Last modified  : 10/29/2013

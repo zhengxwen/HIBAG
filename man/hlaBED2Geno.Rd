@@ -28,7 +28,7 @@ hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaGeno2PED}}, \code{\link{hlaAttrBagging}}
+	\code{\link{hlaGeno2PED}}, \code{\link{hlaGDS2Geno}}
 }
 
 \examples{

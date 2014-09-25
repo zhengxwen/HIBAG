@@ -1,10 +1,10 @@
 Package: HIBAG
 Type: Package
 Title: HIBAG -- HLA Genotype Imputation with Attribute Bagging
-Version: 1.2.3
-Date: 2014-03-05
-Depends: R (>= 2.14.0)
-Imports: parallel
+Version: 1.2.4
+Date: 2014-09-26
+Depends:	R (>= 2.14.0)
+Suggests:	parallel
 Author: Xiuwen Zheng, Bruce S. Weir
 Maintainer: Xiuwen Zheng <zhengx@u.washington.edu>
 Description: HIBAG is a state of the art software package for imputing HLA
@@ -16,8 +16,5 @@ Description: HIBAG is a state of the art software package for imputing HLA
 	technique which improves the accuracy and stability of classifier
 	ensembles using bootstrap aggregating and random variable selection.
 License: GPL-3
-URL: http://www.biostat.washington.edu/~bsweir/HIBAG/
-Packaged: 2014-03-06 03:27:36 UTC; sts
-NeedsCompilation: yes
-Repository: CRAN
-Date/Publication: 2014-03-06 08:01:03
+URL:	http://www.biostat.washington.edu/~bsweir/HIBAG/,
+	http://github.com/zhengxwen/HIBAG

@@ -1,3 +1,10 @@
+Changes in 1.2.4:
+
+	* add a new function 'hlaGDS2Geno' to support GDS SNP files (in the R package SNPRelate)
+	* improve the display of 'summary.hlaAlleleClass'
+	* fix warnings in R 3.1.1
+
+
 Changes in 1.2.3:
 
 	* avoid missing values in 'hlaFlankingSNP'

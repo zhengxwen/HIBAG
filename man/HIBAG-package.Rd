@@ -11,7 +11,7 @@ method.
 	\tabular{ll}{
 		Package: \tab HIBAG\cr
 		Type:    \tab Package\cr
-		Version: \tab 1.2.3\cr
+		Version: \tab 1.2.4\cr
 		License: \tab GPL version 3\cr
 	}
 

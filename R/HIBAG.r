@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.2.3
+# Package Name: HIBAG v1.2.4
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
@@ -462,8 +462,8 @@ hlaGenoSwitchStrand <- function(target, template,
 				a <- "is"; s <- ""
 			}
 			cat(sprintf(
-				"There %s %d variant%s in total whose allelic strand order%s %s switched.\n",
-				a, x, s, s, a))
+				"There %s %d variant%s in total with switched allelic strand order%s.\n",
+				a, x, s, s))
 		} else {
 			cat("No allelic strand orders are switched.\n")
 		}
@@ -606,7 +606,8 @@ hlaGeno2PED <- function(geno, out.fn)
 
 	# MAP file
 	rv <- data.frame(chr=rep(6, length(geno$snp.id)), rs=geno$snp.id,
-		morgan=rep(0, length(geno$snp.id)), bp=geno$snp.position, stringsAsFactors=FALSE)
+		morgan=rep(0, length(geno$snp.id)), bp=geno$snp.position,
+		stringsAsFactors=FALSE)
 	write.table(rv, file=paste(out.fn, ".map", sep=""),
 		row.names=FALSE, col.names=FALSE, quote=FALSE)
 
@@ -763,6 +764,19 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 	# remove invalid snps
 	if (rm.invalid.allele)
 	{
+		# check duplicated SNP ID
+		flag <- duplicated(v$snp.id)
+		if (any(flag))
+		{
+			if (verbose)
+			{
+				cat(sprintf("%d SNPs with duplicated ID have been removed.\n",
+					sum(flag)))
+			}
+			v <- hlaGenoSubset(v, snp.sel=!flag)
+		}
+
+		# check invalid alleles
 		snp.allele <- v$snp.allele
 		snp.allele[is.na(snp.allele)] <- "?/?"
 		flag <- sapply(strsplit(snp.allele, "/"),
@@ -786,6 +800,168 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 	return(v)
 }
 
+
+#######################################################################
+# Convert from SNP GDS format (SNPRelate)
+#
+
+hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
+	import.chr="xMHC", assembly=c("auto", "hg18", "hg19", "unknown"),
+	verbose=TRUE)
+{
+	# library
+	eval(parse(text='
+		if (!require(SNPRelate))
+			stop("The SNPRelate package should be installed.")
+	'))
+
+	# check
+	stopifnot(is.character(gds.fn) & is.vector(gds.fn))
+	stopifnot(length(gds.fn) == 1)
+
+	stopifnot(is.logical(rm.invalid.allele) & is.vector(rm.invalid.allele))
+	stopifnot(length(rm.invalid.allele) == 1)
+
+	stopifnot(is.character(import.chr))
+
+	stopifnot(is.logical(verbose) & is.vector(verbose))
+	stopifnot(length(verbose) == 1)
+
+	assembly <- match.arg(assembly)
+	if (assembly == "auto")
+	{
+		message("using the default genome assembly (assembly=\"hg19\")")
+		warning("Please explicitly specify the argument 'assembly=\"hg18\"' or 'assembly=\"hg19\"'.")
+		assembly <- "hg19"
+	} else if (assembly == "unknown")
+	{
+		warning("Please explicitly specify the argument 'assembly=\"hg18\"' or 'assembly=\"hg19\"'.")
+	}
+
+
+	####  open the GDS SNP file  ####
+
+	chr <- NULL
+	snp.pos <- NULL
+	snp.id <- NULL
+
+	eval(parse(text='gfile <- snpgdsOpen(gds.fn)'))
+	on.exit(eval(parse(text='snpgdsClose(gfile)')))
+
+	# snp.id
+	eval(parse(text='
+		snp.id <- read.gdsn(index.gdsn(gfile, "snp.id"))
+		if (!is.null(index.gdsn(gfile, "snp.rs.id", silent=TRUE)))
+		{
+			snp.rsid <- read.gdsn(index.gdsn(gfile, "snp.rs.id"))
+		} else
+			snp.rsid <- snp.id
+	'))
+
+	# chromosome
+	eval(parse(text='
+		chr <- read.gdsn(index.gdsn(gfile, "snp.chromosome"))
+	'))
+
+	# position
+	eval(parse(text='
+		snp.pos <- read.gdsn(index.gdsn(gfile, "snp.position"))
+		snp.pos[!is.finite(snp.pos)] <- 0
+	'))
+
+	# SNP selection
+	if (length(import.chr) == 1)
+	{
+		if (import.chr == "xMHC")
+		{
+			if (assembly %in% c("hg18", "NCBI36"))
+			{
+				snp.flag <- (chr==6) & (25759242<=snp.pos) & (snp.pos<=33534827)
+			} else if (assembly %in% c("hg19", "NCBI37"))
+			{
+				snp.flag <- (chr==6) & (25651242<=snp.pos) & (snp.pos<=33544122)
+			} else {
+				stop("Invalid genome assembly.")
+			}
+			n.snp <- as.integer(sum(snp.flag))
+			if (verbose)
+			{
+				cat(sprintf("Import %d SNPs within the xMHC region on chromosome 6.\n",
+					n.snp))
+			}
+			import.chr <- NULL
+		} else if (import.chr == "")
+		{
+			n.snp <- length(snp.id)
+			snp.flag <- rep(TRUE, n.snp)
+			if (verbose)
+				cat(sprintf("Import %d SNPs.\n", n.snp))
+			import.chr <- NULL
+		}
+	}
+	if (!is.null(import.chr))
+	{
+		snp.flag <- (chr %in% import.chr) & (snp.pos>0)
+		n.snp <- as.integer(sum(snp.flag))
+		if (verbose)
+		{
+			cat(sprintf("Import %d SNPs from chromosome %s.\n", n.snp,
+				paste(import.chr, collapse=",")))
+		}
+	}
+	if (n.snp <= 0) stop("There is no SNP imported.")
+
+	# result
+	eval(parse(text='
+		v <- list(genotype = snpgdsGetGeno(gfile, snp.id=snp.id[snp.flag],
+				snpfirstdim=TRUE, verbose=FALSE),
+			sample.id = read.gdsn(index.gdsn(gfile, "sample.id")),
+			snp.id = snp.rsid[snp.flag],
+			snp.position = snp.pos[snp.flag],
+			snp.allele = read.gdsn(index.gdsn(gfile, "snp.allele"))[snp.flag],
+			assembly = assembly)
+	'))
+	class(v) <- "hlaSNPGenoClass"
+
+	# remove invalid snps
+	if (rm.invalid.allele)
+	{
+		# check duplicated SNP ID
+		flag <- duplicated(v$snp.id)
+		if (any(flag))
+		{
+			if (verbose)
+			{
+				cat(sprintf("%d SNPs with duplicated ID have been removed.\n",
+					sum(flag)))
+			}
+			v <- hlaGenoSubset(v, snp.sel=!flag)
+		}
+
+		# check invalid alleles
+		snp.allele <- v$snp.allele
+		snp.allele[is.na(snp.allele)] <- "?/?"
+		flag <- sapply(strsplit(snp.allele, "/"),
+			function(x)
+			{
+				if (length(x) == 2)
+				{
+					all(x %in% c("A", "G", "C", "T"))
+				} else {
+					FALSE
+				}
+			}
+		)
+		if (any(!flag) & verbose)
+		{
+			cat(sprintf("%d SNPs with invalid alleles have been removed.\n",
+				sum(!flag)))
+		}
+		v <- hlaGenoSubset(v, snp.sel=flag)
+	}
+
+	return(v)
+}
 
 
 
@@ -1488,7 +1664,8 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 				PredNum[[ fn(ps2[i], allele) ]] <- PredNum[[ fn(ps2[i], allele) ]] + 1
 
 				# correct count of individuals
-				if ( ((ts1[i]==ps1[i]) & (ts2[i]==ps2[i])) | ((ts2[i]==ps1[i]) & (ts1[i]==ps2[i])) )
+				if ( ((ts1[i]==ps1[i]) & (ts2[i]==ps2[i])) |
+					((ts2[i]==ps1[i]) & (ts1[i]==ps2[i])) )
 				{
 					cnt.ind <- cnt.ind + 1
 				}
@@ -1522,21 +1699,26 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 					{
 						if (s[1]==p[1])
 						{
-							confusion[fn(p[2], allele), s[2]] <- confusion[fn(p[2], allele), s[2]] + 1
+							confusion[fn(p[2], allele), s[2]] <-
+								confusion[fn(p[2], allele), s[2]] + 1
 						} else {
-							confusion[fn(p[1], allele), s[2]] <- confusion[fn(p[1], allele), s[2]] + 1
+							confusion[fn(p[1], allele), s[2]] <-
+								confusion[fn(p[1], allele), s[2]] + 1
 						}
 					} else {
 						if (s[2]==p[1])
 						{
-							confusion[fn(p[2], allele), s[1]] <- confusion[fn(p[2], allele), s[1]] + 1
+							confusion[fn(p[2], allele), s[1]] <-
+								confusion[fn(p[2], allele), s[1]] + 1
 						} else {
-							confusion[fn(p[1], allele), s[1]] <- confusion[fn(p[1], allele), s[1]] + 1
+							confusion[fn(p[1], allele), s[1]] <-
+								confusion[fn(p[1], allele), s[1]] + 1
 						}
 					}
 				} else if (hnum == 0)
 				{
-					WrongTab <- cbind(WrongTab, c(s, fn(p[1], allele), fn(p[2], allele)))
+					WrongTab <- cbind(WrongTab,
+						c(s, fn(p[1], allele), fn(p[2], allele)))
 				}
 
 				# the number of calling
@@ -1790,7 +1972,8 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 		p <- hla$value$prob
 		if (!is.null(p))
 		{
-			z <- table(cut(p, breaks=c(-Inf, 0, 0.25, 0.5, 0.75, 1)))
+			z <- table(cut(p, breaks=c(0, 0.25, 0.5, 0.75, 1),
+				right=FALSE, include.lowest=TRUE))
 			z[] <- sprintf("%d (%0.1f%%)", z, prop.table(z)*100)
 			names(attr(z, "dimnames")) <- "Posterior probability:"
 			print(z)
@@ -2213,18 +2396,19 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 		if (rv$err != 0) stop(hlaErrMsg())
 
 		if (rv$CNum > 1) { s <- "s" } else { s <- "" }
-		cat(sprintf("HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles\n",
+		cat(sprintf(
+			"HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
 			rv$CNum, s, length(object$snp.id), length(object$hla.allele)))
 
 		if (vote_method == 1)
-			cat("Predicting based on the averaged posterior probabilities from all individual classifiers\n")
+			cat("Predicting based on the averaged posterior probabilities from all individual classifiers.\n")
 		else
-			cat("Predicting by voting from all individual classifiers\n")
+			cat("Predicting by voting from all individual classifiers.\n")
 
 		if (!is.null(cl))
 		{
 			cat(sprintf(
-				"Run in parallel with %d computing node%s\n",
+				"Run in parallel with %d computing node%s.\n",
 				length(cl), if (length(cl)>1) "s" else ""
 			))
 		}
@@ -2405,6 +2589,8 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 	# initialize ...
 	n.samp <- dim(snp)[2]
 	n.hla <- length(object$hla.allele)
+	if (verbose)
+		cat(sprintf("The number of samples: %d.\n", n.samp))
 
 	# parallel units
 	if (is.null(cl))
@@ -3522,7 +3708,7 @@ hlaErrMsg <- function()
 
 	# information
 	packageStartupMessage(
-		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.3")
+		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.4")
 	if (rv$SSE.Flag != 0)
 		packageStartupMessage("Supported by Streaming SIMD Extensions 2 (SSE2)")
 
