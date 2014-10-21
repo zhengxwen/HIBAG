@@ -942,7 +942,9 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 DLLEXPORT void HIBAG_GPU_Init(char **lib_fn, int *prec, int *out_err)
 {
 	CORETRY
+	#ifdef HIBAG_ALLOW_GPU_SUPPORT
 		Init_GPU_Support(lib_fn[0]);
+	#endif
 		*out_err = 0;
 	CORECATCH(*out_err = 1)
 }

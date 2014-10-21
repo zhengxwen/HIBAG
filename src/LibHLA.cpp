@@ -2200,6 +2200,8 @@ void CAttrBag_Model::_GetSNPWeights(int OutWeight[])
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 
+#ifdef HIBAG_ALLOW_GPU_SUPPORT
+
 template <typename TO, typename FROM> TO nasty_cast(FROM f)
 {
 	union {
@@ -2300,3 +2302,4 @@ void HLA_LIB::Done_GPU_Support()
 #endif
 }
 
+#endif
