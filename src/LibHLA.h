@@ -85,6 +85,7 @@ namespace HLA_LIB
 	#endif
 
 
+	/// Define floating type, 0 -- double, 1 -- float
 	#define HIBAG_FLOAT_TYPE_ID    0
 
 	#if (HIBAG_FLOAT_TYPE_ID == 0)

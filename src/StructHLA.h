@@ -45,7 +45,7 @@ extern "C" {
 
 
 /// Define macro for GPU computing
-#define HIBAG_ALLOW_GPU_SUPPORT
+// #define HIBAG_ALLOW_GPU_SUPPORT
 
 
 /// Define unsigned integers
