@@ -4,3 +4,4 @@
 .Rprofile
 *.o
 *.so
+.travis.yml
