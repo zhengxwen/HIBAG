@@ -39,12 +39,12 @@ install_github("zhengxwen/HIBAG")
 The `install_github()` approach requires that you build from source, i.e. `make` and compilers must be installed on your system -- see the R FAQ for your operating system; you may also need to install dependencies manually.
 
 * Install the package from the source code:
-[download the source code](https://codeload.github.com/zhengxwen/HIBAG/tar.gz/v1.2.4)
+[download the source code](https://github.com/zhengxwen/HIBAG/tarball/master)
 ```
-wget https://codeload.github.com/zhengxwen/HIBAG/tar.gz/v1.2.4 -O HIBAG_1.2.4.tar.gz
+wget --no-check-certificate https://github.com/zhengxwen/HIBAG/tarball/master -O HIBAG_latest.tar.gz
 ** Or **
-curl https://codeload.github.com/zhengxwen/HIBAG/tar.gz/v1.2.4 -o HIBAG_1.2.4.tar.gz
+curl -L https://github.com/zhengxwen/HIBAG/tarball/master/ -o HIBAG_latest.tar.gz
 
 ** Install **
-R CMD INSTALL HIBAG_1.2.4.tar.gz
+R CMD INSTALL HIBAG_latest.tar.gz
 ```
