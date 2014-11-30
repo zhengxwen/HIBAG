@@ -33,7 +33,7 @@
 #include <fstream>
 #include <vector>
 
-#include <LibHLA.h>
+#include "LibHLA.h"
 #include <R.h>
 #include <Rdefines.h>
 
@@ -933,24 +933,6 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 
 
 // -----------------------------------------------------------------------
-// GPU supports
-/**
- *  to get an error message
- *  \param lib_fn        the file name of GPU computing library
- *  \param prec          1 -- double, 2 -- single
-**/
-DLLEXPORT void HIBAG_GPU_Init(char **lib_fn, int *prec, int *out_err)
-{
-	CORETRY
-	#ifdef HIBAG_ALLOW_GPU_SUPPORT
-		Init_GPU_Support(lib_fn[0]);
-	#endif
-		*out_err = 0;
-	CORECATCH(*out_err = 1)
-}
-
-
-// -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
 /**
  *  to get an error message
@@ -970,26 +952,28 @@ DLLEXPORT void HIBAG_ErrMsg(char **Msg)
 //
 
 /// initialize the package
-DLLEXPORT void HIBAG_Init(int *SSE)
+DLLEXPORT SEXP HIBAG_Init()
 {
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
 
+	SEXP ans;
 	#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-		*SSE = 1;
+	#   ifdef __SSE4_2__
+		ans = ScalarInteger(2);
+	#   else
+		ans = ScalarInteger(1);
+	#   endif
 	#else
-		*SSE = 0;
+		ans = ScalarInteger(0);
 	#endif
+
+	return ans;
 }
 
 /// finalize the package
 DLLEXPORT void HIBAG_Done()
 {
 	try {
-
-	#ifdef HIBAG_ALLOW_GPU_SUPPORT
-		Done_GPU_Support();
-	#endif
-
 		for (int i=0; i < MODEL_NUM_LIMIT; i++)
 		{
 			CAttrBag_Model* m = _HIBAG_MODELS_[i];

@@ -26,41 +26,21 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.4
+// Version        : 1.2.5
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
-// Last modified  : 10/29/2013
+// Last modified  : 11/27/2014
 // Description    : HLA Genotype Imputation with Attribute Bagging
 // ===============================================================
 
 
-#if defined(unix) || defined(__unix) || defined(__unix__) || defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-#  define HIBAG_SYS_UNIX
-#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(_WIN32_WCE)
-#  define HIBAG_SYS_WIN
-#endif
-
-
-#include <StructHLA.h>
-
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-#  if defined(HIBAG_SYS_UNIX)
-#    include <dlfcn.h>
-#  elif defined(HIBAG_SYS_WIN)
-#    include <windows.h>
-#  else
-#    error "not supported"
-#  endif
-#endif
-
-#include <LibHLA.h>
+#include "LibHLA.h"
 
 #define HIBAG_TIMING	0
 // 0: No timing
-// 1: Spends ~90% of time on 'CVariableSelection::_OutOfBagAccuracy'
-//    and 'CVariableSelection::_InBagLogLik'
-//    Could be improved on speed by GPU programming
-// 2: ~9.2% of time on CAlg_EM::ExpectationMaximization
+// 1: Spends ~83% of time on 'CVariableSelection::_OutOfBagAccuracy'
+//    and 'CVariableSelection::_InBagLogLik', using hardware popcnt
+// 2: ~14% of time on CAlg_EM::ExpectationMaximization
 // 3: ~0.5% of time on CAlg_EM::PrepareHaplotypes
 
 #if (HIBAG_TIMING > 0)
@@ -100,31 +80,6 @@ static const TFLOAT PRUNE_RELTOL_LOGLIK = 0.1;
 
 
 
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-
-// whether run in double precision, depending on the device
-static bool _gpuRunInDoublePrecision = false;
-
-typedef void (*TGPUFunc)();
-typedef void (*TGPUInitFunc)(UINT8 *hamdist);
-typedef int (*TGPU_OutOfBagAcc_F32)(int nHLA, int *_HLA_HapIdx,
-	int nHaplo, TGPU_Haplotype_F32 *_HapList,
-	int nGeno, TGPU_Genotype *_GList, int nSNP);
-typedef int (*TGPU_OutOfBagAcc_F64)(int nHLA, int *_HLA_HapIdx,
-	int nHaplo, TGPU_Haplotype_F64 *_HapList,
-	int nGeno, TGPU_Genotype *_GList, int nSNP);
-
-static TGPUInitFunc _gpuInitialize = NULL;
-static TGPUFunc     _gpuFinalize = NULL;
-static TGPUFunc     _gpuDeviceQuery = NULL;
-static TGPU_OutOfBagAcc_F32  _gpuOutOfBagAcc_F32 = NULL;
-static TGPU_OutOfBagAcc_F64  _gpuOutOfBagAcc_F64 = NULL;
-
-#endif
-
-
-
-
 // ************************************************************************* //
 // ************************************************************************* //
 
@@ -146,15 +101,6 @@ static inline int RandomNum(int Range)
 /// exp(cnt * log(MIN_RARE_FREQ)), cnt is the hamming distance
 static TFLOAT EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
 
-/// the hamming distance
-/// SNP genotypes (first dimension) and a pair of haplotypes (second dimension)
-static UINT8 _Packed_HammingDistance[256][256] HIBAG_SSE_VAR_ALIGN;
-
-#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-// 32 -- the length of genotypes
-static __m128 _Packed_HamLenMask[32] HIBAG_SSE_VAR_ALIGN;
-#endif
-
 class CInit
 {
 public:
@@ -168,44 +114,6 @@ public:
 			if (!R_finite(EXP_LOG_MIN_RARE_FREQ[i]))
 				EXP_LOG_MIN_RARE_FREQ[i] = 0;
 		}
-
-		// the hamming distance
-		for (int I1=0; I1 < 256; I1++)
-		{
-			int G[4] = { I1 & 0x03, (I1 >> 2) & 0x03,
-				(I1 >> 4) & 0x03, (I1 >> 6) & 0x03 };
-			for (int I2=0; I2 < 256; I2++)
-			{
-				int H1[4] = { (I2 >> 0) & 0x01, (I2 >> 2) & 0x01,
-					(I2 >> 4) & 0x01, (I2 >> 6) & 0x01 };
-				int H2[4] = { (I2 >> 1) & 0x01, (I2 >> 3) & 0x01,
-					(I2 >> 5) & 0x01, (I2 >> 7) & 0x01 };
-				int sum = 0;
-				for (int k=0; k < 4; k++)
-				{
-					if (G[k] <= 2)
-						sum += abs(G[k] - H1[k] - H2[k]);
-				}
-				_Packed_HammingDistance[I1][I2] = sum;
-			}
-		}
-
-	#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-
-		// the hamming mask for length
-		memset(_Packed_HamLenMask, 0, sizeof(_Packed_HamLenMask));
-
-		for (int Length=1; Length < 32; Length++)
-		{
-			UINT8 *p = (UINT8*)(&_Packed_HamLenMask[Length]);
-			int L = Length;
-			for (; L >= 4; L-=4, p+=2)
-				p[0] = p[1] = 0xFF;
-			if (L > 0)
-				p[0] = p[1] = ~(0xFF << (L*2));
-		}
-
-	#endif
 	}
 };
 
@@ -302,53 +210,50 @@ CdProgression HLA_LIB::Progress;
 
 THaplotype::THaplotype()
 {
-	memset(PackedHaplo, 0, sizeof(PackedHaplo));
+	Frequency = OldFreq = 0;
 }
 
 THaplotype::THaplotype(const TFLOAT _freq)
 {
-	memset(PackedHaplo, 0, sizeof(PackedHaplo));
 	Frequency = _freq;
 	OldFreq = 0;
 }
 
 THaplotype::THaplotype(const char *str, const TFLOAT _freq)
 {
-	memset(PackedHaplo, 0, sizeof(PackedHaplo));
 	Frequency = _freq;
 	OldFreq = 0;
 	StrToHaplo(str);
 }
 
-UINT8 THaplotype::GetAllele(const int idx) const
+UINT8 THaplotype::GetAllele(size_t idx) const
 {
-	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::GetAllele, invalid index.");
-	UINT8 ch = PackedHaplo[idx >> 2];
-	return (ch >> (2*(idx & 0x03))) & 0x01;
+	return (PackedHaplo[idx >> 3] >> (idx & 0x07)) & 0x01;
 }
 
-void THaplotype::SetAllele(const int idx, UINT8 val)
+void THaplotype::SetAllele(size_t idx, UINT8 val)
 {
-	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::SetAllele, invalid index.");
 	HIBAG_CHECKING(val!=0 && val!=1,
 		"THaplotype::SetAllele, the value should be 0 or 1.");
-	UTYPE &ch = PackedHaplo[idx >> 2];
-	UINT8 shift = (idx & 0x03)*2;
-	UTYPE mask = ~(0x03 << shift);
-	ch = (ch & mask) | (val << shift);
+	size_t r = idx & 0x07;
+	UINT8 mask = ~(0x01 << r);
+	UINT8 &ch = PackedHaplo[idx >> 3];
+	ch = (ch & mask) | (val << r);
 }
 
-string THaplotype::HaploToStr(const int Length) const
+string THaplotype::HaploToStr(size_t Length) const
 {
-	HIBAG_CHECKING((Length<0) || (Length>HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::HaploToStr, the length is invalid.");
 	string rv;
 	if (Length > 0)
 	{
 		rv.resize(Length);
-		for (int i=0; i < Length; i++)
+		for (size_t i=0; i < Length; i++)
 			rv[i] = (GetAllele(i)==0) ? '0' : '1';
 	}
 	return rv;
@@ -356,222 +261,15 @@ string THaplotype::HaploToStr(const int Length) const
 
 void THaplotype::StrToHaplo(const string &str)
 {
-	HIBAG_CHECKING((int)str.size() > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+	HIBAG_CHECKING(str.size() > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::StrToHaplo, the input string is too long.");
-	for (int i=0; i < (int)str.size(); i++)
+	for (size_t i=0; i < str.size(); i++)
 	{
 		char ch = str[i];
 		HIBAG_CHECKING(ch!='0' && ch!='1',
 			"THaplotype::StrToHaplo, the input string should be '0' or '1'");
 		SetAllele(i, ch-'0');
 	}
-}
-
-
-
-// -------------------------------------------------------------------------
-// The class of genotype structure
-
-TGenotype::TGenotype()
-{
-	memset(PackedSNPs, 0, sizeof(PackedSNPs));
-}
-
-UINT8 TGenotype::GetSNP(const int idx) const
-{
-	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
-		"TGenotype::GetSNP, invalid index.");
-	UINT8 ch = PackedSNPs[idx >> 2];
-	return (ch >> (2*(idx & 0x03))) & 0x03;
-}
-
-void TGenotype::SetSNP(const int idx, int val)
-{
-	HIBAG_CHECKING((idx<0) || (idx>=HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
-		"TGenotype::SetSNP, invalid index.");
-	if (val<0 || val>2) val = 3;
-	_SetSNP(idx, val);
-}
-
-void TGenotype::_SetSNP(const int idx, UINT8 val)
-{
-	UTYPE &ch = PackedSNPs[idx >> 2];
-	UINT8 shift = (idx & 0x03)*2;
-	UTYPE mask = ~(0x03 << shift);
-	ch = (ch & mask) | (val << shift);
-}
-
-string TGenotype::SNPToString(const int Length) const
-{
-	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
-		"TGenotype::SNPToString, the length is too large.");
-	string rv;
-	if (Length > 0)
-	{
-		rv.resize(Length);
-		for (int i=0; i < Length; i++)
-		{
-			UINT8 ch = GetSNP(i);
-			rv[i] = (ch < 3) ? (ch + '0') : '?';
-		}
-	}
-	return rv;
-}
-
-void TGenotype::StringToSNP(const string &str)
-{
-	HIBAG_CHECKING((int)str.size() > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
-		"TGenotype::StringToSNP, the input string is too long.");
-	for (int i=0; i < (int)str.size(); i++)
-	{
-		char ch = str[i];
-		HIBAG_CHECKING(ch!='0' && ch!='1' && ch!='2' && ch!='?',
-			"TGenotype::StringToSNP, the input string should be '0', '1', '2' or '?'.");
-		SetSNP(i, ch-'0');
-	}
-}
-
-void TGenotype::SNPToInt(const int Length, int OutArray[]) const
-{
-	HIBAG_CHECKING((Length<0) || (Length>HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
-		"TGenotype::SNPToInt, the length is invalid.");
-	for (int i=0; i < Length; i++) OutArray[i] = GetSNP(i);
-}
-
-void TGenotype::IntToSNP(int Length, const int InBase[], const int Index[])
-{
-	HIBAG_CHECKING((Length<0) || (Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
-		"TGenotype::IntToSNP, the length is invalid.");
-	UTYPE *p = &PackedSNPs[0];
-	for (; Length >= 4; Length-=4, Index+=4)
-	{
-		int g0 = InBase[Index[0]]; if (g0<0 || g0>2) g0 = 3;
-		int g1 = InBase[Index[1]]; if (g1<0 || g1>2) g1 = 3;
-		int g2 = InBase[Index[2]]; if (g2<0 || g2>2) g2 = 3;
-		int g3 = InBase[Index[3]]; if (g3<0 || g3>2) g3 = 3;
-		*p++ = g0 | (g1 << 2) | (g2 << 4) | (g3 << 6);
-	}
-	if (Length > 0)
-	{
-		*p = 0;
-		for (int i=0; i < Length; i++)
-		{
-			int g = InBase[*Index++]; if (g<0 || g>2) g = 3;
-			*p |= (g << (2*i));
-		}
-	}
-}
-
-int TGenotype::HammingDistance(int Length,
-	const THaplotype &H1, const THaplotype &H2) const
-{
-	HIBAG_CHECKING((Length<0) || (Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER),
-		"THaplotype::HammingDistance, the length is too large.");
-	return _HamDist(Length, H1, H2);
-}
-
-inline int TGenotype::_HamDist(int Length,
-	const THaplotype &H1, const THaplotype &H2) const
-{
-	const UTYPE *p1 = &H1.PackedHaplo[0];
-	const UTYPE *p2 = &H2.PackedHaplo[0];
-	const UTYPE *s = &PackedSNPs[0];
-	int rv = 0;
-
-#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-
-	// UTYPE = UINT16
-	static UINT16 offset[8] HIBAG_SSE_VAR_ALIGN;
-
-	while (Length > 0)
-	{
-		// two haplotypes
-		__m128i h1 = _mm_loadu_si128((__m128i*)p1); p1 += 8;
-		__m128i h2 = _mm_loadu_si128((__m128i*)p2); p2 += 8;
-		// h1 = h1 | (h2 << 1)
-		h1 = (__m128i)_mm_or_ps((__m128)h1, (__m128)_mm_slli_epi16(h2, 1));
-
-		// SNP genotypes
-		__m128i g = _mm_loadu_si128((__m128i*)s); s += 8;
-		g = (__m128i)_mm_or_ps((__m128)_mm_slli_si128(g, 1), (__m128)h1);
-
-
-		#define HAM_BASE	(&_Packed_HammingDistance[0][0])
-
-		// consider Length
-		if (Length >= 32)
-		{
-			// store in offset
-			_mm_store_si128((__m128i*)offset, g);
-
-			// sum
-			rv += HAM_BASE[offset[0]] + HAM_BASE[offset[1]] +
-				HAM_BASE[offset[2]] + HAM_BASE[offset[3]] +
-				HAM_BASE[offset[4]] + HAM_BASE[offset[5]] +
-				HAM_BASE[offset[6]] + HAM_BASE[offset[7]];
-
-			// decrease Length
-			Length -= 32;
-
-		} else {
-			// set mask
-			g = (__m128i)_mm_and_ps((__m128)g, _Packed_HamLenMask[Length]);
-			// stored in offset
-			_mm_store_si128((__m128i*)offset, g);
-
-			// sum
-			const UINT16 *pl = offset;
-			if (Length >= 16)  // 4 bytes
-			{
-				rv += HAM_BASE[offset[0]] + HAM_BASE[offset[1]] +
-					HAM_BASE[offset[2]] + HAM_BASE[offset[3]];
-				Length -= 16; pl += 4;
-			}
-			if (Length >= 8)  // 2 bytes
-			{
-				rv += HAM_BASE[pl[0]] + HAM_BASE[pl[1]];
-				Length -= 8; pl += 2;
-			}
-			if (Length >= 4)
-			{
-				rv += HAM_BASE[pl[0]];
-				Length -= 4; pl ++;
-			}
-			if (Length > 0)
-			{
-				rv += HAM_BASE[pl[0]];
-				Length = 0;
-			}
-		}
-
-		#undef HAM_BASE
-	}
-
-#else
-
-	// UTYPE = UINT8
-	// potential vectorization for compiler
-	for (; Length >= 16; Length -= 16)  // four bytes
-	{
-		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
-		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
-		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
-		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
-	}
-	for (; Length >= 4; Length -= 4)  // one byte
-	{
-		rv += _Packed_HammingDistance[*s++][(*p1++) | (*p2++ << 1)];
-	}
-	if (Length > 0)
-	{
-		static const UINT8 MaskAry[4] = { 0x00, 0x03, 0x0F, 0x3F };
-		UINT8 mask = MaskAry[Length];
-		rv += _Packed_HammingDistance[*s & mask][((*p1) | (*p2 << 1)) & mask];
-	}
-
-#endif
-
-	return rv;
 }
 
 
@@ -592,13 +290,13 @@ void CHaplotypeList::DoubleHaplos(CHaplotypeList &OutHaplos) const
 	OutHaplos.Num_SNP = Num_SNP + 1;
 	OutHaplos.List.resize(List.size());
 
-	for (int i=0; i < (int)List.size(); i++)
+	for (size_t i=0; i < List.size(); i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
-		
+
 		dst.resize(src.size()*2);
-		for (int j=0; j < (int)src.size(); j++)
+		for (size_t j=0; j < src.size(); j++)
 		{
 			dst[2*j+0] = src[j];
 			dst[2*j+0].SetAllele(Num_SNP, 0);
@@ -616,13 +314,13 @@ void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos,
 	HIBAG_CHECKING(List.size() != OutHaplos.List.size(), msg);
 
 	const TFLOAT p0 = 1-AFreq, p1 = AFreq;
-	for (int i=0; i < (int)List.size(); i++)
+	for (size_t i=0; i < List.size(); i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 		HIBAG_CHECKING(dst.size() != src.size()*2, msg);
 
-		for (int j=0; j < (int)src.size(); j++)
+		for (size_t j=0; j < src.size(); j++)
 		{
 			dst[2*j+0].Frequency = src[j].Frequency*p0 + EM_INIT_VAL_FRAC;
 			dst[2*j+1].Frequency = src[j].Frequency*p1 + EM_INIT_VAL_FRAC;
@@ -636,14 +334,14 @@ void CHaplotypeList::MergeDoubleHaplos(const TFLOAT RareProb,
 	OutHaplos.Num_SNP = Num_SNP;
 	OutHaplos.List.resize(List.size());
 
-	for (int i=0; i < (int)List.size(); i++)
+	for (size_t i=0; i < List.size(); i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 		dst.clear();
 		dst.reserve(src.size());
-		
-		for (int j=0; j < (int)src.size(); j += 2)
+
+		for (size_t j=0; j < src.size(); j += 2)
 		{
 			const THaplotype &p0 = src[j+0];
 			const THaplotype &p1 = src[j+1];
@@ -669,14 +367,14 @@ void CHaplotypeList::EraseDoubleHaplos(const TFLOAT RareProb,
 	OutHaplos.List.resize(List.size());
 	TFLOAT sum = 0;
 
-	for (int i=0; i < (int)List.size(); i++)
+	for (size_t i=0; i < List.size(); i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 		dst.clear();
 		dst.reserve(src.size());
 		
-		for (int j=0; j < (int)src.size(); j += 2)
+		for (size_t j=0; j < src.size(); j += 2)
 		{
 			const THaplotype &p0 = src[j+0];
 			const THaplotype &p1 = src[j+1];
@@ -730,168 +428,309 @@ void CHaplotypeList::ScaleFrequency(const TFLOAT scale)
 	}
 }
 
-int CHaplotypeList::TotalNumOfHaplo() const
+size_t CHaplotypeList::TotalNumOfHaplo() const
 {
 	vector< vector<THaplotype> >::const_iterator it;
-	int cnt = 0;
+	size_t Cnt = 0;
 	for (it = List.begin(); it != List.end(); it++)
-		cnt += it->size();
-	return cnt;
+		Cnt += it->size();
+	return Cnt;
 }
 
 void CHaplotypeList::Print()
 {
-	for (int i=0; i < (int)List.size(); i++)
+	for (size_t i=0; i < List.size(); i++)
 	{
 		vector<THaplotype> &L = List[i];
 		vector<THaplotype>::const_iterator it;
 		for (it=L.begin(); it != L.end(); it++)
 		{
-			Rprintf("%0.7f\tHLA: %4d, %s\n", it->Frequency, i,
+			Rprintf("%0.7f\tHLA: %4d, %s\n", it->Frequency, (int)i,
 				it->HaploToStr(Num_SNP).c_str());
 		}
 	}
 }
 
 
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
 
-void CHaplotypeList::InitGPUHostData(int *&_HLA_HapIdx, void *&_HapList)
+// -------------------------------------------------------------------------
+// The class of genotype structure
+
+TGenotype::TGenotype()
 {
-	// HLA allele index
-	_HLA_HapIdx = new int[nHLA()*2];
-	int st = 0;
-	for (int i=0; i < (int)List.size(); i++)
+	BootstrapCount = 0;
+}
+
+int TGenotype::GetSNP(size_t idx) const
+{
+	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"TGenotype::GetSNP, invalid index.");
+	size_t i = idx >> 3, r = idx & 0x07;
+	if ((PackedMissing[i] >> r) & 0x01)
+		return ((PackedSNP1[i] >> r) & 0x01) + ((PackedSNP2[i] >> r) & 0x01);
+	else
+		return -1;
+}
+
+void TGenotype::SetSNP(size_t idx, int val)
+{
+	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"TGenotype::SetSNP, invalid index.");
+	_SetSNP(idx, val);
+}
+
+void TGenotype::_SetSNP(size_t idx, int val)
+{
+	size_t i = idx >> 3, r = idx & 0x07;
+	UINT8 &S1 = PackedSNP1[i];
+	UINT8 &S2 = PackedSNP2[i];
+	UINT8 &M  = PackedMissing[i];
+	UINT8 SET = (UINT8(0x01) << r);
+	UINT8 CLEAR = ~SET;
+
+	switch (val)
 	{
-		_HLA_HapIdx[2*i + 0] = st;
-		_HLA_HapIdx[2*i + 1] = List[i].size();
-		st += List[i].size();
+		case 0:
+			S1 &= CLEAR; S2 &= CLEAR; M |= SET; break;
+		case 1:
+			S1 |= SET; S2 &= CLEAR; M |= SET; break;
+		case 2:
+			S1 |= SET; S2 |= SET; M |= SET; break;
+		default:
+			S1 &= CLEAR; S2 &= CLEAR; M &= CLEAR; break;
 	}
+}
 
-
-	// haplotype list
-#if (HIBAG_FLOAT_TYPE_ID == 0)
-
-	if (_gpuRunInDoublePrecision)
+string TGenotype::SNPToString(size_t Length) const
+{
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"TGenotype::SNPToString, the length is too large.");
+	string rv;
+	if (Length > 0)
 	{
-		_HapList = new TGPU_Haplotype_F64[TotalNumOfHaplo()];
-		TGPU_Haplotype_F64 *pH = (TGPU_Haplotype_F64 *)_HapList;
-
-		vector< vector<THaplotype> >::iterator it;
-		vector<THaplotype>::iterator p;
-		for (it = List.begin(); it != List.end(); it++)
+		rv.resize(Length);
+		for (size_t i=0; i < Length; i++)
 		{
-			for (p = it->begin(); p != it->end(); p++)
-			{
-			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-				// UTYPE = UINT16
-				UINT8  *d = &(pH->PackedHaplo[0]);
-				UINT16 *s = &(p->PackedHaplo[0]);
-				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
-					*d ++ = *s ++;
-			#else
-				memcpy(&(pH->PackedHaplo[0]), &(p->PackedHaplo[0]),
-					HIBAG_PACKED_UTYPE_MAXNUM_SNP);
-			#endif
-				pH->Frequency = p->Frequency;
-				pH ++;
-			}
-		}
-	} else {
-		_HapList = new TGPU_Haplotype_F32[TotalNumOfHaplo()];
-		TGPU_Haplotype_F32 *pH = (TGPU_Haplotype_F32 *)_HapList;
-
-		vector< vector<THaplotype> >::iterator it;
-		vector<THaplotype>::iterator p;
-		for (it = List.begin(); it != List.end(); it++)
-		{
-			for (p = it->begin(); p != it->end(); p++)
-			{
-			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-				// UTYPE = UINT16
-				UINT8  *d = &(pH->PackedHaplo[0]);
-				UINT16 *s = &(p->PackedHaplo[0]);
-				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
-					*d ++ = *s ++;
-			#else
-				memcpy(&(pH->PackedHaplo[0]), &(p->PackedHaplo[0]),
-					HIBAG_PACKED_UTYPE_MAXNUM_SNP);
-			#endif
-				pH->Frequency = p->Frequency;
-				pH ++;
-			}
+			UINT8 ch = GetSNP(i);
+			rv[i] = (ch < 3) ? (ch + '0') : '?';
 		}
 	}
+	return rv;
+}
 
-#elif (HIBAG_FLOAT_TYPE_ID == 1)
-
-	_HapList = new TGPU_Haplotype_F32[TotalNumOfHaplo()];
-	TGPU_Haplotype_F32 *pH = (TGPU_Haplotype_F32 *)_HapList;
-
-	vector< vector<THaplotype> >::iterator it;
-	vector<THaplotype>::iterator p;
-	for (it = List.begin(); it != List.end(); it++)
+void TGenotype::StringToSNP(const string &str)
+{
+	HIBAG_CHECKING(str.size() > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"TGenotype::StringToSNP, the input string is too long.");
+	for (size_t i=0; i < str.size(); i++)
 	{
-		for (p = it->begin(); p != it->end(); p++)
+		char ch = str[i];
+		HIBAG_CHECKING(ch!='0' && ch!='1' && ch!='2' && ch!='?',
+			"TGenotype::StringToSNP, the input string should be '0', '1', '2' or '?'.");
+		_SetSNP(i, ch-'0');
+	}
+}
+
+void TGenotype::SNPToInt(size_t Length, int OutArray[]) const
+{
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"TGenotype::SNPToInt, the length is invalid.");
+	for (size_t i=0; i < Length; i++)
+		OutArray[i] = GetSNP(i);
+}
+
+void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
+{
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"TGenotype::IntToSNP, the length is invalid.");
+
+	const static UINT8 P1[4] = { 0, 1, 1, 0 };
+	const static UINT8 P2[4] = { 0, 0, 1, 0 };
+	const static UINT8 PM[4] = { 1, 1, 1, 0 };
+
+	UINT8 *p1 = PackedSNP1;     // --> P1
+	UINT8 *p2 = PackedSNP2;     // --> P2
+	UINT8 *pM = PackedMissing;  // --> PM
+
+	for (; Length >= 8; Length -= 8, Index += 8)
+	{
+		int g1 = InBase[Index[0]];
+		size_t i1 = ((0<=g1) && (g1<=2)) ? g1 : 3;
+		int g2 = InBase[Index[1]];
+		size_t i2 = ((0<=g2) && (g2<=2)) ? g2 : 3;
+		int g3 = InBase[Index[2]];
+		size_t i3 = ((0<=g3) && (g3<=2)) ? g3 : 3;
+		int g4 = InBase[Index[3]];
+		size_t i4 = ((0<=g4) && (g4<=2)) ? g4 : 3;
+		int g5 = InBase[Index[4]];
+		size_t i5 = ((0<=g5) && (g5<=2)) ? g5 : 3;
+		int g6 = InBase[Index[5]];
+		size_t i6 = ((0<=g6) && (g6<=2)) ? g6 : 3;
+		int g7 = InBase[Index[6]];
+		size_t i7 = ((0<=g7) && (g7<=2)) ? g7 : 3;
+		int g8 = InBase[Index[7]];
+		size_t i8 = ((0<=g8) && (g8<=2)) ? g8 : 3;
+
+		*p1++ = P1[i1] | (P1[i2] << 1) | (P1[i3] << 2) | (P1[i4] << 3) |
+			(P1[i5] << 4) | (P1[i6] << 5) | (P1[i7] << 6) | (P1[i8] << 7);
+		*p2++ = P2[i1] | (P2[i2] << 1) | (P2[i3] << 2) | (P2[i4] << 3) |
+			(P2[i5] << 4) | (P2[i6] << 5) | (P2[i7] << 6) | (P2[i8] << 7);
+		*pM++ = PM[i1] | (PM[i2] << 1) | (PM[i3] << 2) | (PM[i4] << 3) |
+			(PM[i5] << 4) | (PM[i6] << 5) | (PM[i7] << 6) | (PM[i8] << 7);
+	}
+
+	if (Length > 0)
+	{
+		*p1 = *p2 = *pM = 0;
+		for (size_t i=0; i < Length; i++)
 		{
-		#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-			// UTYPE = UINT16
-			UINT8  *d = &(pH->PackedHaplo[0]);
-			UINT16 *s = &(p->PackedHaplo[0]);
-			for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
-				*d ++ = *s ++;
-		#else
-			memcpy(&(pH->PackedHaplo[0]), &(p->PackedHaplo[0]),
-				HIBAG_PACKED_UTYPE_MAXNUM_SNP);
-		#endif
-			pH->Frequency = p->Frequency;
-			pH ++;
+			int g1 = InBase[*Index++];
+			size_t i1 = ((0<=g1) && (g1<=2)) ? g1 : 3;
+			*p1 |= (P1[i1] << i);
+			*p2 |= (P2[i1] << i);
+			*pM |= (PM[i1] << i);
 		}
+	}
+}
+
+int TGenotype::HammingDistance(size_t Length,
+	const THaplotype &H1, const THaplotype &H2) const
+{
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"THaplotype::HammingDistance, the length is too large.");
+	return _HamDist(Length, H1, H2);
+}
+
+
+inline int TGenotype::_HamDist(size_t Length,
+	const THaplotype &H1, const THaplotype &H2) const
+{
+#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+	// signed integer for initializing XMM
+	typedef int64_t UTYPE;
+#else
+	typedef size_t UTYPE;
+#endif
+
+	static const ssize_t STEP = sizeof(UTYPE)*8;
+	const UTYPE *h1 = (UTYPE*)&H1.PackedHaplo[0];
+	const UTYPE *h2 = (UTYPE*)&H2.PackedHaplo[0];
+	const UTYPE *s1 = (UTYPE*)&PackedSNP1[0];
+	const UTYPE *s2 = (UTYPE*)&PackedSNP2[0];
+	const UTYPE *sM = (UTYPE*)&PackedMissing[0];
+	size_t ans = 0;
+
+#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+
+	const __m128i ZERO = _mm_setzero_si128();
+	const __m128i ONE_BITS = _mm_cmpeq_epi8(ZERO, ZERO);
+
+	#ifndef HIBAG_SSE_HARDWARE_POPCNT
+	const __m128i Z05 = { 0x5555555555555555LL, 0x5555555555555555LL };
+	const __m128i Z03 = { 0x3333333333333333LL, 0x3333333333333333LL };
+	const __m128i Z0F = { 0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
+	#endif
+
+	// for-loop
+	for (ssize_t n=Length; n > 0; n -= STEP)
+	{
+		__m128i H = {*h1++, *h2++};
+		__m128i S1 = {*s1++, *s2++};   // {*s1, *s2}
+		__m128i S2 = _mm_shuffle_epi32(S1, _MM_SHUFFLE(1,0,3,2)); // {*s2, *s1}
+		__m128i M = {*sM, *sM}; sM++;
+
+		__m128i mask1 = _mm_xor_si128(H, S2);
+		__m128i mask2 = _mm_shuffle_epi32(mask1, _MM_SHUFFLE(1,0,3,2));
+		__m128i MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
+
+		if (n < STEP)
+		{
+			// MASK &= (~(UTYPE(-1) << n));
+			MASK = _mm_andnot_si128(_mm_slli_epi64(ONE_BITS, n), MASK);
+		}
+
+		// val = '(H1 ^ S1) & MASK' / '(H2 ^ S2) & MASK'
+		__m128i val = _mm_and_si128(_mm_xor_si128(H, S1), MASK);
+
+		// popcount for val
+
+	#ifdef HIBAG_SSE_HARDWARE_POPCNT
+
+		uint64_t r_ary[2] __attribute__((aligned(16)));
+		*((__m128i*)r_ary) = val;
+		ans += _mm_popcnt_u64(r_ary[0]) + _mm_popcnt_u64(r_ary[1]);
+
+	#else
+
+		// two 64-bit integers
+		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
+		// val -= ((val >> 1) & 0x5555555555555555);
+		val = _mm_sub_epi64(val, _mm_and_si128(_mm_srli_epi64(val, 1), Z05));
+		// val = (val & 0x3333333333333333) + ((val >> 2) & 0x3333333333333333);
+		val = _mm_add_epi64(_mm_and_si128(val, Z03),
+			_mm_and_si128(_mm_srli_epi64(val, 2), Z03));
+		// val = (val + (val >> 4)) & 0x0F0F0F0F0F0F0F0F
+		val = _mm_and_si128(_mm_add_epi64(val, _mm_srli_epi64(val, 4)), Z0F);
+
+		// ans += (val * 0x0101010101010101LLU) >> 56;
+		uint64_t r_ary[2] __attribute__((aligned(16)));
+		*((__m128i*)r_ary) = val;
+		ans += ((r_ary[0] * 0x0101010101010101LLU) >> 56) +
+			((r_ary[1] * 0x0101010101010101LLU) >> 56);
+
+	#endif
 	}
 
 #else
-#  error "Invalid HIBAG_FLOAT_TYPE_ID"
-#endif
-}
-#endif
 
-
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-inline void CHaplotypeList::FreqGPUHostData(int *&_HLA_HapIdx, void *&_HapList)
-{
-	// no worry if _HLA_HapIdx == NULL
-	delete[] _HLA_HapIdx;
-	_HLA_HapIdx = NULL;
-
-#if (HIBAG_FLOAT_TYPE_ID == 0)
-
-	if (_HapList)
+	// for-loop
+	for (ssize_t n=Length; n > 0; n -= STEP)
 	{
-		if (_gpuRunInDoublePrecision)
-		{
-			TGPU_Haplotype_F64 *tmp = (TGPU_Haplotype_F64*)_HapList;
-			delete[] tmp;
-		} else {
-			TGPU_Haplotype_F32 *tmp = (TGPU_Haplotype_F32*)_HapList;
-			delete[] tmp;
-		}
-		_HapList = NULL;
+		UTYPE H1 = *h1++;
+		UTYPE H2 = *h2++;
+		UTYPE S1 = *s1++;
+		UTYPE S2 = *s2++;
+		UTYPE M  = *sM++;  // missing value
+
+		UTYPE MASK = ((H1 ^ S2) | (H2 ^ S1)) & M;
+		if (n < STEP)
+			MASK &= (~(UTYPE(-1) << n));
+
+		// popcount for '(H1 ^ S1) & MASK'
+		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+		UTYPE v1 = (H1 ^ S1) & MASK;
+	#ifdef __LP64__
+		// 64-bit integers
+		v1 -= ((v1 >> 1) & 0x5555555555555555LLU);
+		v1 = (v1 & 0x3333333333333333LLU) + ((v1 >> 2) & 0x3333333333333333LLU);
+		ans += (((v1 + (v1 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) * 0x0101010101010101LLU) >> 56;
+	#else
+		// 32-bit integers
+		v1 -= ((v1 >> 1) & 0x55555555);
+		v1 = (v1 & 0x33333333) + ((v1 >> 2) & 0x33333333);
+		ans += (((v1 + (v1 >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+	#endif
+
+		// popcount for '(H2 ^ S2) & MASK'
+		UTYPE v2 = (H2 ^ S2) & MASK;
+	#ifdef __LP64__
+		// 64-bit integers
+		v2 -= ((v2 >> 1) & 0x5555555555555555LLU);
+		v2 = (v2 & 0x3333333333333333LLU) + ((v2 >> 2) & 0x3333333333333333LLU);
+		ans += (((v2 + (v2 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) * 0x0101010101010101LLU) >> 56;
+	#else
+		// 32-bit integers
+		v2 -= ((v2 >> 1) & 0x55555555);
+		v2 = (v2 & 0x33333333) + ((v2 >> 2) & 0x33333333);
+		ans += (((v2 + (v2 >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+	#endif
 	}
 
-#elif (HIBAG_FLOAT_TYPE_ID == 1)
-
-	if (_HapList)
-	{
-		TGPU_Haplotype_F32 *tmp = (TGPU_Haplotype_F32*)_HapList;
-		delete[] tmp;
-		_HapList = NULL;
-	}
-
-#else
-#  error "Invalid HIBAG_FLOAT_TYPE_ID"
 #endif
+
+	return ans;
 }
-#endif
 
 
 
@@ -967,7 +806,7 @@ void CGenotypeList::Print()
 
 CHLATypeList::CHLATypeList() { }
 
-int CHLATypeList::Compare(const THLAType &H1, const THLAType &H2)
+inline int CHLATypeList::Compare(const THLAType &H1, const THLAType &H2)
 {
 	int P1=H1.Allele1, P2=H1.Allele2;
 	int T1=H2.Allele1, T2=H2.Allele2;
@@ -1603,53 +1442,19 @@ TFLOAT CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 
-	int TotalCnt, CorrectCnt;
+	int TotalCnt=0, CorrectCnt=0;
+	vector<TGenotype>::const_iterator it   = _GenoList.List.begin();
+	vector<THLAType>::const_iterator  pHLA = _HLAList->List.begin();
 
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-	if (_gpuOutOfBagAcc_F64 || _gpuOutOfBagAcc_F32)
+	for (; it != _GenoList.List.end(); it++, pHLA++)
 	{
-		int *_HLA_HapIdx = NULL;
-		void *_HapList = NULL;
-		TGPU_Genotype *_GList = NULL;
-
-		Haplo.InitGPUHostData(_HLA_HapIdx, _HapList);
-		TotalCnt = InitGPUHostData_OutOfBag(_GList);
-
-		if (_gpuRunInDoublePrecision)
+		if (it->BootstrapCount <= 0)
 		{
-			CorrectCnt = (*_gpuOutOfBagAcc_F64)(nHLA(), _HLA_HapIdx,
-				Haplo.TotalNumOfHaplo(), (TGPU_Haplotype_F64*)_HapList,
-				TotalCnt, _GList, _GenoList.Num_SNP);
-		} else {
-			CorrectCnt = (*_gpuOutOfBagAcc_F32)(nHLA(), _HLA_HapIdx,
-				Haplo.TotalNumOfHaplo(), (TGPU_Haplotype_F32*)_HapList,
-				TotalCnt, _GList, _GenoList.Num_SNP);
+			CorrectCnt += CHLATypeList::Compare(
+				_Predict._PredBestGuess(Haplo, *it), *pHLA);
+			TotalCnt += 2;
 		}
-
-		Haplo.FreqGPUHostData(_HLA_HapIdx, _HapList);
-		FreqGPUHostData(_GList);
-
-		TotalCnt *= 2;
-	} else {
-#endif
-
-		TotalCnt = CorrectCnt = 0;
-		vector<TGenotype>::const_iterator it  = _GenoList.List.begin();
-		vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
-
-		for (; it != _GenoList.List.end(); it++, pHLA++)
-		{
-			if (it->BootstrapCount <= 0)
-			{
-				CorrectCnt += CHLATypeList::Compare(
-					_Predict._PredBestGuess(Haplo, *it), *pHLA);
-				TotalCnt += 2;
-			}
-		}
-
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
 	}
-#endif
 
 #if (HIBAG_TIMING == 1)
 	_inc_timing();
@@ -1666,10 +1471,6 @@ TFLOAT CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
-
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-
-#endif
 
 	vector<TGenotype>::const_iterator it   = _GenoList.List.begin();
 	vector<THLAType>::const_iterator  pHLA = _HLAList->List.begin();
@@ -1813,95 +1614,6 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	
 	Out_Global_Max_OutOfBagAcc = Global_Max_OutOfBagAcc;
 }
-
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-
-int CVariableSelection::InitGPUHostData_OutOfBag(TGPU_Genotype *&_GList)
-{
-	int Cnt = 0;
-	vector<TGenotype>::iterator it;
-	for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++)
-	{
-		if (it->BootstrapCount <= 0)
-			Cnt ++;
-	}
-
-	if (Cnt > 0)
-	{
-		_GList = new TGPU_Genotype[Cnt];
-		TGPU_Genotype *p = _GList;
-		vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
-
-		for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++, pHLA++)
-		{
-			if (it->BootstrapCount <= 0)
-			{
-			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-				UTYPE *s = it->PackedSNPs;
-				UINT8 *d = p->PackedSNPs;
-				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
-					*d ++ = *s ++;
-			#else
-				memcpy(p->PackedSNPs, it->PackedSNPs, HIBAG_PACKED_UTYPE_MAXNUM_SNP);
-			#endif
-				p->BootstrapCount = 0;
-				p->HLA = *pHLA;
-				p ++;
-			}
-		}
-	} else
-		_GList = NULL;
-
-	return Cnt;
-}
-
-int CVariableSelection::InitGPUHostData_InBag(TGPU_Genotype *&_GList)
-{
-	int Cnt = 0;
-	vector<TGenotype>::iterator it;
-	for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++)
-	{
-		if (it->BootstrapCount > 0)
-			Cnt ++;
-	}
-
-	if (Cnt > 0)
-	{
-		_GList = new TGPU_Genotype[Cnt];
-		TGPU_Genotype *p = _GList;
-		vector<THLAType>::const_iterator pHLA = _HLAList->List.begin();
-
-		for (it=_GenoList.List.begin(); it != _GenoList.List.end(); it++, pHLA++)
-		{
-			if (it->BootstrapCount > 0)
-			{
-			#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-				UTYPE *s = it->PackedSNPs;
-				UINT8 *d = p->PackedSNPs;
-				for (size_t n=HIBAG_PACKED_UTYPE_MAXNUM_SNP; n > 0; n--)
-					*d ++ = *s ++;
-			#else
-				memcpy(p->PackedSNPs, it->PackedSNPs, HIBAG_PACKED_UTYPE_MAXNUM_SNP);
-			#endif
-				p->BootstrapCount = it->BootstrapCount;
-				p->HLA = *pHLA;
-				p ++;
-			}
-		}
-	} else
-		_GList = NULL;
-
-	return Cnt;
-}
-
-inline void CVariableSelection::FreqGPUHostData(TGPU_Genotype *&_GList)
-{
-	// no worry if _GList == NULL
-	delete []_GList;
-	_GList = NULL;
-}
-
-#endif
 
 
 
@@ -2194,112 +1906,3 @@ void CAttrBag_Model::_GetSNPWeights(int OutWeight[])
 			OutWeight[ it->_SNPIndex[i] ] ++;
 	}
 }
-
-
-
-// -------------------------------------------------------------------------
-// -------------------------------------------------------------------------
-
-#ifdef HIBAG_ALLOW_GPU_SUPPORT
-
-template <typename TO, typename FROM> TO nasty_cast(FROM f)
-{
-	union {
-		FROM f; TO t;
-	} u;
-	u.f = f;
-	return u.t;
-}
-
-#if defined(HIBAG_SYS_UNIX)
-
-	static void* GDS_Handle = NULL;
-	#define LOAD(var, type, name)	\
-		var = nasty_cast<type>(dlsym(GDS_Handle, name)); \
-		if ((err = dlerror()) != NULL) \
-			{ Done_GPU_Support(); throw ErrHLA(err); }
-
-#elif defined(HIBAG_SYS_WIN)
-
-	static HMODULE GDS_Handle = NULL;
-	#define LOAD(var, type, name)	\
-		var = nasty_cast<type>(GetProcAddress(GDS_Handle, name)); \
-		if (var == NULL) \
-			{ Done_GPU_Support(); throw ErrHLA("No %s function.", name); }
-
-#else
-#  error "not supported"
-#endif
-
-
-//  throw errors if it fails
-void HLA_LIB::Init_GPU_Support(const char *lib_fn)
-{
-	if (!GDS_Handle)
-	{
-	#if defined(HIBAG_SYS_UNIX)
-		// open dll
-		GDS_Handle = dlopen(lib_fn, RTLD_LAZY);
-		if (!GDS_Handle) throw ErrHLA(dlerror());
-		dlerror();  // Clear any existing error
-		const char *err;
-	#elif defined(HIBAG_SYS_WIN)
-		GDS_Handle = LoadLibrary(lib_fn);
-		if (GDS_Handle == NULL)
-		{
-			char buf[1024];
-			memset((void*)buf, 0, sizeof(buf));
-			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
-				FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ARGUMENT_ARRAY,
-				NULL, GetLastError(), 0, buf, sizeof(buf), NULL);
-			throw ErrHLA(buf);
-		}
-	#else
-	#  error "not supported"
-	#endif
-
-		// load functions
-		LOAD(_gpuInitialize, TGPUInitFunc, "hlaGPU_Initialize");
-		LOAD(_gpuFinalize, TGPUFunc, "hlaGPU_Finalize");
-		LOAD(_gpuDeviceQuery, TGPUFunc, "hlaGPU_DeviceQuery");
-		LOAD(_gpuOutOfBagAcc_F32, TGPU_OutOfBagAcc_F32, "hlaGPU_OutOfBagAcc_F32");
-		LOAD(_gpuOutOfBagAcc_F64, TGPU_OutOfBagAcc_F64, "hlaGPU_OutOfBagAcc_F64");
-
-		// initialize GPU
-		(*_gpuInitialize)(&_Packed_HammingDistance[0][0]);
-		(*_gpuDeviceQuery)();
-	}
-}
-
-
-// Finalize the GPU computing library
-void HLA_LIB::Done_GPU_Support()
-{
-	if (_gpuFinalize) (*_gpuFinalize)();
-
-	_gpuInitialize = NULL;
-	_gpuFinalize = NULL;
-	_gpuDeviceQuery = NULL;
-
-#if defined(HIBAG_SYS_UNIX)
-
-	if (GDS_Handle)
-	{
-		dlclose(GDS_Handle);
-		GDS_Handle = NULL;
-	}
-
-#elif defined(HIBAG_SYS_WIN)
-
-	if (GDS_Handle != NULL)
-	{
-		FreeLibrary(GDS_Handle);
-		GDS_Handle = NULL;
-	}
-
-#else
-#  error "not supported"
-#endif
-}
-
-#endif

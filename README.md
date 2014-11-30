@@ -1,9 +1,16 @@
 HIBAG -- HLA Genotype Imputation with Attribute Bagging
 ==
 
-Version: 1.2.4
+Version: 1.2.5
 
 [![Build Status](https://travis-ci.org/zhengxwen/HIBAG.png)](https://travis-ci.org/zhengxwen/HIBAG)
+
+
+## Changes in v1.2.5
+
+	* optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
+	* hardware POPCNT: 2x speedup, compared to the implementation in v1.2.4
+	* SSE2 instructions: 1.3x speedup, compared to the implementation in v1.2.4
 
 
 ## Features
@@ -33,7 +40,7 @@ Zheng, X. *et al*. HIBAG-HLA genotype imputation with attribute bagging. *The ph
 
 ## Installation
 
-* From CRAN (stable release 1.0.+) [http://cran.r-project.org/web/packages/HIBAG/index.html](http://cran.r-project.org/web/packages/HIBAG/index.html)
+* From CRAN (stable release 1.2.+) [http://cran.r-project.org/web/packages/HIBAG/index.html](http://cran.r-project.org/web/packages/HIBAG/index.html)
 
 * Development version from Github:
 ```

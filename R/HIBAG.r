@@ -3704,13 +3704,18 @@ hlaErrMsg <- function()
 .onAttach <- function(lib, pkg)
 {
 	# initialize HIBAG
-	rv <- .C("HIBAG_Init", SSE.Flag=integer(1), PACKAGE="HIBAG")
+	SSE.Flag <- .Call("HIBAG_Init", PACKAGE="HIBAG")
 
 	# information
 	packageStartupMessage(
-		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.4")
-	if (rv$SSE.Flag != 0)
-		packageStartupMessage("Supported by Streaming SIMD Extensions 2 (SSE2)")
+		"HIBAG (HLA Genotype Imputation with Attribute Bagging): v1.2.5")
+	if (SSE.Flag == 1)
+		s <- "Supported by Streaming SIMD Extensions (SSE2)"
+	else if (SSE.Flag == 2)
+		s <- "Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)"
+	else
+		s <- ""
+	if (s != "") packageStartupMessage(s)
 
 	TRUE
 }
