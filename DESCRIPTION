@@ -2,7 +2,7 @@ Package: HIBAG
 Type: Package
 Title: HIBAG -- HLA Genotype Imputation with Attribute Bagging
 Version: 1.2.5
-Date: 2014-11-28
+Date: 2014-11-30
 Depends:	R (>= 2.14.0)
 Suggests:	parallel
 Author: Xiuwen Zheng, Bruce S. Weir

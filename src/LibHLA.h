@@ -29,14 +29,14 @@
 // Version        : 1.2.5
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
-// Last modified  : 11/29/2014
+// Last modified  : 11/30/2014
 // Description    : HLA Genotype Imputation with Attribute Bagging
 // ===============================================================
 
 #ifndef _LibHLA_H_
 #define _LibHLA_H_
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstdlib>
 #include <cstring>
 #include <cstdarg>
@@ -291,12 +291,12 @@ namespace HLA_LIB
 		void Print();
 
 		/// return the total number of samples
-		inline const int nSamp() const { return List.size(); }
+		inline int nSamp() const { return List.size(); }
 
 		/// genotype list
 		vector<TGenotype> List;
 		/// the number of SNPs
-		int Num_SNP;
+		size_t Num_SNP;
 	};
 
 
@@ -307,9 +307,9 @@ namespace HLA_LIB
 		CHLATypeList();
 
 		/// return the total number of samples
-		inline const int nSamp() const { return List.size(); }
+		inline int nSamp() const { return List.size(); }
 		/// return the total number of HLA alleles
-		inline const int Num_HLA_Allele() const { return Str_HLA_Allele.size(); }
+		inline int Num_HLA_Allele() const { return Str_HLA_Allele.size(); }
 		
 		/// return how many alleles are the same
 		static int Compare(const THLAType &H1, const THLAType &H2);
@@ -318,7 +318,6 @@ namespace HLA_LIB
 		vector<THLAType> List;
 		/// HLA alleles
 		vector<string> Str_HLA_Allele;
-	protected:
 	};
 
 
@@ -515,11 +514,11 @@ namespace HLA_LIB
 			int mtry, bool prune, bool verbose, bool verbose_detail);
 
 		/// the number of samples
-		inline const int nSamp() const { return _SNPMat->Num_Total_Samp; }
+		inline int nSamp() const { return _SNPMat->Num_Total_Samp; }
 		/// the number of SNPs
-		inline const int nSNP() const { return _SNPMat->Num_Total_SNP; }
+		inline int nSNP() const { return _SNPMat->Num_Total_SNP; }
 		/// the number of unique HLA alleles
-		inline const int nHLA() const { return _HLAList->Num_HLA_Allele(); }
+		inline int nHLA() const { return _HLAList->Num_HLA_Allele(); }
 
 	protected:
 		/// store the genotype matrix
@@ -642,11 +641,11 @@ namespace HLA_LIB
 			TFLOAT OutProb[], bool ShowInfo);
 
 		/// the number of samples
-		inline const int nSamp() const { return _SNPMat.Num_Total_Samp; }
+		inline int nSamp() const { return _SNPMat.Num_Total_Samp; }
 		/// the number of SNPs
-		inline const int nSNP() const { return _SNPMat.Num_Total_SNP; }
+		inline int nSNP() const { return _SNPMat.Num_Total_SNP; }
 		/// the number of unique HLA alleles
-		inline const int nHLA() const { return _HLAList.Num_HLA_Allele(); }
+		inline int nHLA() const { return _HLAList.Num_HLA_Allele(); }
 
 		/// a list of HLA types
 		inline const CHLATypeList &HLAList() const

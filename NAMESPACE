@@ -1,6 +1,8 @@
 # Load the shared object
-useDynLib(HIBAG)
+useDynLib(HIBAG,
+	HIBAG_Init, HIBAG_Done, HIBAG_ErrMsg
+)
 
 # Export function names
-exportPattern("^[^\\.]")
+exportPattern("^[^\\.|HIBAG]")
 export(.onAttach, .Last.lib)

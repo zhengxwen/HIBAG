@@ -29,7 +29,7 @@
 // Version        : 1.2.5
 // Copyright      : Xiuwen Zheng (GPL v3.0)
 // Created        : 11/14/2011
-// Last modified  : 11/27/2014
+// Last modified  : 11/30/2014
 // Description    : HLA Genotype Imputation with Attribute Bagging
 // ===============================================================
 
@@ -106,10 +106,11 @@ class CInit
 public:
 	CInit()
 	{
-		for (int i=0; i < HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2; i++)
+		const int n = 2 * HIBAG_MAXNUM_SNP_IN_CLASSIFIER;
+		for (int i=0; i < n; i++)
 			EXP_LOG_MIN_RARE_FREQ[i] = FLOAT_EXP(i * FLOAT_LOG(MIN_RARE_FREQ));
 		EXP_LOG_MIN_RARE_FREQ[0] = 1;
-		for (int i=0; i < HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2; i++)
+		for (int i=0; i < n; i++)
 		{
 			if (!R_finite(EXP_LOG_MIN_RARE_FREQ[i]))
 				EXP_LOG_MIN_RARE_FREQ[i] = 0;
@@ -1510,7 +1511,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	CHaplotypeList NextHaplo, NextReducedHaplo, MinHaplo;
 
 	while ((VarSampling.TotalNum()>0) &&
-		((int)OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER))
+		(OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER))
 	{
 		// prepare for growing the individual classifier
 		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);

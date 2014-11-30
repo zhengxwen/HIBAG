@@ -3691,8 +3691,7 @@ hlaResource <- function()
 
 hlaErrMsg <- function()
 {
-	rv <- .C("HIBAG_ErrMsg", msg=character(1), NAOK=TRUE, PACKAGE="HIBAG")
-	rv$msg
+	.Call(HIBAG_ErrMsg)
 }
 
 
@@ -3704,7 +3703,7 @@ hlaErrMsg <- function()
 .onAttach <- function(lib, pkg)
 {
 	# initialize HIBAG
-	SSE.Flag <- .Call("HIBAG_Init", PACKAGE="HIBAG")
+	SSE.Flag <- .Call(HIBAG_Init)
 
 	# information
 	packageStartupMessage(
@@ -3723,6 +3722,6 @@ hlaErrMsg <- function()
 .Last.lib <- function(libpath)
 {
 	# finalize HIBAG
-	rv <- .C("HIBAG_Done", PACKAGE="HIBAG")
+	.Call(HIBAG_Done)
 	TRUE
 }

@@ -938,9 +938,9 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
  *  to get an error message
  *  \param Msg           the last error information
 **/
-DLLEXPORT void HIBAG_ErrMsg(char **Msg)
+DLLEXPORT SEXP HIBAG_ErrMsg()
 {
-	RStrAgn(_LastError.c_str(), Msg);
+	return mkString(_LastError.c_str());
 }
 
 
@@ -971,7 +971,7 @@ DLLEXPORT SEXP HIBAG_Init()
 }
 
 /// finalize the package
-DLLEXPORT void HIBAG_Done()
+DLLEXPORT SEXP HIBAG_Done()
 {
 	try {
 		for (int i=0; i < MODEL_NUM_LIMIT; i++)
@@ -983,6 +983,8 @@ DLLEXPORT void HIBAG_Done()
 			} catch(...) {}
 		}
 	} catch(...) {}
+
+	return R_NilValue;
 }
 
 } // extern "C"
