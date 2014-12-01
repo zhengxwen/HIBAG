@@ -603,51 +603,59 @@ int TGenotype::HammingDistance(size_t Length,
 }
 
 
+
+#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+
+	// signed integer for initializing XMM
+	typedef int64_t UTYPE;
+
+	static const __m128i ZFF = { -1LL, -1LL };
+	#ifndef HIBAG_SSE_HARDWARE_POPCNT
+	static const __m128i Z05 = { 0x5555555555555555LL, 0x5555555555555555LL };
+	static const __m128i Z03 = { 0x3333333333333333LL, 0x3333333333333333LL };
+	static const __m128i Z0F = { 0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
+	#endif
+
+#else
+	#ifdef __LP64__
+		typedef uint64_t UTYPE;
+	#else
+		typedef uint32_t UTYPE;
+	#endif
+#endif
+
+static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
+
 inline int TGenotype::_HamDist(size_t Length,
 	const THaplotype &H1, const THaplotype &H2) const
 {
-#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-	// signed integer for initializing XMM
-	typedef int64_t UTYPE;
-#else
-	typedef size_t UTYPE;
-#endif
-
-	static const ssize_t STEP = sizeof(UTYPE)*8;
-	const UTYPE *h1 = (UTYPE*)&H1.PackedHaplo[0];
-	const UTYPE *h2 = (UTYPE*)&H2.PackedHaplo[0];
-	const UTYPE *s1 = (UTYPE*)&PackedSNP1[0];
-	const UTYPE *s2 = (UTYPE*)&PackedSNP2[0];
-	const UTYPE *sM = (UTYPE*)&PackedMissing[0];
 	size_t ans = 0;
 
+	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
+	const UTYPE *h2 = (const UTYPE*)&H2.PackedHaplo[0];
+	const UTYPE *s1 = (const UTYPE*)&PackedSNP1[0];
+	const UTYPE *s2 = (const UTYPE*)&PackedSNP2[0];
+	const UTYPE *sM = (const UTYPE*)&PackedMissing[0];
+
 #ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
 
-	const __m128i ZERO = _mm_setzero_si128();
-	const __m128i ONE_BITS = _mm_cmpeq_epi8(ZERO, ZERO);
-
-	#ifndef HIBAG_SSE_HARDWARE_POPCNT
-	const __m128i Z05 = { 0x5555555555555555LL, 0x5555555555555555LL };
-	const __m128i Z03 = { 0x3333333333333333LL, 0x3333333333333333LL };
-	const __m128i Z0F = { 0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
-	#endif
-
 	// for-loop
-	for (ssize_t n=Length; n > 0; n -= STEP)
+	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
-		__m128i H = {*h1++, *h2++};
+		__m128i H  = {*h1++, *h2++};
 		__m128i S1 = {*s1++, *s2++};   // {*s1, *s2}
 		__m128i S2 = _mm_shuffle_epi32(S1, _MM_SHUFFLE(1,0,3,2)); // {*s2, *s1}
-		__m128i M = {*sM, *sM}; sM++;
 
 		__m128i mask1 = _mm_xor_si128(H, S2);
 		__m128i mask2 = _mm_shuffle_epi32(mask1, _MM_SHUFFLE(1,0,3,2));
-		__m128i MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
 
-		if (n < STEP)
+		__m128i M  = {*sM, *sM}; sM++;
+		__m128i MASK  = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
+
+		if (n < UTYPE_BIT_NUM)
 		{
 			// MASK &= (~(UTYPE(-1) << n));
-			MASK = _mm_andnot_si128(_mm_slli_epi64(ONE_BITS, n), MASK);
+			MASK = _mm_andnot_si128(_mm_slli_epi64(ZFF, n), MASK);
 		}
 
 		// val = '(H1 ^ S1) & MASK' / '(H2 ^ S2) & MASK'
@@ -686,7 +694,7 @@ inline int TGenotype::_HamDist(size_t Length,
 #else
 
 	// for-loop
-	for (ssize_t n=Length; n > 0; n -= STEP)
+	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
 		UTYPE H1 = *h1++;
 		UTYPE H2 = *h2++;
@@ -695,8 +703,16 @@ inline int TGenotype::_HamDist(size_t Length,
 		UTYPE M  = *sM++;  // missing value
 
 		UTYPE MASK = ((H1 ^ S2) | (H2 ^ S1)) & M;
-		if (n < STEP)
+		if (n < UTYPE_BIT_NUM)
+		{
+		#ifdef WORDS_BIGENDIAN
+			UINT8 BYTE_MASK = ~(UINT8(-1) << (n & 0x07));
+			MASK &= (UTYPE(-1) << ((UTYPE_BIT_NUM-n) & ~0x07)) &
+				(UTYPE(BYTE_MASK) << (UTYPE_BIT_NUM-8));
+		#else
 			MASK &= (~(UTYPE(-1) << n));
+		#endif
+		}
 
 		// popcount for '(H1 ^ S1) & MASK'
 		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -705,7 +721,8 @@ inline int TGenotype::_HamDist(size_t Length,
 		// 64-bit integers
 		v1 -= ((v1 >> 1) & 0x5555555555555555LLU);
 		v1 = (v1 & 0x3333333333333333LLU) + ((v1 >> 2) & 0x3333333333333333LLU);
-		ans += (((v1 + (v1 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) * 0x0101010101010101LLU) >> 56;
+		ans += (((v1 + (v1 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) *
+			0x0101010101010101LLU) >> 56;
 	#else
 		// 32-bit integers
 		v1 -= ((v1 >> 1) & 0x55555555);
@@ -719,7 +736,8 @@ inline int TGenotype::_HamDist(size_t Length,
 		// 64-bit integers
 		v2 -= ((v2 >> 1) & 0x5555555555555555LLU);
 		v2 = (v2 & 0x3333333333333333LLU) + ((v2 >> 2) & 0x3333333333333333LLU);
-		ans += (((v2 + (v2 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) * 0x0101010101010101LLU) >> 56;
+		ans += (((v2 + (v2 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) *
+			0x0101010101010101LLU) >> 56;
 	#else
 		// 32-bit integers
 		v2 -= ((v2 >> 1) & 0x55555555);

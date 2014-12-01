@@ -46,12 +46,13 @@
 #include <list>
 #include <string>
 #include <algorithm>
+
+#include <Rconfig.h>
 #include <R.h>
 #include <Rmath.h>
 
 
-// TODO: check LITTLE END
-// Streaming SIMD Extensions, SSE, SSE2
+// Streaming SIMD Extensions, SSE, SSE2, SSE4_2 (POPCNT)
 
 #if (defined(__SSE__) && defined(__SSE2__))
 
@@ -60,7 +61,7 @@
 
 #  ifdef __SSE4_2__
 #      define HIBAG_SSE_HARDWARE_POPCNT
-#      include <nmmintrin.h>  // SSE4_2, for popcnt
+#      include <nmmintrin.h>  // SSE4_2, for POPCNT
 #  endif
 
 #  define HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE

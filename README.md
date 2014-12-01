@@ -8,9 +8,9 @@ Version: 1.2.5
 
 ## Changes in v1.2.5
 
-	* optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
-	* hardware POPCNT: 2x speedup, compared to the implementation in v1.2.4
-	* SSE2 instructions: 1.3x speedup, compared to the implementation in v1.2.4
+* optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
+* hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
+* SSE2 instructions: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
 
 
 ## Features
