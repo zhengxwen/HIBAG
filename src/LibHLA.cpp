@@ -27,7 +27,7 @@
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
 // Version        : 1.2.5
-// Copyright      : Xiuwen Zheng (GPL v3.0)
+// Copyright      : Xiuwen Zheng (GPL v3)
 // Created        : 11/14/2011
 // Last modified  : 11/30/2014
 // Description    : HLA Genotype Imputation with Attribute Bagging
@@ -240,10 +240,7 @@ void THaplotype::SetAllele(size_t idx, UINT8 val)
 		"THaplotype::SetAllele, invalid index.");
 	HIBAG_CHECKING(val!=0 && val!=1,
 		"THaplotype::SetAllele, the value should be 0 or 1.");
-	size_t r = idx & 0x07;
-	UINT8 mask = ~(0x01 << r);
-	UINT8 &ch = PackedHaplo[idx >> 3];
-	ch = (ch & mask) | (val << r);
+	_SetAllele(idx, val);
 }
 
 string THaplotype::HaploToStr(size_t Length) const
@@ -269,8 +266,16 @@ void THaplotype::StrToHaplo(const string &str)
 		char ch = str[i];
 		HIBAG_CHECKING(ch!='0' && ch!='1',
 			"THaplotype::StrToHaplo, the input string should be '0' or '1'");
-		SetAllele(i, ch-'0');
+		_SetAllele(i, ch-'0');
 	}
+}
+
+inline void THaplotype::_SetAllele(size_t idx, UINT8 val)
+{
+	size_t r = idx & 0x07;
+	UINT8 mask = ~(0x01 << r);
+	UINT8 &ch = PackedHaplo[idx >> 3];
+	ch = (ch & mask) | (val << r);
 }
 
 
@@ -291,18 +296,20 @@ void CHaplotypeList::DoubleHaplos(CHaplotypeList &OutHaplos) const
 	OutHaplos.Num_SNP = Num_SNP + 1;
 	OutHaplos.List.resize(List.size());
 
-	for (size_t i=0; i < List.size(); i++)
+	const size_t i_n = List.size();
+	for (size_t i=0; i < i_n; i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 
 		dst.resize(src.size()*2);
-		for (size_t j=0; j < src.size(); j++)
+		const size_t j_n = src.size();
+		for (size_t j=0; j < j_n; j++)
 		{
 			dst[2*j+0] = src[j];
-			dst[2*j+0].SetAllele(Num_SNP, 0);
+			dst[2*j+0]._SetAllele(Num_SNP, 0);
 			dst[2*j+1] = src[j];
-			dst[2*j+1].SetAllele(Num_SNP, 1);
+			dst[2*j+1]._SetAllele(Num_SNP, 1);
 		}
 	}
 }
@@ -315,13 +322,15 @@ void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos,
 	HIBAG_CHECKING(List.size() != OutHaplos.List.size(), msg);
 
 	const TFLOAT p0 = 1-AFreq, p1 = AFreq;
-	for (size_t i=0; i < List.size(); i++)
+	const size_t i_n = List.size();
+	for (size_t i=0; i < i_n; i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 		HIBAG_CHECKING(dst.size() != src.size()*2, msg);
 
-		for (size_t j=0; j < src.size(); j++)
+		const size_t j_n = src.size();
+		for (size_t j=0; j < j_n; j++)
 		{
 			dst[2*j+0].Frequency = src[j].Frequency*p0 + EM_INIT_VAL_FRAC;
 			dst[2*j+1].Frequency = src[j].Frequency*p1 + EM_INIT_VAL_FRAC;
@@ -335,14 +344,16 @@ void CHaplotypeList::MergeDoubleHaplos(const TFLOAT RareProb,
 	OutHaplos.Num_SNP = Num_SNP;
 	OutHaplos.List.resize(List.size());
 
-	for (size_t i=0; i < List.size(); i++)
+	const size_t i_n = List.size();
+	for (size_t i=0; i < i_n; i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 		dst.clear();
 		dst.reserve(src.size());
 
-		for (size_t j=0; j < src.size(); j += 2)
+		const size_t j_n = src.size();
+		for (size_t j=0; j < j_n; j += 2)
 		{
 			const THaplotype &p0 = src[j+0];
 			const THaplotype &p1 = src[j+1];
@@ -368,14 +379,16 @@ void CHaplotypeList::EraseDoubleHaplos(const TFLOAT RareProb,
 	OutHaplos.List.resize(List.size());
 	TFLOAT sum = 0;
 
-	for (size_t i=0; i < List.size(); i++)
+	const size_t i_n = List.size();
+	for (size_t i=0; i < i_n; i++)
 	{
 		const vector<THaplotype> &src = List[i];
 		vector<THaplotype> &dst = OutHaplos.List[i];
 		dst.clear();
 		dst.reserve(src.size());
 		
-		for (size_t j=0; j < src.size(); j += 2)
+		const size_t j_n = src.size();
+		for (size_t j=0; j < j_n; j += 2)
 		{
 			const THaplotype &p0 = src[j+0];
 			const THaplotype &p1 = src[j+1];
@@ -440,7 +453,8 @@ size_t CHaplotypeList::TotalNumOfHaplo() const
 
 void CHaplotypeList::Print()
 {
-	for (size_t i=0; i < List.size(); i++)
+	const size_t i_n = List.size();
+	for (size_t i=0; i < i_n; i++)
 	{
 		vector<THaplotype> &L = List[i];
 		vector<THaplotype>::const_iterator it;
@@ -707,8 +721,8 @@ inline int TGenotype::_HamDist(size_t Length,
 		{
 		#ifdef WORDS_BIGENDIAN
 			UINT8 BYTE_MASK = ~(UINT8(-1) << (n & 0x07));
-			MASK &= (UTYPE(-1) << ((UTYPE_BIT_NUM-n) & ~0x07)) &
-				(UTYPE(BYTE_MASK) << (UTYPE_BIT_NUM-8));
+			size_t r = (UTYPE_BIT_NUM - n - 1) & ~0x07;
+			MASK &= (UTYPE(-1) << (r+8)) | (UTYPE(BYTE_MASK) << r);
 		#else
 			MASK &= (~(UTYPE(-1) << n));
 		#endif

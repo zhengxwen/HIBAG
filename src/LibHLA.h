@@ -27,7 +27,7 @@
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
 // Version        : 1.2.5
-// Copyright      : Xiuwen Zheng (GPL v3.0)
+// Copyright      : Xiuwen Zheng (GPL v3)
 // Created        : 11/14/2011
 // Last modified  : 11/30/2014
 // Description    : HLA Genotype Imputation with Attribute Bagging
@@ -150,6 +150,8 @@ namespace HLA_LIB
 	struct THaplotype
 	{
 	public:
+		friend class CHaplotypeList;
+
 		/// packed SNP alleles
 		UINT8 PackedHaplo[HIBAG_PACKED_UTYPE_MAXNUM];
 		/// haplotype frequency
@@ -169,6 +171,10 @@ namespace HLA_LIB
 		string HaploToStr(size_t Length) const;
 		/// set packed SNP alleles from a string of "0" and "1"
 		void StrToHaplo(const string &str);
+
+	private:
+		/// set SNP allele, idx starts from ZERO, without checking
+		inline void _SetAllele(size_t idx, UINT8 val);
 	};
 
 

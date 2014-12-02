@@ -10,7 +10,7 @@ Version: 1.2.5
 
 * optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
 * hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
-* SSE2 instructions: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
+* optimized SSE2 instructions without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
 
 
 ## Features
@@ -23,7 +23,7 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## License
 
-[GPL-3](http://www.gnu.org/copyleft/gpl.html)
+[GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
 
 ## Package Author & Maintainer
 
@@ -31,7 +31,7 @@ Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com) / [zhengx@u.washington.
 
 ## Copyright
 
-HIBAG, GPL-3 License, Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com))
+HIBAG R package, GPLv3 License, Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com))
 
 ## Citation
 
@@ -58,4 +58,22 @@ curl -L https://github.com/zhengxwen/HIBAG/tarball/master/ -o HIBAG_latest.tar.g
 
 ** Install **
 R CMD INSTALL HIBAG_latest.tar.gz
+```
+
+* Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
+You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
+
+Change "*HOME*/.R/Makevars" to, if your machine support SSE4.2 or higher AVX:
+```
+## for C code
+CFLAGS=-g -O3 -march=native
+## for C++ code
+CXXFLAGS=-g -O3 -march=native
+```
+Or force to create hardware POPCNT code:
+```
+## for C code
+CFLAGS=-g -O3 -msse4.2 -mpopcnt
+## for C++ code
+CXXFLAGS=-g -O3 -msse4.2 -mpopcnt
 ```

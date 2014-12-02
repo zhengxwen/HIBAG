@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Package Name: HIBAG v1.2.4
+# Package Name: HIBAG v1.2.5
 #
 # Description:
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
