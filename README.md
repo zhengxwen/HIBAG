@@ -63,7 +63,7 @@ R CMD INSTALL HIBAG_latest.tar.gz
 * Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
 You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
 
-Change "*HOME*/.R/Makevars" to, if your machine support SSE4.2 or higher AVX:
+Change "*HOME*/.R/Makevars" to, if your machine supports SSE4.2 or higher AVX:
 ```
 ## for C code
 CFLAGS=-g -O3 -march=native
