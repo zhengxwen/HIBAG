@@ -24,14 +24,11 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 ## License
 
 [GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
+![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
 
 ## Package Author & Maintainer
 
 Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com) / [zhengx@u.washington.edu](zhengx@u.washington.edu))
-
-## Copyright
-
-HIBAG R package, GPLv3 License, Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com))
 
 ## Citation
 
@@ -40,14 +37,17 @@ Zheng, X. *et al*. HIBAG-HLA genotype imputation with attribute bagging. *The ph
 
 ## Installation
 
-* From CRAN (stable release 1.2.+) [http://cran.r-project.org/web/packages/HIBAG/index.html](http://cran.r-project.org/web/packages/HIBAG/index.html)
-
 * Development version from Github:
-```
+```R
 library("devtools")
 install_github("zhengxwen/HIBAG")
 ```
 The `install_github()` approach requires that you build from source, i.e. `make` and compilers must be installed on your system -- see the R FAQ for your operating system; you may also need to install dependencies manually.
+
+* Nearly up-to-date development binaries from `HIBAG` r-forge repository:
+```R
+install.packages("HIBAG", repos="http://R-Forge.R-project.org")
+```
 
 * Install the package from the source code:
 [download the source code](https://github.com/zhengxwen/HIBAG/tarball/master)
@@ -63,7 +63,7 @@ R CMD INSTALL HIBAG_latest.tar.gz
 * Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
 You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
 
-Change "*HOME*/.R/Makevars" to, if your machine supports SSE4.2 or higher AVX:
+Change "~/.R/Makevars" to, if your machine supports SSE4.2 or higher AVX:
 ```
 ## for C code
 CFLAGS=-g -O3 -march=native

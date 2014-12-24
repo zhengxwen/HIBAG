@@ -2,19 +2,21 @@ Package: HIBAG
 Type: Package
 Title: HIBAG -- HLA Genotype Imputation with Attribute Bagging
 Version: 1.2.5
-Date: 2014-11-30
-Depends:	R (>= 2.14.0)
-Suggests:	parallel
-Author: Xiuwen Zheng, Bruce S. Weir
-Maintainer: Xiuwen Zheng <zhengx@u.washington.edu>
+Date: 2014-12-25
+Depends: R (>= 2.14.0)
+Suggests: parallel
+Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre"),
+    email="zhengx@u.washington.edu"),
+    person("Bruce", "Weir", role=c("ctb", "ths"),
+    email="bsweir@u.washington.edu"))
 Description: HIBAG is a state of the art software package for imputing HLA
-	types using SNP data, and it uses the R statistical programming language.
-	HIBAG can be used by researchers with published parameter estimates instead
-	of requiring access to large training sample datasets. It combines the
-	concepts of attribute bagging, an ensemble classifier method, with
-	haplotype inference for SNPs and HLA types. Attribute bagging is a
-	technique which improves the accuracy and stability of classifier
-	ensembles using bootstrap aggregating and random variable selection.
+    types using SNP data, and it uses the R statistical programming language.
+    HIBAG can be used by researchers with published parameter estimates instead
+    of requiring access to large training sample datasets. It combines the
+    concepts of attribute bagging, an ensemble classifier method, with
+    haplotype inference for SNPs and HLA types. Attribute bagging is a
+    technique which improves the accuracy and stability of classifier
+    ensembles using bootstrap aggregating and random variable selection.
 License: GPL-3
-URL:	http://www.biostat.washington.edu/~bsweir/HIBAG/,
-	http://github.com/zhengxwen/HIBAG
+URL: http://www.biostat.washington.edu/~bsweir/HIBAG/,
+    http://github.com/zhengxwen/HIBAG

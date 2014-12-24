@@ -1,27 +1,21 @@
-// ===========================================================
-//     _/_/_/   _/_/_/  _/_/_/_/    _/_/_/_/  _/_/_/   _/_/_/
-//      _/    _/       _/             _/    _/    _/   _/   _/
-//     _/    _/       _/_/_/_/       _/    _/    _/   _/_/_/
-//    _/    _/       _/             _/    _/    _/   _/
-// _/_/_/   _/_/_/  _/_/_/_/_/     _/     _/_/_/   _/_/
-// ===========================================================
+// ===============================================================
 //
-// Copyright (C) 2011-2014	Xiuwen Zheng (zhengx@u.washington.edu)
+// HIBAG R package, HLA Genotype Imputation with Attribute Bagging
+// Copyright (C) 2011 - 2015   Xiuwen Zheng (zhengx@u.washington.edu)
+// All rights reserved.
 //
-// This file is part of HIBAG R package.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// HIBAG is free software: you can redistribute it and/or modify it
-// under the terms of the GNU General Public License Version 3 as
-// published by the Free Software Foundation.
-//
-// HIBAG is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HIBAG.
-// If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // ===============================================================
 // Name           : LibHLA
@@ -29,8 +23,8 @@
 // Version        : 1.2.5
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Created        : 11/14/2011
-// Last modified  : 11/30/2014
-// Description    : HLA Genotype Imputation with Attribute Bagging
+// Last modified  : 12/24/2014
+// Description    : HIBAG C++ library
 // ===============================================================
 
 #ifndef _LibHLA_H_
