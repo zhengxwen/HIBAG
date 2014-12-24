@@ -24,7 +24,6 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 ## License
 
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
-
 [GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
 
 
