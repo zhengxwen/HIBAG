@@ -1,25 +1,30 @@
-\name{hlaClose}
-\alias{hlaClose}
+\name{hlaModelFromObj}
+\alias{hlaModelFromObj}
+\alias{hlaModelToObj}
 \title{
-    Dispose a model object
+    Conversion between the in-memory model and the object that can be
+saved in a file
 }
 \description{
-    Release all resources stored in the \code{\link{hlaAttrBagClass}} object.
-The HIBAG package allows up to 256 \code{\link{hlaAttrBagClass}} objects
-stored in memory.
+    Build a model \code{\link{hlaAttrBagClass}} from an object of
+\code{\link{hlaAttrBagObj}} which is stored in an R object file, or convert
+\code{\link{hlaAttrBagClass}} to \code{\link{hlaAttrBagObj}}.
 }
 \usage{
-hlaClose(model)
+hlaModelFromObj(obj)
+hlaModelToObj(model)
 }
 \arguments{
+    \item{obj}{an object of \code{\link{hlaAttrBagObj}}}
     \item{model}{an object of \code{\link{hlaAttrBagClass}}}
 }
 \value{
-    None.
+    \code{hlaModelFromObj} returns \code{hlaAttrBagClass}, and
+    \code{hlaModelToObj} returns \code{hlaAttrBagObj}.
 }
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{hlaAttrBagging}}, \code{\link{summary.hlaAttrBagClass}}
+    \code{\link{hlaModelToObj}}, \code{\link{hlaAttrBagging}}
 }
 
 \examples{
@@ -41,6 +46,12 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
 set.seed(1000)
 model <- hlaAttrBagging(hla, train.geno, nclassifier=2)
 print(model)
+
+mobj <- hlaModelToObj(model)
+
+is(model)
+is(mobj)
+
 
 # close the HIBAG model explicitly
 hlaClose(model)

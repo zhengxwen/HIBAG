@@ -1,20 +1,20 @@
 \name{hlaUniqueAllele}
 \alias{hlaUniqueAllele}
 \title{
-	Get unique HLA alleles
+    Get unique HLA alleles
 }
 \description{
-	Get unique HLA alleles, which are in ascending order.
+    Get unique HLA alleles, which are in ascending order.
 }
 \usage{
 hlaUniqueAllele(hla)
 }
 \arguments{
-	\item{hla}{character-type HLA alleles, or a
-		\code{\link{hlaAlleleClass}} object}
+    \item{hla}{character-type HLA alleles, or a
+        \code{\link{hlaAlleleClass}} object}
 }
 \details{
-	Each HLA allele name has a unique number corresponding to up to four sets
+    Each HLA allele name has a unique number corresponding to up to four sets
 of digits separated by colons. The name designation depends on the sequence of
 the allele and that of its nearest relative. The digits before the first colon
 describe the type, which often corresponds to the serological antigen carried
@@ -29,32 +29,29 @@ differ by sequence polymorphisms in the introns or in the 5' or 3' untranslated
 regions that flank the exons and introns are distinguished by the use of the
 fourth set of digits.
 
-	In addition to the unique allele number there are additional optional
+    In addition to the unique allele number there are additional optional
 suffixes that may be added to an allele to indicate its expression status.
 Alleles that have been shown not to be expressed, 'Null' alleles have been
 given the suffix 'N'. Those alleles which have been shown to be alternatively
 expressed may have the suffix 'L', 'S', 'C', 'A' or 'Q'.
 
-	\url{http://hla.alleles.org/nomenclature/index.html}
+    \url{http://hla.alleles.org/nomenclature/index.html}
 }
 \value{
-	Return a vector of HLA alleles
+    Return a vector of HLA alleles
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaAllele}}, \code{\link{hlaAlleleDigit}}
+    \code{\link{hlaAllele}}, \code{\link{hlaAlleleDigit}}
 }
 
 \examples{
-# load HLA types and SNP genotypes
-data(HLA_Type_Table, package="HIBAG")
-
 # make a "hlaAlleleClass" object
 hla.id <- "A"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
-	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
-	locus=hla.id, assembly="hg19")
+    H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+    H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+    locus=hla.id, assembly="hg19")
 summary(hla)
 hlaUniqueAllele(hla)
 

@@ -1,7 +1,7 @@
 // ===============================================================
 //
-// HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-// Copyright (C) 2011 - 2015   Xiuwen Zheng (zhengx@u.washington.edu)
+// HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
+// Copyright (C) 2011-2015   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 // Version        : 1.2.5
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Created        : 11/14/2011
-// Last modified  : 12/24/2014
+// Last modified  : 12/29/2014
 // Description    : HIBAG C++ library
 // ===============================================================
 

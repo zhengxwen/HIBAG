@@ -1,44 +1,40 @@
 \name{hlaSubModelObj}
 \alias{hlaSubModelObj}
 \title{
-	Get a subset of individual classifiers
+    Get a subset of individual classifiers
 }
 \description{
-	Get the first n individual classifiers.
+    Get the first n individual classifiers.
 }
 \usage{
 hlaSubModelObj(obj, n)
 }
 \arguments{
-	\item{obj}{an object of \code{\link{hlaAttrBagObj}}}
-	\item{n}{an integer, get the first n individual classifiers}
+    \item{obj}{an object of \code{\link{hlaAttrBagObj}}}
+    \item{n}{an integer, get the first n individual classifiers}
 }
 \value{
-	Return an object of \code{\link{hlaAttrBagObj}}.
+    Return an object of \code{\link{hlaAttrBagObj}}.
 }
 \author{Xiuwen Zheng}
 \seealso{
-	\code{\link{hlaAttrBagging}}
+    \code{\link{hlaAttrBagging}}
 }
 
 \examples{
-# load HLA types and SNP genotypes
-data(HLA_Type_Table, package="HIBAG")
-data(HapMap_CEU_Geno, package="HIBAG")
-
 # make a "hlaAlleleClass" object
 hla.id <- "C"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
-	H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-	H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
-	locus=hla.id, assembly="hg19")
+    H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+    H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+    locus=hla.id, assembly="hg19")
 
 # training genotypes
 region <- 50   # kb
 snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
-	hla.id, region*1000, assembly="hg19")
+    hla.id, region*1000, assembly="hg19")
 train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
-	snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
+    snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
 
 # train a HIBAG model
 set.seed(1000)

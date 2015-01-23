@@ -1,7 +1,7 @@
 // ===============================================================
 //
-// HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-// Copyright (C) 2011 - 2015   Xiuwen Zheng (zhengx@u.washington.edu)
+// HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
+// Copyright (C) 2011-2015   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 #include "LibHLA.h"
 #include <R.h>
 #include <Rdefines.h>
+#include <R_ext/Rdynload.h>
 
 
 namespace HLA_LIB
@@ -339,7 +340,7 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 //
 
 /// the number of attribute bagging models allowed
-#define MODEL_NUM_LIMIT 256
+#define MODEL_NUM_LIMIT    256
 /// the model container
 static CAttrBag_Model* _HIBAG_MODELS_[MODEL_NUM_LIMIT];
 
@@ -977,6 +978,23 @@ DLLEXPORT SEXP HIBAG_Done()
 	} catch(...) {}
 
 	return R_NilValue;
+}
+
+
+/// finalize the package
+DLLEXPORT void R_init_HIBAG(DllInfo *info)
+{
+	static R_CallMethodDef callMethods[] = {
+		{ "HIBAG_Init", (DL_FUNC)&HIBAG_Init, 0 },
+		{ NULL, NULL, 0 }
+	};
+
+	static R_CMethodDef cMethods[] = {
+		{ "HIBAG_New", (DL_FUNC)&HIBAG_New, 5 },
+		{ NULL, NULL, 0 }
+	};
+
+	R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
 }
 
 } // extern "C"
