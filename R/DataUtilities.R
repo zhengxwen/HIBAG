@@ -527,13 +527,11 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     assembly <- .hla_assembly(assembly)
 
     # detect bed.fn
-    bed <- .C(HIBAG_BEDFlag, bed.fn, snporder=integer(1), err=integer(1),
-        NAOK=TRUE)
-    if (bed$err != 0) stop(hlaErrMsg())
+    bed.flag <- .Call(HIBAG_BEDFlag, bed.fn)
     if (verbose)
     {
         cat("Open \"", bed.fn, sep="")
-        if (bed$snporder == 0)
+        if (bed.flag == 0)
             cat("\" in the individual-major mode.\n")
         else
             cat("\" in the SNP-major mode.\n")
@@ -614,7 +612,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 
     # call the C function
     rv <- .C(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id), n.snp,
-        (bed$snporder==0), snp.flag, verbose,
+        (bed.flag==0), snp.flag, verbose,
         geno = matrix(as.integer(0), nrow=n.snp, ncol=length(sample.id)),
         err=integer(1), NAOK=TRUE)
     if (rv$err != 0) stop(hlaErrMsg())

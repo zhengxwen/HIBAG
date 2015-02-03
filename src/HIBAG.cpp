@@ -829,22 +829,21 @@ DLLEXPORT void HIBAG_SetParam(int *EM_MaxNum, LongBool *If_EM_MaxNum,
  *  to detect the storage mode of a PLINK BED file
  *
  *  \param bedfn         the file name of PLINK BED file
- *  \param out_SNPOrder  output the storage mode
- *  \param out_err       output the error information, 0 -- no error, 1 -- an error exists
 **/
-DLLEXPORT void HIBAG_BEDFlag(char **bedfn, int *out_SNPOrder, LongBool *out_err)
+DLLEXPORT SEXP HIBAG_BEDFlag(SEXP bedfn)
 {
-	TRY
-		ifstream file(*bedfn, ios::binary);
+	const char *fn = CHAR(STRING_ELT(bedfn, 0));
+
+	CORE_TRY
+		ifstream file(fn, ios::binary);
 		if (!file.good())
-			throw ErrHLA("Cannot open the file %s.", *bedfn);
+			throw ErrHLA("Cannot open the file %s.", fn);
 		char prefix[3];
 		file.read(prefix, 3);
 		if ((prefix[0] != 0x6C) || (prefix[1] != 0x1B))
 			throw ErrHLA("Invalid prefix in the bed file.");
-		*out_SNPOrder = (unsigned char)(prefix[2]);
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		rv_ans = ScalarInteger((unsigned char)prefix[2]);
+	CORE_CATCH
 }
 
 
@@ -996,6 +995,7 @@ DLLEXPORT void R_init_HIBAG(DllInfo *info)
 
 	static R_CallMethodDef callMethods[] =
 	{
+		CALL(HIBAG_BEDFlag, 1),
 		CALL(HIBAG_SortAlleleStr, 1),
 		CALL(HIBAG_SSE_Flag, 0),
 		{ NULL, NULL, 0 }
