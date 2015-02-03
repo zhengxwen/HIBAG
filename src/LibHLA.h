@@ -20,15 +20,15 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.5
+// Version        : 1.3.0
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Created        : 11/14/2011
-// Last modified  : 12/29/2014
-// Description    : HIBAG C++ library
+// Last modified  : 02/03/2015
+// Description    : HLA imputation C++ library
 // ===============================================================
 
-#ifndef _LibHLA_H_
-#define _LibHLA_H_
+#ifndef LIBHLA_H_
+#define LIBHLA_H_
 
 #include <stdint.h>
 #include <cstdlib>
@@ -50,22 +50,33 @@
 
 #if (defined(__SSE__) && defined(__SSE2__))
 
-#  include <xmmintrin.h>  // SSE
-#  include <emmintrin.h>  // SSE2
+#   include <xmmintrin.h>  // SSE
+#   include <emmintrin.h>  // SSE2
 
-#  ifdef __SSE4_2__
-#      define HIBAG_SSE_HARDWARE_POPCNT
-#      include <nmmintrin.h>  // SSE4_2, for POPCNT
-#  endif
+#   ifdef __SSE4_2__
+#       define HIBAG_SSE_HARDWARE_POPCNT
+#       include <nmmintrin.h>  // SSE4_2, for POPCNT
+#   endif
 
-#  define HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+#   define HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
 
-# else
+#else
 
-#  ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-#    undef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-#  endif
+#   ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#       undef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#   endif
 
+#endif
+
+
+// 32-bit or 64-bit registers
+
+#ifdef __LP64__
+#   define HIBAG_REG_BIT64
+#else
+#   ifdef HIBAG_REG_BIT64
+#      undef HIBAG_REG_BIT64
+#   endif
 #endif
 
 
@@ -91,30 +102,30 @@ namespace HLA_LIB
 	#define HIBAG_FLOAT_TYPE_ID    0
 
 	#if (HIBAG_FLOAT_TYPE_ID == 0)
-	#  define TFLOAT           double
-	#  define FLOAT_LOG        log
-	#  define FLOAT_EXP        exp
-	#  define FLOAT_EPSILON    DBL_EPSILON
+	#   define TFLOAT           double
+	#   define FLOAT_LOG        log
+	#   define FLOAT_EXP        exp
+	#   define FLOAT_EPSILON    DBL_EPSILON
 	#elif (HIBAG_FLOAT_TYPE_ID == 1)
-	#  define TFLOAT           float
-	#  define FLOAT_LOG        logf
-	#  define FLOAT_EXP        expf
-	#  define FLOAT_EPSILON    FLT_EPSILON
+	#   define TFLOAT           float
+	#   define FLOAT_LOG        logf
+	#   define FLOAT_EXP        expf
+	#   define FLOAT_EPSILON    FLT_EPSILON
 	#else
-	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
+	#   error "Invalid HIBAG_FLOAT_TYPE_ID"
 	#endif
 
 
-	// ************************************************************************* //
-	// ************************************************************************* //
+	// ===================================================================== //
+	// ===================================================================== //
 
 	/// macro for checking error
 	#define HIBAG_CHECKING(x, msg)	{ if (x) throw ErrHLA(msg); }
 
 
 
-	// ********************************************************************* //
-	// ********                     Description                     ********
+	// ===================================================================== //
+	// ========                     Description                     ========
 	//
 	// Packed SNP storage strategy is used for faster matching
 	//
@@ -137,8 +148,8 @@ namespace HLA_LIB
 	//                   -1 or other value (missing)
 	//                          -- (s1_1=0 s2_1=0 s3_1=0)
 	//
-	// ********                                                     ********
-	// ********************************************************************* //
+	// ========                                                     ========
+	// ===================================================================== //
 
 	/// Packed SNP haplotype structure: 8 alleles in a byte
 	struct THaplotype
@@ -324,8 +335,8 @@ namespace HLA_LIB
 
 
 
-	// ********************************************************************* //
-	// ********                      algorithm                      ********
+	// ===================================================================== //
+	// ========                      algorithm                      ========
 
 	// the parameter of EM algorithm for estimating haplotype frequencies
 
@@ -545,8 +556,8 @@ namespace HLA_LIB
 
 
 
-	// ********************************************************************* //
-	// ********                   HIBAG -- model                    ********
+	// ===================================================================== //
+	// ========                   HIBAG -- model                    ========
 
 	class CAttrBag_Model;
 
@@ -675,8 +686,8 @@ namespace HLA_LIB
 
 
 
-	// ********************************************************************* //
-	// ********************************************************************* //
+	// ===================================================================== //
+	// ===================================================================== //
 
 	/// The basic class for progress object
 	class CdProgression
@@ -739,4 +750,4 @@ namespace HLA_LIB
 
 }
 
-#endif /* _LibHLA_H_ */
+#endif /* LIBHLA_H_ */

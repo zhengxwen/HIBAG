@@ -1,12 +1,12 @@
 Package: HIBAG
 Type: Package
 Title: HLA Genotype Imputation with Attribute Bagging
-Version: 0.99.1
-Date: 2015-01-20
+Version: 0.99.3
+Date: 2015-02-03
 Depends: R (>= 2.14.0)
 Imports: methods, GenomicRanges
 Suggests: parallel, RUnit, BiocStyle, BiocGenerics, knitr,
-    gdsfmt, SNPRelate
+    gdsfmt (>= 1.2.2), SNPRelate (>= 1.1.6)
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre"),
     email="zhengx@u.washington.edu"),
     person("Bruce", "Weir", role=c("ctb", "ths"),

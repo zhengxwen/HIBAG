@@ -211,7 +211,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 
     if (!is.null(cl))
     {
-        if (!require(parallel, warn.conflicts=FALSE))
+        if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
     }
 
@@ -348,7 +348,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     vote_method <- match(vote, c("prob", "majority"))
     if (!is.null(cl))
     {
-        if (!require(parallel, warn.conflicts=FALSE))
+        if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
         if (length(cl) <= 1) cl <- NULL
     }
@@ -372,7 +372,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 "HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
             rv$CNum, s, length(object$snp.id), length(object$hla.allele)))
 
-        if (vote_method == 1)
+        if (vote_method == 1L)
         {
             cat("Predicting based on the averaged posterior probabilities",
                 "from all individual classifiers.\n")
@@ -1129,10 +1129,10 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
 
     stopifnot(is.numeric(call.threshold) & is.vector(call.threshold))
-    stopifnot(length(call.threshold) == 1)
+    stopifnot(length(call.threshold) == 1L)
 
     stopifnot(is.logical(verbose) & is.vector(verbose))
-    stopifnot(length(verbose) == 1)
+    stopifnot(length(verbose) == 1L)
 
 
     ######################################################
@@ -1381,31 +1381,26 @@ hlaErrMsg <- function()
 
 
 #######################################################################
-# Internal R library functions
+# Export stardard R library function(s)
 #######################################################################
 
 .onAttach <- function(lib, pkg)
 {
-    # initialize HIBAG
-    SSE.Flag <- .Call(HIBAG_Init)
+    # get SSE2 information
+    SSE <- .Call(HIBAG_SSE_Flag)
 
     # information
     packageStartupMessage(
         "HIBAG (HLA Genotype Imputation with Attribute Bagging)")
-    if (SSE.Flag == 1)
+    if (SSE[1] == 1L)
         s <- "Supported by Streaming SIMD Extensions (SSE2)"
-    else if (SSE.Flag == 2)
+    else if (SSE[1] == 2)
         s <- "Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)"
     else
         s <- ""
+    if ((SSE[2] != 0) & (s != ""))
+        s <- paste(s, ", 64 bits", sep="")
     if (s != "") packageStartupMessage(s)
 
-    TRUE
-}
-
-.Last.lib <- function(libpath)
-{
-    # finalize HIBAG
-    .Call(HIBAG_Done)
     TRUE
 }

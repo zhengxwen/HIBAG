@@ -28,6 +28,11 @@
 #
 #######################################################################
 
+.plural <- function(num)
+{
+    if (num > 1) "s" else ""
+}
+
 #######################################################################
 # get the name of HLA gene
 #
@@ -569,27 +574,20 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         cat("Open \"", bim.fn, "\".\n", sep="")
 
     # SNP selection
-    if (length(import.chr) == 1)
+    if (length(import.chr) == 1L)
     {
         if (import.chr == "xMHC")
         {
-            if (assembly %in% c("hg18", "NCBI36"))
-            {
-                snp.flag <- (chr==6) &
-                    (25759242<=snp.pos) & (snp.pos<=33534827)
-            } else if (assembly %in% c("hg19", "NCBI37"))
-            {
-                snp.flag <- (chr==6) &
-                    (25651242<=snp.pos) & (snp.pos<=33544122)
-            } else {
-                stop("Invalid genome assembly.")
-            }
+			info <- hlaLociInfo(assembly)
+        	st <- min(BiocGenerics::start(info)) - 1000000L
+        	ed <- max(BiocGenerics::end(info)) + 1000000L
+            snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNPs within the xMHC region on chromosome 6.\n",
-                    n.snp))
+                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
+                    n.snp, .plural(n.snp)))
             }
             import.chr <- NULL
         } else if (import.chr == "")
@@ -597,7 +595,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
             n.snp <- length(snp.id)
             snp.flag <- rep(TRUE, n.snp)
             if (verbose)
-                cat(sprintf("Import %d SNPs.\n", n.snp))
+                cat(sprintf("Import %d SNP%s.\n", n.snp, .plural(n.snp)))
             import.chr <- NULL
         }
     }
@@ -607,11 +605,12 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         n.snp <- as.integer(sum(snp.flag))
         if (verbose)
         {
-            cat(sprintf("Import %d SNPs from chromosome %s.\n", n.snp,
-                paste(import.chr, collapse=",")))
+            cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
+            	.plural(n.snp), paste(import.chr, collapse=",")))
         }
     }
-    if (n.snp <= 0) stop("There is no SNP imported.")
+    if (n.snp <= 0)
+    	stop("There is no SNP imported.")
 
     # call the C function
     rv <- .C(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id), n.snp,
@@ -635,8 +634,8 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         {
             if (verbose)
             {
-                cat(sprintf("%d SNPs with duplicated ID have been removed.\n",
-                    sum(flag)))
+                cat(sprintf("%d SNP%s with duplicated ID have been removed.\n",
+                    sum(flag), .plural(sum(flag))))
             }
             v <- hlaGenoSubset(v, snp.sel=!flag)
         }
@@ -645,7 +644,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         snp.allele <- v$snp.allele
         snp.allele[is.na(snp.allele)] <- "?/?"
         flag <- sapply(strsplit(snp.allele, "/"),
-            function(x)
+            FUN=function(x)
             {
                 if (length(x) == 2)
                 {
@@ -658,8 +657,8 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         if (any(!flag) & verbose)
         {
             cat(sprintf(
-                "%d SNPs with invalid alleles have been removed.\n",
-                sum(!flag)))
+                "%d SNP%s with invalid alleles have been removed.\n",
+                sum(!flag), .plural(sum(!flag))))
         }
 
         # get a subset
@@ -678,20 +677,22 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
     import.chr="xMHC", assembly="auto", verbose=TRUE)
 {
     # library
-    if (!require(SNPRelate))
+    if (!requireNamespace("gdsfmt"))
+        stop("The gdsfmt package should be installed.")
+    if (!requireNamespace("SNPRelate"))
         stop("The SNPRelate package should be installed.")
 
     # check
     stopifnot(is.character(gds.fn) & is.vector(gds.fn))
-    stopifnot(length(gds.fn) == 1)
+    stopifnot(length(gds.fn) == 1L)
 
     stopifnot(is.logical(rm.invalid.allele) & is.vector(rm.invalid.allele))
-    stopifnot(length(rm.invalid.allele) == 1)
+    stopifnot(length(rm.invalid.allele) == 1L)
 
     stopifnot(is.character(import.chr))
 
     stopifnot(is.logical(verbose) & is.vector(verbose))
-    stopifnot(length(verbose) == 1)
+    stopifnot(length(verbose) == 1L)
 
     assembly <- .hla_assembly(assembly)
 
@@ -722,27 +723,20 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
     snp.pos[!is.finite(snp.pos)] <- 0
 
     # SNP selection
-    if (length(import.chr) == 1)
+    if (length(import.chr) == 1L)
     {
         if (import.chr == "xMHC")
         {
-            if (assembly %in% c("hg18", "NCBI36"))
-            {
-                snp.flag <- (chr==6) &
-                    (25759242<=snp.pos) & (snp.pos<=33534827)
-            } else if (assembly %in% c("hg19", "NCBI37"))
-            {
-                snp.flag <- (chr==6) &
-                    (25651242<=snp.pos) & (snp.pos<=33544122)
-            } else {
-                stop("Invalid genome assembly.")
-            }
+			info <- hlaLociInfo(assembly)
+        	st <- min(BiocGenerics::start(info)) - 1000000L
+        	ed <- max(BiocGenerics::end(info)) + 1000000L
+            snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNPs within the xMHC region on chromosome 6.\n",
-                    n.snp))
+                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
+                    n.snp, .plural(n.snp)))
             }
             import.chr <- NULL
         } else if (import.chr == "")
@@ -750,7 +744,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
             n.snp <- length(snp.id)
             snp.flag <- rep(TRUE, n.snp)
             if (verbose)
-                cat(sprintf("Import %d SNPs.\n", n.snp))
+                cat(sprintf("Import %d SNP%s.\n", n.snp, .plural(n.snp)))
             import.chr <- NULL
         }
     }
@@ -760,14 +754,16 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         n.snp <- as.integer(sum(snp.flag))
         if (verbose)
         {
-            cat(sprintf("Import %d SNPs from chromosome %s.\n", n.snp,
-                paste(import.chr, collapse=",")))
+            cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
+            	.plural(n.snp), paste(import.chr, collapse=",")))
         }
     }
-    if (n.snp <= 0) stop("There is no SNP imported.")
+    if (n.snp <= 0)
+    	stop("There is no SNP imported.")
 
     # result
-    v <- list(genotype = SNPRelate::snpgdsGetGeno(gfile,
+    v <- list(
+        genotype = SNPRelate::snpgdsGetGeno(gfile,
             snp.id=snp.id[snp.flag], snpfirstdim=TRUE, verbose=FALSE),
         sample.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(gfile, "sample.id")),
         snp.id = snp.rsid[snp.flag],
@@ -786,8 +782,8 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         {
             if (verbose)
             {
-                cat(sprintf("%d SNPs with duplicated ID have been removed.\n",
-                    sum(flag)))
+                cat(sprintf("%d SNP%s with duplicated ID have been removed.\n",
+                    sum(flag), .plural(sum(flag))))
             }
             v <- hlaGenoSubset(v, snp.sel=!flag)
         }
@@ -808,8 +804,8 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         )
         if (any(!flag) & verbose)
         {
-            cat(sprintf("%d SNPs with invalid alleles have been removed.\n",
-                sum(!flag)))
+            cat(sprintf("%d SNP%s with invalid alleles have been removed.\n",
+                sum(!flag), .plural(sum(!flag))))
         }
         v <- hlaGenoSubset(v, snp.sel=flag)
     }
@@ -1234,7 +1230,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     {
         TrueHLA <- hlaAlleleSubset(TrueHLA, flag)
     } else {
-        if (!all(flag == 1:length(TrueHLA$value$sample.id)))
+        if (!all(flag == 1L:length(TrueHLA$value$sample.id)))
             TrueHLA <- hlaAlleleSubset(TrueHLA, flag)
     }
     # Predicted HLA
@@ -1243,7 +1239,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     {
         PredHLA <- hlaAlleleSubset(PredHLA, flag)
     } else {
-        if (!all(flag == 1:length(PredHLA$value$sample.id)))
+        if (!all(flag == 1L:length(PredHLA$value$sample.id)))
             PredHLA <- hlaAlleleSubset(PredHLA, flag)
     }
 
@@ -1381,7 +1377,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 
                 # for confusion matrix
                 s <- c(ts1[i], ts2[i]); p <- c(ps1[i], ps2[i])
-                if (hnum == 1)
+                if (hnum == 1L)
                 {
                     if ((s[1]==p[1]) | (s[1]==p[2]))
                     {
@@ -1599,7 +1595,7 @@ hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
     HLAInfo <- hlaLociInfo(assembly)
     ID <- names(HLAInfo)
 
-    stopifnot(length(hla.id) == 1)
+    stopifnot(length(hla.id) == 1L)
     if (!(hla.id %in% ID))
         stop(paste("`hla.id' should be one of", paste(ID, collapse=",")))
 
@@ -1872,10 +1868,10 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
 
     stopifnot(is.numeric(call.threshold) & is.vector(call.threshold))
-    stopifnot(length(call.threshold) == 1)
+    stopifnot(length(call.threshold) == 1L)
 
     stopifnot(is.logical(verbose) & is.vector(verbose))
-    stopifnot(length(verbose) == 1)
+    stopifnot(length(verbose) == 1L)
 
 
     ######################################################

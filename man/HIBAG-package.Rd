@@ -145,9 +145,9 @@ hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 #
 pred <- predict(model, hapmap.ceu, type="response")
 head(pred$value)
-#    sample.id allele1 allele2      prob
-# 1    NA10859   01:01   03:01 0.9374860
-# 2    NA11882   01:01   29:02 0.9999835
+#   sample.id allele1 allele2      prob
+# 1   NA10859   01:01   03:01 0.9999992
+# 2   NA11882   01:01   29:02 1.0000000
 # ...
 
 

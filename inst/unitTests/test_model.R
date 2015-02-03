@@ -5,15 +5,16 @@
 
 CreateModel <- function()
 {
-    RNGkind("L'Ecuyer-CMRG")
-    set.seed(1000)
-
     # load the package HIBAG
     library(HIBAG)
 
     # load HLA types and SNP genotypes
     data(HLA_Type_Table, package="HIBAG")
     data(HapMap_CEU_Geno, package="HIBAG")
+
+    # set seed
+    RNGkind("L'Ecuyer-CMRG")
+    set.seed(1000)
 
     ans <- list()
 
@@ -48,22 +49,31 @@ CreateModel <- function()
 
 test.HIBAG <- function()
 {
-    library(HIBAG)
-
     ##  unit testing
 
-    # the pre-fit models
-    fn <- system.file("extdata", "ModelListTest.RData", package="HIBAG")
-    modellist <- get(load(fn))
+    library(HIBAG)
 
-    # fit the models
-    mlist <- CreateModel()
-
-    # check
-    for (hla.id in c("A", "B", "C", "DQA1", "DQB1", "DRB1"))
+    SSE <- .Call("HIBAG_SSE_Flag", PACKAGE="HIBAG")
+    if (SSE[1] > 0)
     {
-        checkEquals(modellist[[hla.id]], modellist[[hla.id]],
-            sprintf("Model HLA-%s", hla.id))
+        # scientific reproducibility with random number
+        # when SSE2 is used since the model file was created with SSE2
+        # more details: x87 might use 80-bit precision interally but
+        #   SSE2 uses 64-bit precision only
+
+        # the pre-fit models
+        fn <- system.file("extdata", "ModelListTest.RData", package="HIBAG")
+        modellist <- get(load(fn))
+
+        # fit the models
+        mlist <- CreateModel()
+
+        # check
+        for (hla.id in c("A", "B", "C", "DQA1", "DQB1", "DRB1"))
+        {
+            checkEquals(modellist[[hla.id]], mlist[[hla.id]],
+                sprintf("Model HLA-%s", hla.id))
+        }
     }
 
     invisible()

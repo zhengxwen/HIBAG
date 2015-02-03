@@ -1,6 +1,6 @@
 # Load the shared object
 useDynLib(HIBAG,
-    HIBAG_Init, HIBAG_Done, HIBAG_ErrMsg,
+    HIBAG_SSE_Flag, HIBAG_ErrMsg,
     HIBAG_AlleleStrand, HIBAG_BEDFlag, HIBAG_ConvBED,
     HIBAG_Close, HIBAG_Confusion,
     HIBAG_GetNumClassifiers, HIBAG_Idv_GetNumHaplo, HIBAG_Classifier_GetHaplos,
@@ -12,7 +12,7 @@ useDynLib(HIBAG,
 
 # Export function names
 exportPattern("^[^\\.|HIBAG]")
-export(.onAttach, .Last.lib)
+export(.onAttach)
 
 # Imports
 import(methods)

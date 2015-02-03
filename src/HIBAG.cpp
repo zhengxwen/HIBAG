@@ -937,55 +937,42 @@ DLLEXPORT SEXP HIBAG_ErrMsg()
 }
 
 
-
-// -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
-//
-// HIBAG: an attribute bagging method
-//
-
-/// initialize the package
-DLLEXPORT SEXP HIBAG_Init()
+/**
+ *  to get the SSE information
+**/
+DLLEXPORT SEXP HIBAG_SSE_Flag()
 {
-	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
+	SEXP ans = NEW_INTEGER(2);
 
-	SEXP ans;
-	#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
-	#   ifdef __SSE4_2__
-		ans = ScalarInteger(2);
+	#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+	#   ifdef HIBAG_SSE_HARDWARE_POPCNT
+		INTEGER(ans)[0] = 2;
 	#   else
-		ans = ScalarInteger(1);
+		INTEGER(ans)[0] = 1;
 	#   endif
 	#else
-		ans = ScalarInteger(0);
+		INTEGER(ans)[0] = 0;
+	#endif
+
+	#ifdef HIBAG_REG_BIT64
+		INTEGER(ans)[1] = 64;
+	#else
+		INTEGER(ans)[1] = 0;
 	#endif
 
 	return ans;
 }
 
-/// finalize the package
-DLLEXPORT SEXP HIBAG_Done()
-{
-	try {
-		for (int i=0; i < MODEL_NUM_LIMIT; i++)
-		{
-			CAttrBag_Model* m = _HIBAG_MODELS_[i];
-			_HIBAG_MODELS_[i] = NULL;
-			try {
-				delete m;
-			} catch(...) {}
-		}
-	} catch(...) {}
-
-	return R_NilValue;
-}
 
 
-/// finalize the package
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+
+/// Initialize the package
 DLLEXPORT void R_init_HIBAG(DllInfo *info)
 {
 	static R_CallMethodDef callMethods[] = {
-		{ "HIBAG_Init", (DL_FUNC)&HIBAG_Init, 0 },
+		{ "HIBAG_SSE_Flag", (DL_FUNC)&HIBAG_SSE_Flag, 0 },
 		{ NULL, NULL, 0 }
 	};
 
@@ -995,6 +982,28 @@ DLLEXPORT void R_init_HIBAG(DllInfo *info)
 	};
 
 	R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
+
+	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
+}
+
+/// Finalize the package
+DLLEXPORT void R_unload_HIBAG(DllInfo *info)
+{
+	try
+	{
+		for (int i=0; i < MODEL_NUM_LIMIT; i++)
+		{
+			CAttrBag_Model *m = _HIBAG_MODELS_[i];
+			try
+			{
+				if (m != NULL)
+				{
+					_HIBAG_MODELS_[i] = NULL;
+					delete m;
+				}
+			} catch(...) {}
+		}
+	} catch(...) {}
 }
 
 } // extern "C"

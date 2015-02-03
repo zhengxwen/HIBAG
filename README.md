@@ -9,6 +9,19 @@ HLA Genotype Imputation with Attribute Bagging
 HIBAG is a state of the art software package for imputing HLA types using SNP data, and it relies on a training set of HLA and SNP genotypes. HIBAG can be used by researchers with published parameter estimates instead of requiring access to large training sample datasets. It combines the concepts of attribute bagging, an ensemble classifier method, with haplotype inference for SNPs and HLA types. Attribute bagging is a technique which improves the accuracy and stability of classifier ensembles using bootstrap aggregating and random variable selection.
 
 
+## Bioconductor:
+
+Development Version: v0.99.3
+
+[http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
+
+### Changes in Bioconductor Version:
+
+* optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
+* hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in CRAN v1.2.4
+* optimized SSE2 instructions without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
+
+
 ## License
 
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)

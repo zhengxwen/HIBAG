@@ -20,11 +20,11 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.2.5
+// Version        : 1.3.0
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Created        : 11/14/2011
-// Last modified  : 12/29/2014
-// Description    : HIBAG C++ library
+// Last modified  : 02/03/2015
+// Description    : HLA imputation C++ library
 // ===============================================================
 
 
@@ -38,7 +38,7 @@
 // 3: ~0.5% of time on CAlg_EM::PrepareHaplotypes
 
 #if (HIBAG_TIMING > 0)
-#  include <time.h>
+#   include <time.h>
 #endif
 
 
@@ -46,48 +46,48 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-// ************************************************************************* //
-// ************************************************************************* //
+// ========================================================================= //
+// ========================================================================= //
 
-// parameters -- EM algorithm
-/// The max number of iterations
+// Parameters -- EM algorithm
+
+/// the max number of iterations
 int HLA_LIB::EM_MaxNum_Iterations = 500;
-/// The initial value of EM algorithm
+/// the initial value of EM algorithm
 static const TFLOAT EM_INIT_VAL_FRAC = 0.001;
-/// The reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
+/// the reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
 TFLOAT HLA_LIB::EM_FuncRelTol = sqrt(FLOAT_EPSILON);
 
-// parameters -- reduce the number of possible haplotypes
+
+// Parameters -- reduce the number of possible haplotypes
+
 /// The minimum rare frequency to store haplotypes
 static const TFLOAT MIN_RARE_FREQ = 1e-5;
 /// The fraction of one haplotype that can be ignored
 static const TFLOAT FRACTION_HAPLO = 1.0/10;
 
 
+// Parameters -- search SNP markers
 
-// the parameter of searching SNP markers
-
-/// The reltol for the stopping rule of adding a new SNP marker
+/// the reltol for the stopping rule of adding a new SNP marker
 static const TFLOAT STOP_RELTOL_LOGLIK_ADDSNP = 0.001;
-/// The reltol for erasing the SNP marker is prune = TRUE
+/// the reltol for erasing the SNP marker is prune = TRUE
 static const TFLOAT PRUNE_RELTOL_LOGLIK = 0.1;
 
 
+// Random number
 
-// ************************************************************************* //
-// ************************************************************************* //
-
-// return 0 .. (Range-1)
-static inline int RandomNum(int Range)
+// return an integer from 0 to n-1 with equal probability
+static inline int RandomNum(int n)
 {
-	int rv = (int)(unif_rand()*(Range-1) + 0.5);
-	if (rv >= Range) rv = Range -1;
-	return rv;
+	int v = (int)(n * unif_rand());
+	if (v >= n) v = n - 1;  // it seems impossible, but avoid the risk
+	return v;
 }
 
 
 
-// ************************************************************************* //
+// ========================================================================= //
 
 /// Frequency Calculation
 #define FREQ_MUTANT(p, cnt)    ((p) * EXP_LOG_MIN_RARE_FREQ[cnt]);
@@ -115,7 +115,7 @@ public:
 static CInit _Init;
 
 
-// ************************************************************************* //
+// ========================================================================= //
 
 #if (HIBAG_TIMING > 0)
 
@@ -138,8 +138,8 @@ static inline void _inc_timing()
 
 
 
-// ************************************************************************* //
-// ************************************************************************* //
+// ========================================================================= //
+// ========================================================================= //
 
 // CdProgression
 
@@ -197,8 +197,8 @@ CdProgression HLA_LIB::Progress;
 
 
 
-// ************************************************************************* //
-// ************************************************************************* //
+// ========================================================================= //
+// ========================================================================= //
 
 // -------------------------------------------------------------------------
 // The class of haplotype structure
@@ -612,7 +612,7 @@ int TGenotype::HammingDistance(size_t Length,
 
 
 
-#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
 
 	// signed integer for initializing XMM
 	typedef int64_t UTYPE;
@@ -625,7 +625,7 @@ int TGenotype::HammingDistance(size_t Length,
 	#endif
 
 #else
-	#ifdef __LP64__
+	#ifdef HIBAG_REG_BIT64
 		typedef uint64_t UTYPE;
 	#else
 		typedef uint32_t UTYPE;
@@ -645,7 +645,7 @@ inline int TGenotype::_HamDist(size_t Length,
 	const UTYPE *s2 = (const UTYPE*)&PackedSNP2[0];
 	const UTYPE *sM = (const UTYPE*)&PackedMissing[0];
 
-#ifdef HIBAG_SSE_OPTIMIZE_HAMMING_DISTANCE
+#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
 
 	// for-loop
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
@@ -725,7 +725,7 @@ inline int TGenotype::_HamDist(size_t Length,
 		// popcount for '(H1 ^ S1) & MASK'
 		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 		UTYPE v1 = (H1 ^ S1) & MASK;
-	#ifdef __LP64__
+	#ifdef HIBAG_REG_BIT64
 		// 64-bit integers
 		v1 -= ((v1 >> 1) & 0x5555555555555555LLU);
 		v1 = (v1 & 0x3333333333333333LLU) + ((v1 >> 2) & 0x3333333333333333LLU);
@@ -740,7 +740,7 @@ inline int TGenotype::_HamDist(size_t Length,
 
 		// popcount for '(H2 ^ S2) & MASK'
 		UTYPE v2 = (H2 ^ S2) & MASK;
-	#ifdef __LP64__
+	#ifdef HIBAG_REG_BIT64
 		// 64-bit integers
 		v2 -= ((v2 >> 1) & 0x5555555555555555LLU);
 		v2 = (v2 & 0x3333333333333333LLU) + ((v2 >> 2) & 0x3333333333333333LLU);
@@ -860,7 +860,8 @@ CBaseSampling *CSamplingWithoutReplace::Init(int m_total)
 {
 	_m_try = 0;
 	_IdxArray.resize(m_total);
-	for (int i=0; i < m_total; i++) _IdxArray[i] = i;
+	for (int i=0; i < m_total; i++)
+		_IdxArray[i] = i;
 	return this;
 }
 
@@ -877,7 +878,7 @@ void CSamplingWithoutReplace::RandomSelect(int m_try)
 	{
 		for (int i=0; i < m_try; i++)
 		{
-			int I = RandomNum(n_tmp - i);  // int(runif(0, 1)*(n_tmp - i - 1) + 0.5);
+			int I = RandomNum(n_tmp - i);
 			std::swap(_IdxArray[I], _IdxArray[n_tmp-i-1]);
 		}
 	}
