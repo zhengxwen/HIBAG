@@ -1046,11 +1046,7 @@ hlaUniqueAllele <- function(hla)
     {
         hla <- hla[!is.na(hla)]
         hla <- unique(hla)
-        rv <- .C(HIBAG_SortAlleleStr, length(hla), hla,
-            out = character(length(hla)),
-            err = integer(1), NAOK=TRUE)
-        if (rv$err != 0) stop(hlaErrMsg())
-        rv$out
+        .Call(HIBAG_SortAlleleStr, hla)
     } else {
         hlaUniqueAllele(as.character(c(hla$value$allele1, hla$value$allele2)))
     }

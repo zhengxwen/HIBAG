@@ -55,7 +55,8 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
 summary(hla)
 hlaUniqueAllele(hla)
 
-hlaUniqueAllele(c("01", "01:03", "01:01", "03:05", "03:01g", "03:01", "104:01"))
+hlaUniqueAllele(c("01", "01:03", "01:01", "03:05", "03:01G",
+    "03:05P", "03:104:01", "104:01"))
 }
 
 \keyword{HLA}

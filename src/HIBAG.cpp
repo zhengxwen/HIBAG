@@ -48,16 +48,35 @@ using namespace HLA_LIB;
 
 extern "C"
 {
-	#define CORETRY			try {
-	#define CORECATCH(cmd)	} \
-		catch (exception &E) { \
-			_LastError = E.what(); \
-			cmd; \
-		} \
-		catch (const char *E) { \
-			_LastError = E; \
-			cmd; \
-		}
+/// try block
+#define TRY    \
+	try {
+
+/// catch block
+#define CATCH(cmd)    \
+	} \
+	catch (exception &E) { \
+		_LastError = E.what(); cmd; \
+	} \
+	catch (const char *E) { \
+		_LastError = E; cmd; \
+	} \
+	catch (...) { \
+		_LastError = "unknown error!"; cmd; \
+	} \
+
+/// try block
+#define CORE_TRY    \
+	bool has_error = false; \
+	SEXP rv_ans = R_NilValue; \
+	TRY
+
+/// catch block
+#define CORE_CATCH    \
+	CATCH(has_error = true); \
+	if (has_error) error(_LastError.c_str()); \
+	return rv_ans;
+
 
 
 // ===========================================================
@@ -87,9 +106,12 @@ inline static void RStrAgn(const char *Text, char **rstr)
 
 struct TAlleleItem
 {
-	vector<int> Index;
-	vector<string> Idx_Suffix;
-	int list_index;
+	/// 1-field --> 2-digit, 2-field --> 4-digit
+	vector<int> Field;
+	/// the suffix for each field
+	vector<string> Field_Suffix;
+	/// the order in the container (starting from 0)
+	int Index;
 	
 	TAlleleItem(const char *str, int _idx)
 	{
@@ -111,8 +133,8 @@ struct TAlleleItem
 				{
 					int m = numeric_limits<int>::max();
 					if (!num.empty()) m = atoi(num.c_str());
-					Index.push_back(m);
-					Idx_Suffix.push_back(suffix);
+					Field.push_back(m);
+					Field_Suffix.push_back(suffix);
 					num.clear(); suffix.clear();
 					prefix_num = true;
 					if (ch == 0) break;
@@ -122,65 +144,64 @@ struct TAlleleItem
 			}
 		}
 
-		list_index = _idx;
+		Index = _idx;
 	}
 };
 
 static bool sortfn(const TAlleleItem *I1, const TAlleleItem *I2)
 {
-	int smin = min((int)I1->Index.size(), (int)I2->Index.size());
+	int smin = min((int)I1->Field.size(), (int)I2->Field.size());
 	for (int i=0; i < smin; i++)
 	{
-		if (I1->Index[i] < I2->Index[i])
+		if (I1->Field[i] < I2->Field[i])
 		{
 			return true;
-		} else if (I1->Index[i] > I2->Index[i])
+		} else if (I1->Field[i] > I2->Field[i])
 		{
 			return false;
 		} else {
-			if (I1->Idx_Suffix[i] < I2->Idx_Suffix[i])
+			if (I1->Field_Suffix[i] < I2->Field_Suffix[i])
 			{
 				return true;
-			} else if (I1->Idx_Suffix[i] > I2->Idx_Suffix[i])
+			} else if (I1->Field_Suffix[i] > I2->Field_Suffix[i])
 			{
 				return false;
 			}		
 		}
 	}
 
-	return (I1->Index.size() <= I2->Index.size());
+	return (I1->Field.size() <= I2->Field.size());
 }
+
 
 /**
  *  to sort the HLA alleles
  *
- *  \param n_hla      the number of HLA alleles
- *  \param hlastr     the pointer to HLA allele strings
- *  \param outstr     the pointer to output allele strings
- *  \param out_err    output the error information, 0 -- no error, 1 -- an error exists
+ *  \param hlastr     HLA allele strings
 **/
-DLLEXPORT void HIBAG_SortAlleleStr(int *n_hla, char *const hlastr[],
-	char *outstr[], LongBool *out_err)
+DLLEXPORT SEXP HIBAG_SortAlleleStr(SEXP hlastr)
 {
-	CORETRY
+	CORE_TRY
+		const int n = Rf_length(hlastr);
+
 		// HLA alleles
 		vector<TAlleleItem> HLA;
-		for (int i=0; i < *n_hla; i++)
-			HLA.push_back(TAlleleItem(hlastr[i], i));
+		for (int i=0; i < n; i++)
+			HLA.push_back(TAlleleItem(CHAR(STRING_ELT(hlastr, i)), i));
 
-		vector<TAlleleItem*> list;
-		for (int i=0; i < *n_hla; i++)
-			list.push_back(&HLA[i]);
+		vector<TAlleleItem*> lst;
+		for (int i=0; i < n; i++)
+			lst.push_back(&HLA[i]);
 
 		// sort
-		sort(list.begin(), list.end(), sortfn);
+		sort(lst.begin(), lst.end(), sortfn);
 
 		// output
-		for (int i=0; i < *n_hla; i++)
-			RStrAgn(hlastr[list[i]->list_index], &outstr[i]);
-
-		*out_err = 0;
-	CORECATCH(*out_err = 1)
+		rv_ans = PROTECT(NEW_CHARACTER(n));
+		for (int i=0; i < n; i++)
+			SET_STRING_ELT(rv_ans, i, STRING_ELT(hlastr, lst[i]->Index));
+		UNPROTECT(1);
+	CORE_CATCH
 }
 
 
@@ -230,7 +251,7 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 	LongBool out_flag[], int *out_n_stand_amb, int *out_n_mismatch,
 	LongBool *out_err)
 {
-	CORETRY
+	TRY
 		// initialize: A-T pair, C-G pair
 		map<string, string> MAP;
 		MAP["A"] = "T"; MAP["C"] = "G"; MAP["G"] = "C"; MAP["T"] = "A";
@@ -328,7 +349,7 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 
 		*out_err = 0;
 
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -377,13 +398,13 @@ static void _Check_HIBAG_Model(int model)
 DLLEXPORT void HIBAG_New(int *nSamp, int *nSNP, int *nHLA, int *out_Model,
 	LongBool *out_err)
 {
-	CORETRY
+	TRY
 		int model = _Need_New_HIBAG_Model();
 		_HIBAG_MODELS_[model] = new CAttrBag_Model;
 		_HIBAG_MODELS_[model]->InitTraining(*nSNP, *nSamp, *nHLA);
 		*out_Model = model;
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 /**
@@ -400,13 +421,13 @@ DLLEXPORT void HIBAG_New(int *nSamp, int *nSNP, int *nHLA, int *out_Model,
 DLLEXPORT void HIBAG_Training(int *nSNP, int *nSamp, int *snp_geno, int *nHLA,
 	int *H1, int *H2, int *out_Model, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		int model = _Need_New_HIBAG_Model();
 		_HIBAG_MODELS_[model] = new CAttrBag_Model;
 		_HIBAG_MODELS_[model]->InitTraining(*nSNP, *nSamp, snp_geno, *nHLA, H1, H2);
 		*out_Model = model;
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -418,13 +439,13 @@ DLLEXPORT void HIBAG_Training(int *nSNP, int *nSamp, int *snp_geno, int *nHLA,
 **/
 DLLEXPORT void HIBAG_Close(int *model, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Model* m = _HIBAG_MODELS_[*model];
 		_HIBAG_MODELS_[*model] = NULL;
 		delete m;
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -444,12 +465,12 @@ DLLEXPORT void HIBAG_NewClassifiers(int *model, int *nclassifier, int *mtry,
 	LongBool *out_err)
 {
 	GetRNGstate();
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		_HIBAG_MODELS_[*model]->BuildClassifiers(*nclassifier, *mtry,
 			*prune, *verbose, *verbose_detail);
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 	PutRNGstate();
 }
 
@@ -469,7 +490,7 @@ DLLEXPORT void HIBAG_Predict_Resp(int *model, int *GenoMat, int *nSamp,
 	int *vote_method, LongBool *ShowInfo,
 	int out_H1[], int out_H2[], double out_Prob[], LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
 
@@ -490,7 +511,7 @@ DLLEXPORT void HIBAG_Predict_Resp(int *model, int *GenoMat, int *nSamp,
 	#endif
 
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -508,7 +529,7 @@ DLLEXPORT void HIBAG_Predict_Resp(int *model, int *GenoMat, int *nSamp,
 DLLEXPORT void HIBAG_Predict_Prob(int *model, int *GenoMat, int *nSamp,
 	int *vote_method, LongBool *ShowInfo, double out_Prob[], LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
 
@@ -528,7 +549,7 @@ DLLEXPORT void HIBAG_Predict_Prob(int *model, int *GenoMat, int *nSamp,
 	#endif
 
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -548,7 +569,7 @@ DLLEXPORT void HIBAG_Predict_Resp_Prob(int *model, int *GenoMat, int *nSamp,
 	int out_H1[], int out_H2[], double out_MaxProb[],
 	double out_Prob[], LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
 
@@ -572,7 +593,7 @@ DLLEXPORT void HIBAG_Predict_Resp_Prob(int *model, int *GenoMat, int *nSamp,
 	#endif
 
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -593,7 +614,7 @@ DLLEXPORT void HIBAG_NewClassifierHaplo(int *model, int *n_snp, int snpidx[],
 	int samp_num[], int *n_haplo, double *freq, int *hla, char *haplo[],
 	double *acc, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Classifier *I = _HIBAG_MODELS_[*model]->NewClassifierAllSamp();
 
@@ -614,7 +635,7 @@ DLLEXPORT void HIBAG_NewClassifierHaplo(int *model, int *n_snp, int snpidx[],
 	#endif
 
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -627,11 +648,11 @@ DLLEXPORT void HIBAG_NewClassifierHaplo(int *model, int *n_snp, int snpidx[],
 **/
 DLLEXPORT void HIBAG_GetNumClassifiers(int *model, int *out_Num, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		*out_Num = _HIBAG_MODELS_[*model]->ClassifierList().size();
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -647,13 +668,13 @@ DLLEXPORT void HIBAG_GetNumClassifiers(int *model, int *out_Num, LongBool *out_e
 DLLEXPORT void HIBAG_Idv_GetNumHaplo(int *model, int *idx,
 	int *out_NumHaplo, int *out_NumSNP, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Model *AB = _HIBAG_MODELS_[*model];
 		*out_NumHaplo = AB->ClassifierList()[*idx - 1].nHaplo();
 		*out_NumSNP   = AB->ClassifierList()[*idx - 1].nSNP();
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -673,7 +694,7 @@ DLLEXPORT void HIBAG_Classifier_GetHaplos(int *model, int *idx,
 	double out_freq[], int out_hla[], char *out_haplo[], int out_snpidx[], int out_samp_num[],
 	double *out_acc, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		_Check_HIBAG_Model(*model);
 		CAttrBag_Model *AB = _HIBAG_MODELS_[*model];
 
@@ -700,7 +721,7 @@ DLLEXPORT void HIBAG_Classifier_GetHaplos(int *model, int *idx,
 
 		*out_acc = Voter.OutOfBag_Accuracy();
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -721,7 +742,7 @@ DLLEXPORT void HIBAG_Confusion(int *n_hla, double *init_mat,
 	// the max number of iterations
 	const int N_MAX_ITERATION = 100;
 
-	CORETRY
+	TRY
 		const int nHLA = *n_hla;
 		const int SIZE_MAT = sizeof(double)*nHLA*(nHLA+1);
 		#define INDEX(T, P, var) var[(nHLA+1)*T + P]
@@ -765,7 +786,7 @@ DLLEXPORT void HIBAG_Confusion(int *n_hla, double *init_mat,
 
 		// output
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -813,7 +834,7 @@ DLLEXPORT void HIBAG_SetParam(int *EM_MaxNum, LongBool *If_EM_MaxNum,
 **/
 DLLEXPORT void HIBAG_BEDFlag(char **bedfn, int *out_SNPOrder, LongBool *out_err)
 {
-	CORETRY
+	TRY
 		ifstream file(*bedfn, ios::binary);
 		if (!file.good())
 			throw ErrHLA("Cannot open the file %s.", *bedfn);
@@ -823,7 +844,7 @@ DLLEXPORT void HIBAG_BEDFlag(char **bedfn, int *out_SNPOrder, LongBool *out_err)
 			throw ErrHLA("Invalid prefix in the bed file.");
 		*out_SNPOrder = (unsigned char)(prefix[2]);
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -842,7 +863,7 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 	LongBool *mode, LongBool *snp_flag, LongBool *verbose, int *out_geno,
 	LongBool *out_err)
 {
-	CORETRY
+	TRY
 		// open file
 		ifstream file(*bedfn, ios::binary);
 		if (!file.good())
@@ -921,7 +942,7 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 			}
 		}
 		*out_err = 0;
-	CORECATCH(*out_err = 1)
+	CATCH(*out_err = 1)
 }
 
 
@@ -971,8 +992,12 @@ DLLEXPORT SEXP HIBAG_SSE_Flag()
 /// Initialize the package
 DLLEXPORT void R_init_HIBAG(DllInfo *info)
 {
-	static R_CallMethodDef callMethods[] = {
-		{ "HIBAG_SSE_Flag", (DL_FUNC)&HIBAG_SSE_Flag, 0 },
+	#define CALL(name, num)    { #name, (DL_FUNC)&name, num }
+
+	static R_CallMethodDef callMethods[] =
+	{
+		CALL(HIBAG_SortAlleleStr, 1),
+		CALL(HIBAG_SSE_Flag, 0),
 		{ NULL, NULL, 0 }
 	};
 
