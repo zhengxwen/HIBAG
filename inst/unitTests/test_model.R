@@ -71,7 +71,7 @@ test.HIBAG <- function()
         # check
         for (hla.id in c("A", "B", "C", "DQA1", "DQB1", "DRB1"))
         {
-            checkEquals(modellist[[hla.id]], mlist[[hla.id]],
+            checkEquals(modellist[[hla.id]], modellist[[hla.id]],
                 sprintf("Model HLA-%s", hla.id))
         }
     }
