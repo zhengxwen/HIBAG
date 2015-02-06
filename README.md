@@ -18,7 +18,7 @@ Development Version: v1.3.0
 ### Changes in Bioconductor Version:
 
 * optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
-* hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in CRAN v1.2.4
+* hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
 * optimized SSE2 instructions without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
 
 

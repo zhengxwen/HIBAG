@@ -210,6 +210,12 @@ hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
 
     assembly <- .hla_assembly(assembly)
 
+    if (!is.integer(genotype))
+        storage.mode(genotype) <- "integer"
+
+    if (!all(is.element(genotype, c(NA, 0L, 1L, 2L))))
+        stop("Only NA, 0, 1 and 2 are allowed in 'genotype'.")
+
     rv <- list(genotype = genotype, sample.id = sample.id, snp.id = snp.id,
         snp.position = snp.position,
         snp.allele = paste(A.allele, B.allele, sep="/"),
@@ -576,9 +582,9 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     {
         if (import.chr == "xMHC")
         {
-			info <- hlaLociInfo(assembly)
-        	st <- min(BiocGenerics::start(info)) - 1000000L
-        	ed <- max(BiocGenerics::end(info)) + 1000000L
+            info <- hlaLociInfo(assembly)
+            st <- min(BiocGenerics::start(info)) - 1000000L
+            ed <- max(BiocGenerics::end(info)) + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
@@ -604,11 +610,11 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         if (verbose)
         {
             cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
-            	.plural(n.snp), paste(import.chr, collapse=",")))
+                .plural(n.snp), paste(import.chr, collapse=",")))
         }
     }
     if (n.snp <= 0)
-    	stop("There is no SNP imported.")
+        stop("There is no SNP imported.")
 
     # call the C function
     rv <- .C(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id), n.snp,
@@ -725,9 +731,9 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
     {
         if (import.chr == "xMHC")
         {
-			info <- hlaLociInfo(assembly)
-        	st <- min(BiocGenerics::start(info)) - 1000000L
-        	ed <- max(BiocGenerics::end(info)) + 1000000L
+            info <- hlaLociInfo(assembly)
+            st <- min(BiocGenerics::start(info)) - 1000000L
+            ed <- max(BiocGenerics::end(info)) + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
@@ -753,11 +759,11 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         if (verbose)
         {
             cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
-            	.plural(n.snp), paste(import.chr, collapse=",")))
+                .plural(n.snp), paste(import.chr, collapse=",")))
         }
     }
     if (n.snp <= 0)
-    	stop("There is no SNP imported.")
+        stop("There is no SNP imported.")
 
     # result
     v <- list(
