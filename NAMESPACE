@@ -16,3 +16,14 @@ export(.onAttach)
 
 # Imports
 import(methods)
+
+# Registering S3 methods
+S3method(plot, hlaAttrBagClass)
+S3method(plot, hlaAttrBagObj)
+S3method(predict, hlaAttrBagClass)
+S3method(print, hlaAttrBagClass)
+S3method(print, hlaAttrBagObj)
+S3method(summary, hlaAttrBagClass)
+S3method(summary, hlaAttrBagObj)
+S3method(summary, hlaAlleleClass)
+S3method(summary, hlaSNPGenoClass)

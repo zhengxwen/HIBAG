@@ -57,7 +57,7 @@ is specified.
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
     HIBAG -- HLA Genotype Imputation with Attribute Bagging.
     Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
-    \url{http://dx.doi.org/10.1038/tpj.2013.18}
+    \url{http://www.nature.com/tpj/journal/v14/n2/full/tpj201318a.html}
 }
 \author{Xiuwen Zheng}
 \seealso{
