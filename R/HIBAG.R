@@ -1342,8 +1342,8 @@ plot.hlaAttrBagObj <- function(x, xlab=NULL, ylab=NULL,
             assembly <- x$assembly
     }
     info <- hlaLociInfo(assembly)
-    pos.start <- info$pos.HLA.start[[x$hla.locus]]/1000
-    pos.end <- info$pos.HLA.end[[x$hla.locus]]/1000
+    pos.start <- info[x$hla.locus, "start"]/1000
+    pos.end <- info[x$hla.locus, "end"]/1000
 
     # summary of the attribute bagging model
     desp <- summary(x, show=FALSE)

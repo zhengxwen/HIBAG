@@ -583,8 +583,8 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         if (import.chr == "xMHC")
         {
             info <- hlaLociInfo(assembly)
-            st <- min(BiocGenerics::start(info)) - 1000000L
-            ed <- max(BiocGenerics::end(info)) + 1000000L
+            st <- min(info$start) - 1000000L
+            ed <- max(info$end)   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
@@ -732,8 +732,8 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         if (import.chr == "xMHC")
         {
             info <- hlaLociInfo(assembly)
-            st <- min(BiocGenerics::start(info)) - 1000000L
-            ed <- max(BiocGenerics::end(info)) + 1000000L
+            st <- min(info$start) - 1000000L
+            ed <- max(info$end)   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
@@ -952,11 +952,9 @@ hlaLociInfo <- function(assembly =
         package="HIBAG")
     if (file.exists(fn))
     {
-        z <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
-        rownames(z) <- z$name
-
-        # output
-        GenomicRanges::makeGRangesFromDataFrame(z)
+        v <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
+        rownames(v) <- v$name
+        v[, c("chrom", "start", "end")]
     } else {
         if (assembly != "unknown")
             stop("Unknown human genome reference in 'assembly'!")
@@ -1085,12 +1083,12 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
     H2[H2 == ""] <- NA
     H2 <- hlaAlleleDigit(H2, max.resolution)
 
-    if (locus %in% names(HLAinfo))
+    if (locus %in% rownames(HLAinfo))
     {
         if (!is.finite(locus.pos.start))
-            locus.pos.start <- BiocGenerics::start(HLAinfo[locus,])
+            locus.pos.start <- HLAinfo[locus, "start"]
         if (!is.finite(locus.pos.end))
-            locus.pos.end <- BiocGenerics::end(HLAinfo[locus,])
+            locus.pos.end <- HLAinfo[locus, "end"]
     } else {
         locus.pos.start <- as.integer(NA)
         locus.pos.end <- as.integer(NA)
@@ -1593,14 +1591,14 @@ hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
     # init
     assembly <- .hla_assembly(assembly)
     HLAInfo <- hlaLociInfo(assembly)
-    ID <- names(HLAInfo)
+    ID <- rownames(HLAInfo)
 
     stopifnot(length(hla.id) == 1L)
     if (!(hla.id %in% ID))
-        stop(paste("`hla.id' should be one of", paste(ID, collapse=",")))
+        stop(paste("`hla.id' should be one of", paste(ID, collapse=", ")))
 
-    pos.start <- BiocGenerics::start(HLAInfo[hla.id,]) - flank.bp
-    pos.end <- BiocGenerics::end(HLAInfo[hla.id,]) + flank.bp
+    pos.start <- HLAInfo[hla.id, "start"] - flank.bp
+    pos.end <- HLAInfo[hla.id, "end"] + flank.bp
 
     if (is.finite(pos.start) & is.finite(pos.end))
     {

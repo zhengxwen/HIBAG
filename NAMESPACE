@@ -16,4 +16,3 @@ export(.onAttach)
 
 # Imports
 import(methods)
-importFrom(GenomicRanges, makeGRangesFromDataFrame)

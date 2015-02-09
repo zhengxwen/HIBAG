@@ -16,8 +16,7 @@ hlaLociInfo(assembly=c("auto", "auto-silent", "hg18", "hg19", "hg20",
         any warning}
 }
 \value{
-    Return a \code{\link[GenomicRanges]{GRanges}} object (a container for
-the genomic locations and their associated annotations).
+    Return a data frame include the genomic locations.
 }
 
 \references{
