@@ -3,9 +3,9 @@ useDynLib(HIBAG,
     HIBAG_SSE_Flag, HIBAG_ErrMsg,
     HIBAG_AlleleStrand, HIBAG_BEDFlag, HIBAG_ConvBED,
     HIBAG_Close, HIBAG_Confusion,
-    HIBAG_GetNumClassifiers, HIBAG_Idv_GetNumHaplo, HIBAG_Classifier_GetHaplos,
+    HIBAG_GetNumClassifiers, HIBAG_Classifier_GetHaplos,
     HIBAG_SortAlleleStr,
-    HIBAG_Predict_Resp_Prob, HIBAG_Predict_Prob, HIBAG_Predict_Resp,
+    HIBAG_Predict_Resp, HIBAG_Predict_Resp_Prob,
     HIBAG_Training,
     HIBAG_New, HIBAG_NewClassifiers, HIBAG_NewClassifierHaplo
 )

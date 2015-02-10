@@ -559,8 +559,9 @@ namespace HLA_LIB
 		/// initialize the bootstrap sample
 		void InitBootstrapCount(int SampCnt[]);
 		/// assign the haplotype frequencies
-		void Assign(int n_snp, const int snpidx[], const int samp_num[], int n_haplo,
-			const TFLOAT *freq, const int *hla, char *const haplo[], TFLOAT *_acc=NULL);
+		void Assign(int n_snp, const int snpidx[], const int samp_num[],
+			int n_haplo, const TFLOAT *freq, const int *hla,
+			const char * haplo[], TFLOAT *_acc=NULL);
 		/// grow this classifier by adding SNPs
 		void Grow(CBaseSampling &VarSampling, int mtry, bool prune,
 			bool verbose, bool verbose_detail);

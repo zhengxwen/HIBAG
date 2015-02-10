@@ -339,18 +339,16 @@ hlaGenoSwitchStrand <- function(target, template,
     }
 
     # call
-    gz <- .C(HIBAG_AlleleStrand,
+    gz <- .Call(HIBAG_AlleleStrand,
         template$snp.allele, template.afreq, I1,
         target$snp.allele, target.afreq, I2,
-        same.strand, length(s), out=logical(length(s)),
-        out.n.ambiguity=integer(1), out.n.mismatching=integer(1),
-        err=integer(1), NAOK=TRUE)
-    if (gz$err != 0) stop(hlaErrMsg())
+        same.strand, length(s))
+    names(gz) <- c("flag", "n.amb", "n.mismatch")
 
     if (verbose)
     {
         # switched allele pairs
-        x <- sum(gz$out)
+        x <- sum(gz$flag)
         if (x > 0)
         {
             if (x > 1)
@@ -367,9 +365,9 @@ hlaGenoSwitchStrand <- function(target, template,
         }
 
         # the number of ambiguity
-        if (gz$out.n.ambiguity > 0)
+        if (gz$n.amb > 0)
         {
-            if (gz$out.n.ambiguity > 1)
+            if (gz$n.amb > 1)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -377,14 +375,14 @@ hlaGenoSwitchStrand <- function(target, template,
             }
             cat("Due to stand ambiguity (such like C/G),",
                 sprintf("the allelic strand order%s of %d variant%s %s",
-                    s, gz$out.n.ambiguity, s, a),
+                    s, gz$n.amb, s, a),
                 "determined by comparing allele frequencies.\n")
         }
 
         # the number of mismatching
-        if (gz$out.n.mismatching > 0)
+        if (gz$n.mismatch > 0)
         {
-            if (gz$out.n.mismatching > 1)
+            if (gz$n.mismatch > 1)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -392,16 +390,18 @@ hlaGenoSwitchStrand <- function(target, template,
             }
             cat("Due to mismatching alleles,",
                 sprintf("the allelic strand order%s of %d variant%s %s",
-                    s, gz$out.n.mismatching, s, a),
+                    s, gz$n.mismatch, s, a),
                 "determined by comparing allele frequencies.\n")
         }
     }
 
-    # result
+    # output
     geno <- target$genotype[I2, ]
     if (is.vector(geno))
         geno <- matrix(geno, ncol=1)
-    for (i in which(gz$out)) geno[i, ] <- 2 - geno[i, ]
+    for (i in which(gz$flag))
+        geno[i, ] <- 2 - geno[i, ]
+
     rv <- list(genotype = geno)
     rv$sample.id <- target$sample.id
     rv$snp.id <- target$snp.id[I2]
@@ -617,14 +617,11 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         stop("There is no SNP imported.")
 
     # call the C function
-    rv <- .C(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id), n.snp,
-        (bed.flag==0), snp.flag, verbose,
-        geno = matrix(as.integer(0), nrow=n.snp, ncol=length(sample.id)),
-        err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
+    v <- .Call(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id),
+        n.snp, snp.flag)
 
     # result
-    v <- list(genotype = rv$geno, sample.id = sample.id,
+    v <- list(genotype = v, sample.id = sample.id,
         snp.id = snp.id[snp.flag], snp.position = snp.pos[snp.flag],
         snp.allele = snp.allele[snp.flag], assembly = assembly)
     class(v) <- "hlaSNPGenoClass"
@@ -1431,14 +1428,10 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     } else {
         nw <- ncol(WrongTab)
     }
-    rv <- .C(HIBAG_Confusion, as.integer(m), confusion,
-        nw, match(WrongTab, names(PredNum)) - as.integer(1),
-        out = matrix(0.0, nrow=m+1, ncol=m, dimnames=
-            list(Predict=names(PredNum), True=names(TrueNum))),
-        tmp = double((m+1)*m),
-        err = integer(1), NAOK = TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
-    confusion <- round(rv$out, 2)
+    v <- .Call(HIBAG_Confusion, m, confusion, nw,
+        match(WrongTab, names(PredNum)) - 1L)
+    dimnames(v) <- list(Predict=names(PredNum), True=names(TrueNum))
+    confusion <- round(v, 2)
 
     # detail -- sensitivity and specificity
     detail <- data.frame(allele = allele, stringsAsFactors=FALSE)

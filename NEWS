@@ -43,7 +43,7 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
     o improve the display of 'summary.hlaAlleleClass'
 
-    o fix warnings in R CMD check with v3.1.1
+    o fix warnings in 'R-3.1.1 CMD check'
 
     o avoid missing values in 'hlaFlankingSNP'
 

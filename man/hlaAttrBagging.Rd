@@ -114,6 +114,8 @@ summary(model)
 
 # validation
 pred <- predict(model, test.geno)
+summary(pred)
+
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0))

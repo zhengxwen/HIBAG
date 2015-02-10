@@ -1667,7 +1667,7 @@ void CAttrBag_Classifier::InitBootstrapCount(int SampCnt[])
 
 void CAttrBag_Classifier::Assign(int n_snp, const int snpidx[],
 	const int samp_num[], int n_haplo, const TFLOAT *freq, const int *hla,
-	char *const haplo[], TFLOAT *_acc)
+	const char * haplo[], TFLOAT *_acc)
 {
 	// SNP markers
 	_SNPIndex.assign(&snpidx[0], &snpidx[n_snp]);

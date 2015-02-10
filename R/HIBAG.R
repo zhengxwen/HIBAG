@@ -112,14 +112,11 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
     H <- factor(match(c(hla.allele1, hla.allele2), HUA))
     levels(H) <- HUA
     n.hla <- nlevels(H)
-    H1 <- as.integer(H[1:n.samp]) - as.integer(1)
-    H2 <- as.integer(H[(n.samp+1):(2*n.samp)]) - as.integer(1)
+    H1 <- as.integer(H[1:n.samp]) - 1L
+    H2 <- as.integer(H[(n.samp+1):(2*n.samp)]) - 1L
 
     # create an attribute bagging object
-    rv <- .C(HIBAG_Training, n.snp, n.samp, snp.geno, n.hla,
-        H1, H2, AB=integer(1), err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
-    ABmodel <- rv$AB
+    ABmodel <- .Call(HIBAG_Training, n.snp, n.samp, snp.geno, n.hla, H1, H2)
 
     # number of variables randomly sampled as candidates at each split
     mtry <- mtry[1]
@@ -166,10 +163,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
     ###################################################################
     # training ...
     # add new individual classifers
-    rv <- .C(HIBAG_NewClassifiers, ABmodel, as.integer(nclassifier),
-        as.integer(mtry), as.logical(prune), verbose, verbose.detail,
-        err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
+    .Call(HIBAG_NewClassifiers, ABmodel, nclassifier, mtry, prune,
+        verbose, verbose.detail)
 
     # output
     rv <- list(n.samp = n.samp, n.snp = n.snp, sample.id = samp.id,
@@ -314,14 +309,8 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 
 hlaClose <- function(model)
 {
-    # check
     stopifnot(inherits(model, "hlaAttrBagClass"))
-
-    # class handler
-    rv <- .C(HIBAG_Close, model$model, err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
-
-    # output
+    .Call(HIBAG_Close, model$model)
     invisible()
 }
 
@@ -362,15 +351,13 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 
     if (verbose)
     {
-        # call, get the number of classifiers
-        rv <- .C(HIBAG_GetNumClassifiers, object$model, CNum = integer(1),
-            err=integer(1), NAOK=TRUE)
-        if (rv$err != 0) stop(hlaErrMsg())
+        # get the number of classifiers
+        CNum <- .Call(HIBAG_GetNumClassifiers, object$model)
 
-        if (rv$CNum > 1) { s <- "s" } else { s <- "" }
         cat(sprintf(
 "HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
-            rv$CNum, s, length(object$snp.id), length(object$hla.allele)))
+            CNum, .plural(CNum), length(object$snp.id),
+            length(object$hla.allele)))
 
         if (vote_method == 1L)
         {
@@ -586,26 +573,20 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 
             if (type == "response")
             {
-                rv <- .C(HIBAG_Predict_Resp, object$model, as.integer(snp),
-                    n.samp, as.integer(vote_method), as.logical(verbose),
-                    H1=integer(n.samp), H2=integer(n.samp),
-                    prob=double(n.samp), err=integer(1), NAOK=TRUE)
+                rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
+                    n.samp, vote_method, verbose)
+                names(rv) <- c("H1", "H2", "prob")
             } else {
-                rv <- .C(HIBAG_Predict_Resp_Prob, object$model,
-                    as.integer(snp), n.samp, as.integer(vote_method),
-                    as.logical(verbose),
-                    H1=integer(n.samp), H2=integer(n.samp),
-                    prob=double(n.samp),
-                    postprob=matrix(NaN, nrow=n.hla*(n.hla+1)/2, ncol=n.samp),
-                    err=integer(1), NAOK=TRUE)
+                rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
+                    as.integer(snp), n.samp, vote_method, verbose)
+                names(rv) <- c("H1", "H2", "prob", "postprob")
             }
-            if (rv$err != 0) stop(hlaErrMsg())
 
             res <- hlaAllele(geno.sampid,
-                H1=object$hla.allele[rv$H1 + 1],
-                H2=object$hla.allele[rv$H2 + 1],
-                locus = object$hla.locus, prob = rv$prob, na.rm = FALSE,
-                assembly = assembly)
+                H1 = object$hla.allele[rv$H1 + 1L],
+                H2 = object$hla.allele[rv$H2 + 1L],
+                locus = object$hla.locus, prob = rv$prob,
+                na.rm = FALSE, assembly = assembly)
             if (!is.null(rv$postprob))
             {
                 res$postprob <- rv$postprob
@@ -620,13 +601,11 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
         } else {
             # all probabilites
 
-            rv <- .C(HIBAG_Predict_Prob, object$model, as.integer(snp),
-                n.samp, as.integer(vote_method), as.logical(verbose),
-                prob=matrix(NaN, nrow=n.hla*(n.hla+1)/2, ncol=n.samp),
-                err=integer(1), NAOK=TRUE)
-            if (rv$err != 0) stop(hlaErrMsg())
+            rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
+                as.integer(snp), n.samp, vote_method, verbose)
+            names(rv) <- c("H1", "H2", "prob", "postprob")
 
-            res <- rv$prob
+            res <- rv$postprob
             colnames(res) <- geno.sampid
             m <- outer(object$hla.allele, object$hla.allele,
                 function(x, y) paste(x, y, sep="/"))
@@ -643,7 +622,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
             {
                 if (length(idx) > 0)
                 {
-                    eval(parse(text="library(HIBAG)"))
+                    library(HIBAG)
                     m <- hlaModelFromObj(mobj)
                     pd <- predict(m, snp[,idx], type=type, vote=vote,
                         verbose=FALSE)
@@ -668,8 +647,8 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                 colnames(res$postprob) <- geno.sampid
             NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
         } else {
-            res <- rv[[1]]
-            for (i in 2:length(rv))
+            res <- rv[[1L]]
+            for (i in 2L:length(rv))
             {
                 if (!is.null(rv[[i]]))
                     res <- cbind(res, rv[[i]])
@@ -679,9 +658,9 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
         }
     } 
 
-    if (NA.cnt > 0)
+    if (NA.cnt > 0L)
     {
-        if (NA.cnt > 1) s <- "s" else s <- ""
+        if (NA.cnt > 1L) s <- "s" else s <- ""
         warning(sprintf(
             "No prediction output%s for %d individual%s ",
             s, NA.cnt, s),
@@ -843,35 +822,23 @@ hlaModelToObj <- function(model)
     # check
     stopifnot(inherits(model, "hlaAttrBagClass"))
 
-    # call, get the number of classifiers
-    rv <- .C(HIBAG_GetNumClassifiers, model$model, CNum = integer(1),
-        err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
+    # get the number of classifiers
+    CNum <- .Call(HIBAG_GetNumClassifiers, model$model)
 
     # for each tree
-    res <- vector("list", rv$CNum)
-    for (i in 1:length(res))
+    res <- vector("list", CNum)
+    for (i in seq_len(CNum))
     {
-        # call, get the number of haplotypes
-        rv <- .C(HIBAG_Idv_GetNumHaplo, model$model, as.integer(i),
-            NumHaplo = integer(1), NumSNP = integer(1),
-            err=integer(1), NAOK=TRUE)
-        if (rv$err != 0) stop(hlaErrMsg())
-
-        # call, get freq. and haplotypes
-        rv <- .C(HIBAG_Classifier_GetHaplos, model$model, as.integer(i),
-            freq=double(rv$NumHaplo), hla=integer(rv$NumHaplo),
-            haplo=character(rv$NumHaplo), snpidx = integer(rv$NumSNP),
-            samp.num = integer(model$n.samp), acc = double(1),
-            err=integer(1), NAOK=TRUE)
-        if (rv$err != 0) stop(hlaErrMsg())
+        # get freq. and haplotypes, etc
+        v <- .Call(HIBAG_Classifier_GetHaplos, model$model, i)
+        names(v) <- c("freq", "hla", "haplo", "snpidx", "samp.num", "acc")
 
         res[[i]] <- list(
-            samp.num = rv$samp.num,
-            haplos = data.frame(freq = rv$freq, hla = model$hla.allele[rv$hla],
-                haplo = rv$haplo, stringsAsFactors=FALSE),
-            snpidx = rv$snpidx,
-            outofbag.acc = rv$acc)
+            samp.num = v$samp.num,
+            haplos = data.frame(freq = v$freq, hla = model$hla.allele[v$hla],
+                haplo = v$haplo, stringsAsFactors=FALSE),
+            snpidx = v$snpidx,
+            outofbag.acc = v$acc)
     }
 
     rv <- list(n.samp = model$n.samp, n.snp = model$n.snp,
@@ -955,28 +922,24 @@ hlaModelFromObj <- function(obj)
     stopifnot(inherits(obj, "hlaAttrBagObj"))
 
     # create an attribute bagging object
-    rv <- .C(HIBAG_New,
-        as.integer(obj$n.samp), as.integer(obj$n.snp), length(obj$hla.allele),
-        model = integer(1), err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
-    ABmodel <- rv$model
+    ABmodel <- .Call(HIBAG_New, obj$n.samp, obj$n.snp, length(obj$hla.allele))
 
     # add individual classifiers
     for (tree in obj$classifiers)
     {
-        hla <- match(tree$haplos$hla, obj$hla.allele) - 1
+        hla <- match(tree$haplos$hla, obj$hla.allele) - 1L
         if (any(is.na(hla)))
             stop("Invalid HLA alleles in the individual classifier.")
         if (is.null(tree$samp.num))
-            snum <- rep(as.integer(1), obj$n.samp)
+            snum <- rep.int(1L, obj$n.samp)
         else
-            snum <- tree$samp.num
-        rv <- .C(HIBAG_NewClassifierHaplo, ABmodel, length(tree$snpidx),
-            as.integer(tree$snpidx-1), as.integer(snum), dim(tree$haplos)[1],
-            as.double(tree$haplos$freq), as.integer(hla),
-            as.character(tree$haplos$haplo), as.double(tree$outofbag.acc),
-            err=integer(1), NAOK=TRUE)
-        if (rv$err != 0) stop(hlaErrMsg())
+            snum <- as.integer(tree$samp.num)
+
+        # create a new classifier
+        .Call(HIBAG_NewClassifierHaplo, ABmodel, as.integer(tree$snpidx - 1L),
+            snum, as.double(tree$haplos$freq), hla,
+            as.character(tree$haplos$haplo),
+            tree$outofbag.acc)
     }
 
     # output
@@ -1398,8 +1361,8 @@ hlaErrMsg <- function()
         s <- "Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)"
     else
         s <- ""
-    if ((SSE[2] != 0) & (s != ""))
-        s <- paste(s, ", 64 bits", sep="")
+    if ((SSE[2] > 0) & (s != ""))
+        s <- paste(s, ", ", SSE[2], " bits", sep="")
     if (s != "") packageStartupMessage(s)
 
     TRUE
