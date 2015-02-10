@@ -14,10 +14,10 @@ BiocStyle::latex()
 \begin{document}
 
 \bioctitle[HLA Allele Imputation]{
-    HIBAG: an R Package for HLA Genotype Imputation with Attribute Bagging
+    HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging
 }
 \author{Xiuwen Zheng}
-\date{Jan 20, 2015}
+\date{Feb 9, 2015}
 
 
 \maketitle
@@ -101,7 +101,7 @@ library(HIBAG)
 # load the published parameter estimates from European ancestry
 #   e.g., filename <- "HumanOmniExpressExome-European-HLA4-hg19.RData"
 #   here, we use example data in the package
-filename <- system.file("extdata", "ModelListTest.RData", package="HIBAG")
+filename <- system.file("extdata", "ModelList.RData", package="HIBAG")
 model.list <- get(load(filename))
 
 # HLA imputation at HLA-A
@@ -137,7 +137,7 @@ pred.guess$postprob
 %     ---- Build a HIBAG model for HLA genotype imputation ----
 \subsection{Build a HIBAG model for HLA genotype imputation}
 
-<<build-model>>=
+<<build-model, eval=FALSE>>=
 library(HIBAG)
 
 # load HLA types and SNP genotypes in the package
@@ -173,8 +173,13 @@ summary(train.geno)
 
 # train a HIBAG model
 set.seed(100)
-model <- hlaAttrBagging(train.HLA, train.geno, nclassifier=100, verbose=FALSE)
-
+model <- hlaAttrBagging(train.HLA, train.geno, nclassifier=100)
+@
+<<echo=FALSE>>=
+mobj <- get(load(system.file("extdata", "ModelList.RData", package="HIBAG")))
+model <- hlaModelFromObj(mobj$A)
+@
+<<>>=
 summary(model)
 @
 
@@ -274,13 +279,22 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
     snp.sel = match(snpid, HapMap_CEU_Geno$snp.id),
     samp.sel = match(hlatab$training$value$sample.id,
         HapMap_CEU_Geno$sample.id))
+summary(train.geno)
+
 test.geno <- hlaGenoSubset(HapMap_CEU_Geno, samp.sel=match(
     hlatab$validation$value$sample.id, HapMap_CEU_Geno$sample.id))
-
+@
+<<eval=FALSE>>=
 # train a HIBAG model
 set.seed(100)
-model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=100,
-    verbose=FALSE)
+model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=100)
+@
+<<echo=FALSE>>=
+mobj <- get(load(system.file("extdata", "OutOfBag.RData", package="HIBAG")))
+model <- hlaModelFromObj(mobj)
+@
+
+<<>>=
 summary(model)
 
 # validation

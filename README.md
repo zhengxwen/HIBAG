@@ -84,7 +84,7 @@ CFLAGS=-g -O3 -msse4.2 -mpopcnt
 CXXFLAGS=-g -O3 -msse4.2 -mpopcnt
 ```
 
-If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message when the package is loaded:
+If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message after loading the package:
 ```
 HIBAG (HLA Genotype Imputation with Attribute Bagging)
 Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)
