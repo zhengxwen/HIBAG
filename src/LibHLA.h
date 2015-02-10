@@ -20,10 +20,8 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.3.0
+// Version        : 1.3.1
 // Copyright      : Xiuwen Zheng (GPL v3)
-// Created        : 11/14/2011
-// Last modified  : 02/03/2015
 // Description    : HLA imputation C++ library
 // ===============================================================
 
@@ -98,22 +96,11 @@ namespace HLA_LIB
 		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(UINT8));
 
 
-	/// Define floating type, 0 -- double, 1 -- float
-	#define HIBAG_FLOAT_TYPE_ID    0
-
-	#if (HIBAG_FLOAT_TYPE_ID == 0)
-	#   define TFLOAT           double
-	#   define FLOAT_LOG        log
-	#   define FLOAT_EXP        exp
-	#   define FLOAT_EPSILON    DBL_EPSILON
-	#elif (HIBAG_FLOAT_TYPE_ID == 1)
-	#   define TFLOAT           float
-	#   define FLOAT_LOG        logf
-	#   define FLOAT_EXP        expf
-	#   define FLOAT_EPSILON    FLT_EPSILON
-	#else
-	#   error "Invalid HIBAG_FLOAT_TYPE_ID"
-	#endif
+	/// Define the numeric type
+	#define TFLOAT           double
+	#define FLOAT_LOG        log
+	#define FLOAT_EXP        exp
+	#define FLOAT_EPSILON    DBL_EPSILON
 
 
 	// ===================================================================== //

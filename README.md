@@ -11,7 +11,7 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor:
 
-Development Version: v1.3.0
+Development Version: v1.3.1
 
 [http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
 
@@ -69,7 +69,7 @@ R CMD INSTALL HIBAG_latest.tar.gz
 * Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
 You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
 
-Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher AVX:
+Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher AVX, assuming GNU Compilers (gcc/g++) are installed:
 ```
 ## for C code
 CFLAGS=-g -O3 -march=native
@@ -82,4 +82,10 @@ Or force to create hardware POPCNT code:
 CFLAGS=-g -O3 -msse4.2 -mpopcnt
 ## for C++ code
 CXXFLAGS=-g -O3 -msse4.2 -mpopcnt
+```
+
+If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message when the package is loaded:
+```
+HIBAG (HLA Genotype Imputation with Attribute Bagging)
+Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)
 ```

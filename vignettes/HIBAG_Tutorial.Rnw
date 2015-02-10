@@ -218,7 +218,7 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
 summary(train.geno)
 
 
-# Sreate an environment with an appropriate cluster size,
+# Create an environment with an appropriate cluster size,
 #   e.g., 2 -- # of (CPU) cores
 cl <- makeCluster(2)
 
@@ -310,7 +310,7 @@ hlaReport(comp, type="tex", header=FALSE)
 %     ---- Release HIBAG models without confidential information ----
 \subsection{Release HIBAG models without confidential information}
 
-<<release-model>>=
+<<release-model, eval=FALSE>>=
 library(HIBAG)
 
 # make a list of HLA types
@@ -329,7 +329,7 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
     samp.sel = match(hla$value$sample.id, HapMap_CEU_Geno$sample.id))
 
 set.seed(1000)
-model <- hlaAttrBagging(hla, train.geno, nclassifier=100, verbose=FALSE)
+model <- hlaAttrBagging(hla, train.geno, nclassifier=100)
 summary(model)
 
 # remove unused SNPs and sample IDs from the model

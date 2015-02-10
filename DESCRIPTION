@@ -5,8 +5,8 @@ Version: 1.3.1
 Date: 2015-02-09
 Depends: R (>= 2.14.0)
 Imports: methods
-Suggests: parallel, RUnit, BiocStyle, BiocGenerics, knitr,
-    gdsfmt (>= 1.2.2), SNPRelate (>= 1.1.6)
+Suggests: parallel, RUnit, BiocStyle, knitr, gdsfmt (>= 1.2.2),
+    SNPRelate (>= 1.1.6)
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre"),
     email="zhengx@u.washington.edu"),
     person("Bruce", "Weir", role=c("ctb", "ths"),

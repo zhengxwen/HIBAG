@@ -20,10 +20,8 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.3.0
+// Version        : 1.3.1
 // Copyright      : Xiuwen Zheng (GPL v3)
-// Created        : 11/14/2011
-// Last modified  : 02/03/2015
 // Description    : HLA imputation C++ library
 // ===============================================================
 
@@ -680,6 +678,7 @@ inline int TGenotype::_HamDist(size_t Length,
 	#else
 
 		// two 64-bit integers
+		// suggested by
 		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 
 		// val -= ((val >> 1) & 0x5555555555555555);
@@ -723,7 +722,9 @@ inline int TGenotype::_HamDist(size_t Length,
 		}
 
 		// popcount for '(H1 ^ S1) & MASK'
+		// suggested by
 		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
 		UTYPE v1 = (H1 ^ S1) & MASK;
 	#ifdef HIBAG_REG_BIT64
 		// 64-bit integers
@@ -1549,6 +1550,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 
 		// sample mtry from all candidate SNP markers
 		VarSampling.RandomSelect(mtry);
+
+		// for-loop
 		for (int i=0; i < VarSampling.NumOfSelection(); i++)
 		{
 			if (_EM.PrepareNewSNP(VarSampling[i], OutHaplo, *_SNPMat, _GenoList, NextHaplo))
