@@ -583,6 +583,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         if (import.chr == "xMHC")
         {
             info <- hlaLociInfo(assembly)
+            info <- info[info$chrom == 6L, ]
             st <- min(info$start) - 1000000L
             ed <- max(info$end)   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
@@ -590,8 +591,8 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
-                    n.snp, .plural(n.snp)))
+                    "Import %d SNP%s within the xMHC region [%d, %d] on chromosome 6.\n",
+                    n.snp, .plural(n.snp), st, ed))
             }
             import.chr <- NULL
         } else if (import.chr == "")
@@ -729,6 +730,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         if (import.chr == "xMHC")
         {
             info <- hlaLociInfo(assembly)
+            info <- info[info$chrom == 6L, ]
             st <- min(info$start) - 1000000L
             ed <- max(info$end)   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
@@ -736,8 +738,8 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
-                    n.snp, .plural(n.snp)))
+                    "Import %d SNP%s within the xMHC region [%d, %d] on chromosome 6.\n",
+                    n.snp, .plural(n.snp), st, ed))
             }
             import.chr <- NULL
         } else if (import.chr == "")
