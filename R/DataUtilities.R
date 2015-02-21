@@ -1835,7 +1835,7 @@ hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
                 rv <- hlaCombineModelObj(rv, tmp)
             }
         } else {
-            s <- sprintf("There is no '%s'.", fn)
+            s <- sprintf("No file '%s'.", fn)
             if (action.missingfile == "stop")
             {
                 stop(s)

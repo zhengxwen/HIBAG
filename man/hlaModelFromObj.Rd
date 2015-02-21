@@ -24,7 +24,7 @@ hlaModelToObj(model)
 }
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{hlaModelToObj}}, \code{\link{hlaAttrBagging}}
+    \code{\link{hlaAttrBagging}}
 }
 
 \examples{

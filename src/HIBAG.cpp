@@ -144,7 +144,7 @@ static bool sortfn(const TAlleleItem *I1, const TAlleleItem *I2)
 
 
 /**
- *  to sort the HLA alleles
+ *  Sort the HLA alleles
  *
  *  \param hlastr     HLA allele strings
 **/
@@ -181,7 +181,7 @@ SEXP HIBAG_SortAlleleStr(SEXP hlastr)
 //  SNP functions
 //
 
-/// to detect and correct strand problem
+/// Detect and correct strand problem
 
 static inline bool ATGC(const string &s)
 {
@@ -366,7 +366,7 @@ static void _Check_HIBAG_Model(int model)
 
 
 /**
- *  to build a HIBAG model
+ *  Build a HIBAG model
  *
  *  \param nSNP       the number of SNPs
  *  \param nSamp      the number of samples
@@ -394,7 +394,7 @@ SEXP HIBAG_New(SEXP nSamp, SEXP nSNP, SEXP nHLA)
 
 
 /**
- *  to build a HIBAG model
+ *  Build a HIBAG model
  *
  *  \param nSNP       the number of SNPs
  *  \param nSamp      the number of samples
@@ -419,7 +419,7 @@ SEXP HIBAG_Training(SEXP nSNP, SEXP nSamp, SEXP snp_geno,
 
 
 /**
- *  to close an existing HIBAG model 
+ *  Close an existing HIBAG model 
  *
  *  \param model      the index in the model list
 **/
@@ -436,7 +436,7 @@ SEXP HIBAG_Close(SEXP model)
 
 
 /**
- *  to add individual classifiers
+ *  Add individual classifiers
  *
  *  \param model           the model index
  *  \param nclassifier     the total number of individual classifiers to be created
@@ -463,7 +463,7 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
 
 
 /**
- *  to predict HLA types, output the best-guess and their prob.
+ *  Predict HLA types, output the best-guess and their prob.
  *
  *  \param model        the model index
  *  \param GenoMat      the pointer to the SNP genotypes
@@ -500,8 +500,8 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 
 
 /**
- *  to predict HLA types, output the best-guess, their prob. and a matrix
- *  of all posterior probabilities
+ *  Predict HLA types, output the best-guess, their prob. and a matrix
+ *      of all posterior probabilities
  *
  *  \param model        the model index
  *  \param GenoMat      the pointer to the SNP genotypes
@@ -542,7 +542,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 
 
 /**
- *  to create a new individual classifier with specified parameters
+ *  Create a new individual classifier with specified parameters
  *
  *  \param model        the model index
  *  \param snpidx       the indices of SNP markers
@@ -580,7 +580,7 @@ SEXP HIBAG_NewClassifierHaplo(SEXP model, SEXP snpidx,
 
 
 /**
- *  to get the number of individual component classifiers
+ *  Get the number of individual component classifiers
  *
  *  \param model        the model index
  *  \return the number of individual classifiers
@@ -596,7 +596,7 @@ SEXP HIBAG_GetNumClassifiers(SEXP model)
 
 
 /**
- *  to get the details of a specified individual classifier
+ *  Get the details of a specified individual classifier
  *
  *  \param model         the model index
  *  \param idx           the index of individual classifier
@@ -620,8 +620,11 @@ SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 
 		rv_ans = PROTECT(NEW_LIST(6));
 		SEXP out_Freq  = PROTECT(NEW_NUMERIC(nHaplo));
+		SET_ELEMENT(rv_ans, 0, out_Freq);
 		SEXP out_HLA   = PROTECT(NEW_INTEGER(nHaplo));
+		SET_ELEMENT(rv_ans, 1, out_HLA);
 		SEXP out_Haplo = PROTECT(NEW_CHARACTER(nHaplo));
+		SET_ELEMENT(rv_ans, 2, out_Haplo);
 
 		size_t idx = 0;
 		for (size_t i=0; i < List.size(); i++)
@@ -655,7 +658,7 @@ SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 
 
 /**
- *  to estimate the confusion matrix
+ *  Estimate the confusion matrix
  *
  *  \param n_hla         the number of different HLA alleles
  *  \param init_mat      the initial confusion matrix without any ambiguous state
@@ -728,7 +731,7 @@ SEXP HIBAG_Confusion(SEXP n_hla, SEXP init_mat, SEXP n_DConfusion,
 
 
 /**
- *  to detect the storage mode of a PLINK BED file
+ *  Detect the storage mode of a PLINK BED file
  *
  *  \param bedfn         the file name of PLINK BED file
 **/
@@ -750,7 +753,7 @@ SEXP HIBAG_BEDFlag(SEXP bedfn)
 
 
 /**
- *  to convert from a PLINK BED file
+ *  Convert from a PLINK BED file
  *
  *  \param bedfn         the file name of PLINK BED file
  *  \param n_samp        the number of samples
@@ -860,7 +863,7 @@ SEXP HIBAG_ConvBED(SEXP bedfn, SEXP n_samp, SEXP n_snp, SEXP n_save_snp,
 
 
 /**
- *  to get an error message
+ *  Get an error message
 **/
 SEXP HIBAG_ErrMsg()
 {
@@ -869,26 +872,29 @@ SEXP HIBAG_ErrMsg()
 
 
 /**
- *  to get the SSE information
+ *  Get the version and SSE information
 **/
-SEXP HIBAG_SSE_Flag()
+SEXP HIBAG_Kernel_Version()
 {
-	SEXP ans = NEW_INTEGER(2);
+	SEXP ans = NEW_INTEGER(4);
+
+	INTEGER(ans)[0] = HIBAG_KERNEL_VERSION_MAJOR;
+	INTEGER(ans)[1] = HIBAG_KERNEL_VERSION_MINOR;
 
 	#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
 	#   ifdef HIBAG_SSE_HARDWARE_POPCNT
-		INTEGER(ans)[0] = 2;
+		INTEGER(ans)[2] = 2;
 	#   else
-		INTEGER(ans)[0] = 1;
+		INTEGER(ans)[2] = 1;
 	#   endif
 	#else
-		INTEGER(ans)[0] = 0;
+		INTEGER(ans)[2] = 0;
 	#endif
 
 	#ifdef HIBAG_REG_BIT64
-		INTEGER(ans)[1] = 64;
+		INTEGER(ans)[3] = 64;
 	#else
-		INTEGER(ans)[1] = 0;
+		INTEGER(ans)[3] = 0;
 	#endif
 
 	return ans;
@@ -914,6 +920,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Confusion, 4),
 		CALL(HIBAG_ConvBED, 5),
 		CALL(HIBAG_ErrMsg, 0),
+		CALL(HIBAG_Kernel_Version, 0),
 		CALL(HIBAG_New, 3),
 		CALL(HIBAG_NewClassifierHaplo, 7),
 		CALL(HIBAG_NewClassifiers, 6),
@@ -921,7 +928,6 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Predict_Resp_Prob, 5),
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
-		CALL(HIBAG_SSE_Flag, 0),
 		{ NULL, NULL, 0 }
 	};
 

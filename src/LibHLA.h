@@ -20,7 +20,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.3.1
+// Kernel Version : 1.3.0
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Description    : HLA imputation C++ library
 // ===============================================================
@@ -80,6 +80,12 @@
 
 namespace HLA_LIB
 {
+	/// Kernel Version, major number
+	#define HIBAG_KERNEL_VERSION_MAJOR    0x01
+	/// Kernel Version, minor number
+	#define HIBAG_KERNEL_VERSION_MINOR    0x03
+
+
 	using namespace std;
 
 	/// Define unsigned integers
@@ -715,6 +721,9 @@ namespace HLA_LIB
 	extern CdProgression Progress;
 
 
+
+	// ===================================================================== //
+
 	/// Exceptions for HLA imputation
 	class ErrHLA: public std::exception
 	{
@@ -732,6 +741,7 @@ namespace HLA_LIB
 			}
 		virtual const char *what() const throw() { return fMessage.c_str(); }
 		virtual ~ErrHLA() throw() {};
+
 	protected:
 		std::string fMessage;
 	};

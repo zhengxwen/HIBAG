@@ -14,6 +14,9 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
     o support the human genome "hg20"
 
+    o add a new function 'hlaGDS2Geno' to support SNP GDS files (in the
+      R/Bioconductor package SNPRelate)
+
 BUG FIXES
 
     o bug fixes on big-endian machines
@@ -28,9 +31,6 @@ CHANGES IN VERSION 1.2.1-1.2.4
 -------------------------
 
 NEW FEATURES
-
-    o add a new function 'hlaGDS2Geno' to support GDS SNP files (in the
-      R/Bioconductor package SNPRelate)
 
     o add a new function 'hlaOutOfBag' offering out-of-bag estimation of
       overall accuracy, per-allele sensitivity, etc

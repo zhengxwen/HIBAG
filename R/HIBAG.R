@@ -89,8 +89,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
         if (verbose)
         {
             a <- sum(!snpsel)
-            cat(sprintf("%s monomorphic SNP%s ha%s been removed.\n",
-                a, if (a>1) "s" else "", if (a>1) "ve" else "s"))
+            if (a > 0L)
+                cat(sprintf("Remove %d monomorphic SNP%s\n", a, .plural(a)))
         }
         tmp.snp.id <- tmp.snp.id[snpsel]
         tmp.snp.position <- tmp.snp.position[snpsel]
@@ -151,8 +151,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
 
     if (verbose)
     {
-        cat("Build a HIBAG model with", nclassifier,
-            "individual classifier(s):\n")
+        cat(sprintf("Build a HIBAG model with %d individual classifier%s:\n",
+            nclassifier, .plural(nclassifier)))
         cat("# of SNPs randomly sampled as candidates for each selection: ",
             mtry, "\n", sep="")
         cat("# of SNPs: ", n.snp, ", # of samples: ", n.samp, "\n", sep="")
@@ -1349,20 +1349,22 @@ hlaErrMsg <- function()
 
 .onAttach <- function(lib, pkg)
 {
-    # get SSE2 information
-    SSE <- .Call(HIBAG_SSE_Flag)
+    # get version and SSE2 information
+    Version <- .Call(HIBAG_Kernel_Version)
 
     # information
     packageStartupMessage(
         "HIBAG (HLA Genotype Imputation with Attribute Bagging)")
-    if (SSE[1] == 1L)
+    packageStartupMessage(
+        sprintf("Kernel Version: v%d.%d", Version[1], Version[2]))
+    if (Version[3] == 1L)
         s <- "Supported by Streaming SIMD Extensions (SSE2)"
-    else if (SSE[1] == 2)
+    else if (Version[3] == 2L)
         s <- "Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)"
     else
         s <- ""
-    if ((SSE[2] > 0) & (s != ""))
-        s <- paste(s, ", ", SSE[2], " bits", sep="")
+    if ((Version[4] > 0) & (s != ""))
+        s <- paste(s, " [", Version[4], "-bit]", sep="")
     if (s != "") packageStartupMessage(s)
 
     TRUE
