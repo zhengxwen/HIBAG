@@ -1972,8 +1972,8 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 # to create a report for evaluating accuracies
 #
 
-hlaReport <- function(object, export.fn="", type=c("txt", "tex", "html"),
-    header=TRUE)
+hlaReport <- function(object, export.fn="",
+    type=c("txt", "tex", "html", "markdown"), header=TRUE)
 {
     # check
     stopifnot(is.list(object))
@@ -2190,6 +2190,23 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex", "html"),
         {
             cat("\n</body>\n</html>\n", file=f, append=TRUE)
         }
+    } else if (type == "markdown")
+    {
+        L1[L1 == "Num."] <- "#"
+        cat(sprintf("**Overall accuracy: %0.1f%%, Call rate: %0.1f%%**\n\n",
+            object$overall$acc.haplo*100, object$overall$call.rate*100),
+            file=f, append=TRUE)
+        cat("| ", file=f, append=TRUE)
+        cat(paste(L1, L2), file=f, sep=" | ", append=TRUE)
+        cat(" |\n|:--", file=f, append=TRUE)
+        cat(rep("|--:", length(L1)-2), file=f, sep="", append=TRUE)
+        cat("|:--|\n", file=f, append=TRUE)
+        d <- as.matrix(d)
+        dm <- paste(" ", d, " ", sep="")
+        dim(dm) <- dim(d)
+        dm <- cbind(rep("", dim(dm)[1]), dm)
+        write.table(dm, file=f, append=TRUE, quote=FALSE, sep="|",
+            row.names=FALSE, col.names=FALSE, eol="|\n")
     }
 
     invisible()

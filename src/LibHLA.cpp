@@ -73,13 +73,12 @@ static const TFLOAT STOP_RELTOL_LOGLIK_ADDSNP = 0.001;
 static const TFLOAT PRUNE_RELTOL_LOGLIK = 0.1;
 
 
-// Random number
-
-// return an integer from 0 to n-1 with equal probability
+/// Random number: return an integer from 0 to n-1 with equal probability
 static inline int RandomNum(int n)
 {
+	// 'unif_rand()' returns [0 .. 1]
 	int v = (int)(n * unif_rand());
-	if (v >= n) v = n - 1;  // it seems impossible, but avoid the risk
+	if (v >= n) v = n - 1;
 	return v;
 }
 

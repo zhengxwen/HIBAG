@@ -7,7 +7,7 @@
     Create a report for evaluating prediction accuracies.
 }
 \usage{
-hlaReport(object, export.fn="", type=c("txt", "tex", "html"),
+hlaReport(object, export.fn="", type=c("txt", "tex", "html", "markdown"),
     header=TRUE)
 }
 \arguments{
@@ -78,6 +78,8 @@ hlaReport(comp, type="txt")
 hlaReport(comp, type="tex")
 
 hlaReport(comp, type="html")
+
+hlaReport(comp, type="markdown")
 }
 
 \keyword{genetics}
