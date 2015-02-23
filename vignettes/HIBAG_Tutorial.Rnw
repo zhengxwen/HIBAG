@@ -16,8 +16,11 @@ BiocStyle::latex()
 \bioctitle[HLA Allele Imputation]{
     HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging
 }
-\author{Xiuwen Zheng}
-\date{Feb 9, 2015}
+\author{
+    Xiuwen Zheng \\
+    Department of Biostatistics, University of Washington -- Seattle
+}
+\date{Feb 20, 2015}
 
 
 \maketitle
