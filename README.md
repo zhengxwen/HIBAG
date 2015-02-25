@@ -32,7 +32,7 @@ Development Version: v1.3.1
 
 ## Package Maintainer
 
-Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com) / [zhengx@u.washington.edu](zhengx@u.washington.edu))
+Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
 
 
 ## Pre-fit Model Download:
@@ -59,19 +59,19 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 
 * Install the package from the source code:
 [download the source code](https://github.com/zhengxwen/HIBAG/tarball/master)
-```
+```sh
 wget --no-check-certificate https://github.com/zhengxwen/HIBAG/tarball/master -O HIBAG_latest.tar.gz
-** Or **
+## or ##
 curl -L https://github.com/zhengxwen/HIBAG/tarball/master/ -o HIBAG_latest.tar.gz
 
-** Install **
+## Install ##
 R CMD INSTALL HIBAG_latest.tar.gz
 ```
 
 * Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
 You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
 
-Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher AVX, assuming GNU Compilers (gcc/g++) are installed:
+Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher, assuming GNU Compilers (gcc/g++) or Clang compiler (clang++) are installed:
 ```
 ## for C code
 CFLAGS=-g -O3 -march=native
