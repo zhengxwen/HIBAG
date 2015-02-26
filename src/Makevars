@@ -1,5 +1,0 @@
-all: $(SHLIB)
-
-clean:
-	rm -f ../.travis.yml
-	rm -f ../.gitignore
