@@ -4,6 +4,7 @@ HLA Genotype Imputation with Attribute Bagging
 Kernel Version: v1.3
 
 [![Build Status](https://travis-ci.org/zhengxwen/HIBAG.png)](https://travis-ci.org/zhengxwen/HIBAG)
+[![Build status](https://ci.appveyor.com/api/projects/status/v650qe8ap4bojxuf?svg=true)](https://ci.appveyor.com/project/zhengxwen/hibag)
 
 
 ## Features
