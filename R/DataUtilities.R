@@ -339,18 +339,16 @@ hlaGenoSwitchStrand <- function(target, template,
     }
 
     # call
-    gz <- .C(HIBAG_AlleleStrand,
+    gz <- .Call(HIBAG_AlleleStrand,
         template$snp.allele, template.afreq, I1,
         target$snp.allele, target.afreq, I2,
-        same.strand, length(s), out=logical(length(s)),
-        out.n.ambiguity=integer(1), out.n.mismatching=integer(1),
-        err=integer(1), NAOK=TRUE)
-    if (gz$err != 0) stop(hlaErrMsg())
+        same.strand, length(s))
+    names(gz) <- c("flag", "n.amb", "n.mismatch")
 
     if (verbose)
     {
         # switched allele pairs
-        x <- sum(gz$out)
+        x <- sum(gz$flag)
         if (x > 0)
         {
             if (x > 1)
@@ -367,9 +365,9 @@ hlaGenoSwitchStrand <- function(target, template,
         }
 
         # the number of ambiguity
-        if (gz$out.n.ambiguity > 0)
+        if (gz$n.amb > 0)
         {
-            if (gz$out.n.ambiguity > 1)
+            if (gz$n.amb > 1)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -377,14 +375,14 @@ hlaGenoSwitchStrand <- function(target, template,
             }
             cat("Due to stand ambiguity (such like C/G),",
                 sprintf("the allelic strand order%s of %d variant%s %s",
-                    s, gz$out.n.ambiguity, s, a),
+                    s, gz$n.amb, s, a),
                 "determined by comparing allele frequencies.\n")
         }
 
         # the number of mismatching
-        if (gz$out.n.mismatching > 0)
+        if (gz$n.mismatch > 0)
         {
-            if (gz$out.n.mismatching > 1)
+            if (gz$n.mismatch > 1)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -392,16 +390,18 @@ hlaGenoSwitchStrand <- function(target, template,
             }
             cat("Due to mismatching alleles,",
                 sprintf("the allelic strand order%s of %d variant%s %s",
-                    s, gz$out.n.mismatching, s, a),
+                    s, gz$n.mismatch, s, a),
                 "determined by comparing allele frequencies.\n")
         }
     }
 
-    # result
+    # output
     geno <- target$genotype[I2, ]
     if (is.vector(geno))
         geno <- matrix(geno, ncol=1)
-    for (i in which(gz$out)) geno[i, ] <- 2 - geno[i, ]
+    for (i in which(gz$flag))
+        geno[i, ] <- 2 - geno[i, ]
+
     rv <- list(genotype = geno)
     rv$sample.id <- target$sample.id
     rv$snp.id <- target$snp.id[I2]
@@ -583,15 +583,16 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         if (import.chr == "xMHC")
         {
             info <- hlaLociInfo(assembly)
-            st <- min(BiocGenerics::start(info)) - 1000000L
-            ed <- max(BiocGenerics::end(info)) + 1000000L
+            info <- info[info$chrom == 6L, ]
+            st <- min(info$start) - 1000000L
+            ed <- max(info$end)   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
-                    n.snp, .plural(n.snp)))
+                    "Import %d SNP%s within the xMHC region [%d, %d] on chromosome 6.\n",
+                    n.snp, .plural(n.snp), st, ed))
             }
             import.chr <- NULL
         } else if (import.chr == "")
@@ -617,14 +618,11 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         stop("There is no SNP imported.")
 
     # call the C function
-    rv <- .C(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id), n.snp,
-        (bed.flag==0), snp.flag, verbose,
-        geno = matrix(as.integer(0), nrow=n.snp, ncol=length(sample.id)),
-        err=integer(1), NAOK=TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
+    v <- .Call(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id),
+        n.snp, snp.flag)
 
     # result
-    v <- list(genotype = rv$geno, sample.id = sample.id,
+    v <- list(genotype = v, sample.id = sample.id,
         snp.id = snp.id[snp.flag], snp.position = snp.pos[snp.flag],
         snp.allele = snp.allele[snp.flag], assembly = assembly)
     class(v) <- "hlaSNPGenoClass"
@@ -682,9 +680,15 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
 {
     # library
     if (!requireNamespace("gdsfmt"))
-        stop("The gdsfmt package should be installed.")
+    {
+        warning("The gdsfmt package should be installed.", immediate.=TRUE)
+        return(NULL)
+    }
     if (!requireNamespace("SNPRelate"))
-        stop("The SNPRelate package should be installed.")
+    {
+        warning("The SNPRelate package should be installed.", immediate.=TRUE)
+        return(NULL)
+    }
 
     # check
     stopifnot(is.character(gds.fn) & is.vector(gds.fn))
@@ -732,15 +736,16 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         if (import.chr == "xMHC")
         {
             info <- hlaLociInfo(assembly)
-            st <- min(BiocGenerics::start(info)) - 1000000L
-            ed <- max(BiocGenerics::end(info)) + 1000000L
+            info <- info[info$chrom == 6L, ]
+            st <- min(info$start) - 1000000L
+            ed <- max(info$end)   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
-                    n.snp, .plural(n.snp)))
+                    "Import %d SNP%s within the xMHC region [%d, %d] on chromosome 6.\n",
+                    n.snp, .plural(n.snp), st, ed))
             }
             import.chr <- NULL
         } else if (import.chr == "")
@@ -952,11 +957,9 @@ hlaLociInfo <- function(assembly =
         package="HIBAG")
     if (file.exists(fn))
     {
-        z <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
-        rownames(z) <- z$name
-
-        # output
-        GenomicRanges::makeGRangesFromDataFrame(z)
+        v <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
+        rownames(v) <- v$name
+        v[, c("chrom", "start", "end")]
     } else {
         if (assembly != "unknown")
             stop("Unknown human genome reference in 'assembly'!")
@@ -1085,12 +1088,12 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
     H2[H2 == ""] <- NA
     H2 <- hlaAlleleDigit(H2, max.resolution)
 
-    if (locus %in% names(HLAinfo))
+    if (locus %in% rownames(HLAinfo))
     {
         if (!is.finite(locus.pos.start))
-            locus.pos.start <- BiocGenerics::start(HLAinfo[locus,])
+            locus.pos.start <- HLAinfo[locus, "start"]
         if (!is.finite(locus.pos.end))
-            locus.pos.end <- BiocGenerics::end(HLAinfo[locus,])
+            locus.pos.end <- HLAinfo[locus, "end"]
     } else {
         locus.pos.start <- as.integer(NA)
         locus.pos.end <- as.integer(NA)
@@ -1433,14 +1436,10 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     } else {
         nw <- ncol(WrongTab)
     }
-    rv <- .C(HIBAG_Confusion, as.integer(m), confusion,
-        nw, match(WrongTab, names(PredNum)) - as.integer(1),
-        out = matrix(0.0, nrow=m+1, ncol=m, dimnames=
-            list(Predict=names(PredNum), True=names(TrueNum))),
-        tmp = double((m+1)*m),
-        err = integer(1), NAOK = TRUE)
-    if (rv$err != 0) stop(hlaErrMsg())
-    confusion <- round(rv$out, 2)
+    v <- .Call(HIBAG_Confusion, m, confusion, nw,
+        match(WrongTab, names(PredNum)) - 1L)
+    dimnames(v) <- list(Predict=names(PredNum), True=names(TrueNum))
+    confusion <- round(v, 2)
 
     # detail -- sensitivity and specificity
     detail <- data.frame(allele = allele, stringsAsFactors=FALSE)
@@ -1593,14 +1592,14 @@ hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
     # init
     assembly <- .hla_assembly(assembly)
     HLAInfo <- hlaLociInfo(assembly)
-    ID <- names(HLAInfo)
+    ID <- rownames(HLAInfo)
 
     stopifnot(length(hla.id) == 1L)
     if (!(hla.id %in% ID))
-        stop(paste("`hla.id' should be one of", paste(ID, collapse=",")))
+        stop(paste("`hla.id' should be one of", paste(ID, collapse=", ")))
 
-    pos.start <- BiocGenerics::start(HLAInfo[hla.id,]) - flank.bp
-    pos.end <- BiocGenerics::end(HLAInfo[hla.id,]) + flank.bp
+    pos.start <- HLAInfo[hla.id, "start"] - flank.bp
+    pos.end <- HLAInfo[hla.id, "end"] + flank.bp
 
     if (is.finite(pos.start) & is.finite(pos.end))
     {
@@ -1842,7 +1841,7 @@ hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
                 rv <- hlaCombineModelObj(rv, tmp)
             }
         } else {
-            s <- sprintf("There is no '%s'.", fn)
+            s <- sprintf("No file '%s'.", fn)
             if (action.missingfile == "stop")
             {
                 stop(s)
@@ -1979,8 +1978,8 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 # to create a report for evaluating accuracies
 #
 
-hlaReport <- function(object, export.fn="", type=c("txt", "tex", "html"),
-    header=TRUE)
+hlaReport <- function(object, export.fn="",
+    type=c("txt", "tex", "html", "markdown"), header=TRUE)
 {
     # check
     stopifnot(is.list(object))
@@ -2197,6 +2196,23 @@ hlaReport <- function(object, export.fn="", type=c("txt", "tex", "html"),
         {
             cat("\n</body>\n</html>\n", file=f, append=TRUE)
         }
+    } else if (type == "markdown")
+    {
+        L1[L1 == "Num."] <- "#"
+        cat(sprintf("**Overall accuracy: %0.1f%%, Call rate: %0.1f%%**\n\n",
+            object$overall$acc.haplo*100, object$overall$call.rate*100),
+            file=f, append=TRUE)
+        cat("| ", file=f, append=TRUE)
+        cat(paste(L1, L2), file=f, sep=" | ", append=TRUE)
+        cat(" |\n|:--", file=f, append=TRUE)
+        cat(rep("|--:", length(L1)-2), file=f, sep="", append=TRUE)
+        cat("|:--|\n", file=f, append=TRUE)
+        d <- as.matrix(d)
+        dm <- paste(" ", d, " ", sep="")
+        dim(dm) <- dim(d)
+        dm <- cbind(rep("", dim(dm)[1]), dm)
+        write.table(dm, file=f, append=TRUE, quote=FALSE, sep="|",
+            row.names=FALSE, col.names=FALSE, eol="|\n")
     }
 
     invisible()

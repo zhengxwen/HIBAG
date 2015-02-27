@@ -1,13 +1,12 @@
 # Load the shared object
 useDynLib(HIBAG,
-    HIBAG_SSE_Flag, HIBAG_ErrMsg,
-    HIBAG_AlleleStrand, HIBAG_BEDFlag, HIBAG_ConvBED,
-    HIBAG_Close, HIBAG_Confusion,
-    HIBAG_GetNumClassifiers, HIBAG_Idv_GetNumHaplo, HIBAG_Classifier_GetHaplos,
-    HIBAG_SortAlleleStr,
-    HIBAG_Predict_Resp_Prob, HIBAG_Predict_Prob, HIBAG_Predict_Resp,
-    HIBAG_Training,
-    HIBAG_New, HIBAG_NewClassifiers, HIBAG_NewClassifierHaplo
+    HIBAG_AlleleStrand, HIBAG_BEDFlag,
+    HIBAG_ConvBED, HIBAG_Close, HIBAG_Confusion,
+    HIBAG_GetNumClassifiers, HIBAG_Classifier_GetHaplos,
+    HIBAG_New, HIBAG_NewClassifiers, HIBAG_NewClassifierHaplo,
+    HIBAG_SortAlleleStr, HIBAG_Kernel_Version, HIBAG_ErrMsg,
+    HIBAG_Predict_Resp, HIBAG_Predict_Resp_Prob,
+    HIBAG_Training
 )
 
 # Export function names
@@ -16,4 +15,14 @@ export(.onAttach)
 
 # Imports
 import(methods)
-importFrom(GenomicRanges, makeGRangesFromDataFrame)
+
+# Registering S3 methods
+S3method(plot, hlaAttrBagClass)
+S3method(plot, hlaAttrBagObj)
+S3method(predict, hlaAttrBagClass)
+S3method(print, hlaAttrBagClass)
+S3method(print, hlaAttrBagObj)
+S3method(summary, hlaAttrBagClass)
+S3method(summary, hlaAttrBagObj)
+S3method(summary, hlaAlleleClass)
+S3method(summary, hlaSNPGenoClass)

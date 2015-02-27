@@ -49,16 +49,16 @@ fam.fn <- system.file("extdata", "HapMap_CEU.fam", package="HIBAG")
 bim.fn <- system.file("extdata", "HapMap_CEU.bim", package="HIBAG")
 hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 summary(hapmap.ceu)
-#  A/C  A/G  A/T  C/G  C/T  G/T 
-#  471 2102   83  134 2046  480 
+# A/C  A/G  A/T  C/G  C/T  G/T
+# 332 1567   64  111 1510  348
 
 # combine two datasets together
 geno <- hlaGenoSwitchStrand(HapMap_CEU_Geno, hapmap.ceu)
 summary(geno)
 # There are 1564 SNPs in common.
 # The allele pairs of 763 SNPs need to be switched.
-# A/C A/G C/T G/T 
-# 136 655 632 141 
+# A/C A/G C/T G/T
+# 104 505 496 109
 }
 
 \keyword{SNP}

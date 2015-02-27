@@ -20,10 +20,8 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.3.0
+// Kernel Version : 1.3.0
 // Copyright      : Xiuwen Zheng (GPL v3)
-// Created        : 11/14/2011
-// Last modified  : 02/03/2015
 // Description    : HLA imputation C++ library
 // ===============================================================
 
@@ -82,6 +80,12 @@
 
 namespace HLA_LIB
 {
+	/// Kernel Version, major number
+	#define HIBAG_KERNEL_VERSION_MAJOR    0x01
+	/// Kernel Version, minor number
+	#define HIBAG_KERNEL_VERSION_MINOR    0x03
+
+
 	using namespace std;
 
 	/// Define unsigned integers
@@ -98,22 +102,11 @@ namespace HLA_LIB
 		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(UINT8));
 
 
-	/// Define floating type, 0 -- double, 1 -- float
-	#define HIBAG_FLOAT_TYPE_ID    0
-
-	#if (HIBAG_FLOAT_TYPE_ID == 0)
-	#   define TFLOAT           double
-	#   define FLOAT_LOG        log
-	#   define FLOAT_EXP        exp
-	#   define FLOAT_EPSILON    DBL_EPSILON
-	#elif (HIBAG_FLOAT_TYPE_ID == 1)
-	#   define TFLOAT           float
-	#   define FLOAT_LOG        logf
-	#   define FLOAT_EXP        expf
-	#   define FLOAT_EPSILON    FLT_EPSILON
-	#else
-	#   error "Invalid HIBAG_FLOAT_TYPE_ID"
-	#endif
+	/// Define the numeric type
+	#define TFLOAT           double
+	#define FLOAT_LOG        log
+	#define FLOAT_EXP        exp
+	#define FLOAT_EPSILON    DBL_EPSILON
 
 
 	// ===================================================================== //
@@ -572,8 +565,9 @@ namespace HLA_LIB
 		/// initialize the bootstrap sample
 		void InitBootstrapCount(int SampCnt[]);
 		/// assign the haplotype frequencies
-		void Assign(int n_snp, const int snpidx[], const int samp_num[], int n_haplo,
-			const TFLOAT *freq, const int *hla, char *const haplo[], TFLOAT *_acc=NULL);
+		void Assign(int n_snp, const int snpidx[], const int samp_num[],
+			int n_haplo, const TFLOAT *freq, const int *hla,
+			const char * haplo[], TFLOAT *_acc=NULL);
 		/// grow this classifier by adding SNPs
 		void Grow(CBaseSampling &VarSampling, int mtry, bool prune,
 			bool verbose, bool verbose_detail);
@@ -727,6 +721,9 @@ namespace HLA_LIB
 	extern CdProgression Progress;
 
 
+
+	// ===================================================================== //
+
 	/// Exceptions for HLA imputation
 	class ErrHLA: public std::exception
 	{
@@ -744,6 +741,7 @@ namespace HLA_LIB
 			}
 		virtual const char *what() const throw() { return fMessage.c_str(); }
 		virtual ~ErrHLA() throw() {};
+
 	protected:
 		std::string fMessage;
 	};

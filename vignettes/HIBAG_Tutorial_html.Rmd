@@ -1,106 +1,50 @@
-%\VignetteIndexEntry{HIBAG vignette pdf}
-%\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS}
-%\VignettePackage{HIBAG}
-%\VignetteEngine{knitr::knitr}
+---
+title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging"
+author: "Xiuwen Zheng (Department of Biostatistics, University of Washington, Seattle)"
+date: "Feb 20, 2015"
+output:
+  html_document:
+    theme: spacelab
+    toc: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+bibliography: HIBAG_Ref.bib
+vignette: >
+  %\VignetteIndexEntry{HIBAG vignette html}
+  %\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS}
+  %\VignetteEngine{knitr::rmarkdown}
+---
 
-\documentclass[11pt]{article}
+# Overview
 
-<<style, eval=TRUE, echo=FALSE, results="asis">>=
-BiocStyle::latex()
-@ 
+The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation [@Shiina09]. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the *HLA--B* locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database [@Robinson13] ([http://www.ebi.ac.uk/imgt/hla/](http://www.ebi.ac.uk/imgt/hla/)).
 
-\usepackage{longtable}
+Classical HLA genotyping methodologies have been predominantly developed for tissue typing purposes, with sequence based typing (SBT) approaches currently considered the gold standard. While there is widespread availability of vendors offering HLA genotyping services, the complexities involved in performing this to the standard required for diagnostic purposes make using a SBT approach time-consuming and cost-prohibitive for most research studies wishing to look in detail at the involvement of classical HLA genes in disease.
 
-\begin{document}
-
-\bioctitle[HLA Allele Imputation]{
-    HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging
-}
-\author{
-    Xiuwen Zheng \\
-    Department of Biostatistics, University of Washington -- Seattle
-}
-\date{Feb 20, 2015}
-
-
-\maketitle
-\tableofcontents
-
-%\SweaveOpts{keep.source=TRUE, eps=FALSE}
-
-% ---- Overview ----
-\section{Overview}
-
-The human leukocyte antigen (HLA) system, located in the major
-histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic.
-This region has been shown to be important in human disease, adverse drug
-reactions and organ transplantation \cite{Shiina09}. HLA genes play a
-role in the immune system and autoimmunity as they are central to the
-presentation of antigens for recognition by T cells. Since they have to
-provide defense against a great diversity of environmental microbes, HLA
-genes must be able to present a wide range of peptides. Evolutionary pressure
-at these loci have given rise to a great deal of functional diversity. For
-example, the {\em HLA--B} locus has 1,898 four-digit alleles listed in the
-April 2012 release of the IMGT-HLA Database
-\cite{Robinson13}
-(\url{http://www.ebi.ac.uk/imgt/hla/}).
-
-Classical HLA genotyping methodologies have been predominantly developed
-for tissue typing purposes, with sequence based typing (SBT) approaches
-currently considered the gold standard. While there is widespread availability
-of vendors offering HLA genotyping services, the complexities involved in
-performing this to the standard required for diagnostic purposes make using a
-SBT approach time-consuming and cost-prohibitive for most research studies
-wishing to look in detail at the involvement of classical HLA genes in disease.
-
-Here we introduce a new prediction method for {\bf H}LA {\bf I}mputation using
-attribute {\bf BAG}ging, HIBAG, that is highly accurate, computationally
-tractable, and can be used with published parameter estimates, eliminating
-the need to access large training samples
-\cite{Zheng13}.
-It relies on a training set with known HLA and SNP genotypes, and combines
-the concepts of attribute bagging with haplotype inference from unphased SNPs
-and HLA types. Attribute bagging is a technique for improving the accuracy and
-stability of classifier ensembles using bootstrap aggregating and random
-variable selection \cite{Breiman96,
-Breiman01, Bryll03}. In this case, individual
-classifiers are created which utilize a subset of SNPs to predict HLA types
-and haplotype frequencies estimated from a training data set of SNPs and HLA
-types. Each of the classifiers employs a variable selection algorithm with a
-random component to select a subset of the SNPs. HLA type predictions are
-determined by maximizing the average posterior probabilities from all
-classifiers.
+Here we introduce a new prediction method for **H**LA **I**mputation using attribute **BAG**ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples [@Zheng13]. It relies on a training set with known HLA and SNP genotypes, and combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles using bootstrap aggregating and random variable selection [@Breiman96; @Breiman01; @Bryll03]. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers.
 
 
 
-% ---- Features ----
-\section{Features}
+# Features
 
-\begin{enumerate}
-    \item HIBAG can be used by researchers with published parameter estimates
-        (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of
-        requiring access to large training sample datasets.
-    \item A typical HIBAG parameter file contains only haplotype frequencies
-        at different SNP subsets rather than individual training genotypes.
-    \item SNPs within the xMHC region (chromosome 6) are used for imputation.
-    \item HIBAG employs unphased genotypes of unrelated individuals as a
-        training set.
-    \item HIBAG supports parallel computing with R.
-\end{enumerate}
+* HIBAG can be used by researchers with published parameter estimates ([http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)) instead of requiring access to large training sample datasets.
+* A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
+* SNPs within the xMHC region (chromosome 6) are used for imputation.
+* HIBAG employs unphased genotypes of unrelated individuals as a training set.
+* HIBAG supports parallel computing with R.
 
 
 
-% ---- Examples ----
-\section{Examples}
+# Examples
 
-<<library>>=
+```{r}
 library(HIBAG)
-@
+```
 
-%     ---- Pre-fit HIBAG models for HLA imputation ----
-\subsection{Pre-fit HIBAG models for HLA imputation}
+## Pre-fit HIBAG Models for HLA Imputation
 
-<<plot, fig.width=8, fig.height=4, fig.align='center'>>=
+```{r fig.width=10, fig.height=5, fig.align='center'}
 # load the published parameter estimates from European ancestry
 #   e.g., filename <- "HumanOmniExpressExome-European-HLA4-hg19.RData"
 #   here, we use example data in the package
@@ -119,9 +63,9 @@ head(model$snp.position)
 
 # plot SNP information
 plot(model)
-@
+```
 
-<<eval=FALSE>>=
+```{r eval=FALSE}
 #########################################################################
 # Import your PLINK BED file
 #
@@ -134,13 +78,12 @@ summary(pred.guess)
 
 pred.guess$value
 pred.guess$postprob
-@
+```
 
 
-%     ---- Build a HIBAG Model for HLA Genotype Imputation ----
-\subsection{Build a HIBAG Model for HLA Genotype Imputation}
+## Build a HIBAG Model for HLA Genotype Imputation
 
-<<build-model, eval=FALSE>>=
+```{r eval=FALSE}
 library(HIBAG)
 
 # load HLA types and SNP genotypes in the package
@@ -177,20 +120,19 @@ summary(train.geno)
 # train a HIBAG model
 set.seed(100)
 model <- hlaAttrBagging(train.HLA, train.geno, nclassifier=100)
-@
-<<echo=FALSE>>=
+```
+```{r echo=FALSE}
 mobj <- get(load(system.file("extdata", "ModelList.RData", package="HIBAG")))
 model <- hlaModelFromObj(mobj$A)
-@
-<<>>=
+```
+```{r}
 summary(model)
-@
+```
 
 
-%     ---- Build and Predict in Parallel ----
-\subsection{Build and Predict in Parallel}
+## Build and Predict in Parallel
 
-<<build-model-parallel, eval=FALSE>>=
+```{r eval=FALSE}
 library(HIBAG)
 library(parallel)
 
@@ -237,20 +179,14 @@ hlaParallelAttrBagging(cl, train.HLA, train.geno, nclassifier=100,
 model.obj <- get(load("AutoSaveModel.RData"))
 model <- hlaModelFromObj(model.obj)
 summary(model)
-@
-
-<<echo=FALSE>>=
-unlink("AutoSaveModel.RData", force=TRUE)
-@
+```
 
 
-%     ---- Evaluate Overall Accuracy, Sensitivity, Specificity, etc ----
-\subsection{Evaluate Overall Accuracy, Sensitivity, Specificity, etc}
+## Evaluate Overall Accuracy, Sensitivity, Specificity, etc
 
-The function \Rfunction{hlaReport()} can be used to automatically generate
-a tex or HTML report when a validation dataset is available.
+The function `hlaReport()` can be used to automatically generate a tex or HTML report when a validation dataset is available.
 
-<<evaluate>>=
+```{r}
 library(HIBAG)
 
 # load HLA types and SNP genotypes in the package
@@ -286,18 +222,17 @@ summary(train.geno)
 
 test.geno <- hlaGenoSubset(HapMap_CEU_Geno, samp.sel=match(
     hlatab$validation$value$sample.id, HapMap_CEU_Geno$sample.id))
-@
-<<eval=FALSE>>=
+```
+```{r eval=FALSE}
 # train a HIBAG model
 set.seed(100)
 model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=100)
-@
-<<echo=FALSE>>=
+```
+```{r echo=FALSE}
 mobj <- get(load(system.file("extdata", "OutOfBag.RData", package="HIBAG")))
 model <- hlaModelFromObj(mobj)
-@
-
-<<>>=
+```
+```{r}
 summary(model)
 
 # validation
@@ -307,27 +242,33 @@ pred <- predict(model, test.geno)
 comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0)
 comp$overall
-@
+```
 
+### Report in Text
 Output to plain text format:
-<<out-text>>=
+```{r}
 # report overall accuracy, per-allele sensitivity, specificity, etc
 hlaReport(comp, type="txt")
-@
+```
 
-\setlength{\LTcapwidth}{7in}
-Output to a tex file, and please add ``\textbackslash usepackage\{longtable\}''
-to your tex file:
-<<out-tex, results="asis">>=
+### Report in Markdown
+Output to a markdown file:
+```{r results='asis'}
+# report overall accuracy, per-allele sensitivity, specificity, etc
+hlaReport(comp, type="markdown")
+```
+
+### Report in LaTeX
+Output to a tex file, and please add `\usepackage{longtable}` to your tex file:
+```{r}
 # report overall accuracy, per-allele sensitivity, specificity, etc
 hlaReport(comp, type="tex", header=FALSE)
-@
+```
 
 
-%     ---- Release HIBAG Models without Confidential Information ----
-\subsection{Release HIBAG Models without Confidential Information}
+## Release HIBAG Models without Confidential Information
 
-<<release-model, eval=FALSE>>=
+```{r eval=FALSE}
 library(HIBAG)
 
 # make a list of HLA types
@@ -357,17 +298,12 @@ mobj <- hlaPublish(model,
     rm.unused.snp=TRUE, anonymize=TRUE)
 
 save(mobj, file="Your_HIBAG_Model.RData")
-@
-
-<<echo=FALSE>>=
-unlink("Your_HIBAG_Model.RData", force=TRUE)
-@
+```
 
 
-%     ---- Release a Collection of HIBAG Models ----
-\subsection{Release a Collection of HIBAG Models}
+## Release a Collection of HIBAG Models
 
-<<eval=FALSE>>=
+```{r eval=FALSE}
 # assume the HIBAG models are stored in R objects: mobj.A, mobj.B, ...
 
 ModelList <- list()
@@ -377,32 +313,19 @@ ModelList[["B"]] <- mobj.B
 
 # save to an R data file
 save(ModelList, file="HIBAG_Model_List.RData")
-@
+```
 
 
-% ---- Resources ----
-\section{Resources}
+# Resources
 
-\begin{enumerate}
-    \item Allele Frequency Net Database (AFND):
-        \url{http://www.allelefrequencies.net}.
-    \item IMGT/HLA Database: \url{http://www.ebi.ac.uk/imgt/hla}.
-    \item HLA Nomenclature: G Codes
-        (\url{http://hla.alleles.org/alleles/g_groups.html}) and P Codes
-        (\url{http://hla.alleles.org/alleles/p_groups.html}) for reporting
-        of ambiguous allele typings.
-\end{enumerate}
+* Allele Frequency Net Database (AFND): [http://www.allelefrequencies.net](http://www.allelefrequencies.net).
+* IMGT/HLA Database: [http://www.ebi.ac.uk/imgt/hla](http://www.ebi.ac.uk/imgt/hla).
+* HLA Nomenclature: [G Codes](http://hla.alleles.org/alleles/g_groups.html) and [P Codes](http://hla.alleles.org/alleles/p_groups.html) for reporting of ambiguous allele typings.
 
 
-\section{Session Info}
 
-<<sessioninfo, results="asis">>=
-toLatex(sessionInfo())
-@
+# Session Info
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bibliography{HIBAG_Ref}
-
-
-\end{document}
+```{r}
+sessionInfo()
+```

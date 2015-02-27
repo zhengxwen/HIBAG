@@ -31,67 +31,36 @@
 #include <R_ext/Rdynload.h>
 
 
-namespace HLA_LIB
-{
-	// the last error information
-	std::string _LastError;
-}
-
-
 using namespace std;
 using namespace HLA_LIB;
-
-
-#define LongBool int
-#define DLLEXPORT
 
 
 extern "C"
 {
 /// try block
-#define TRY    \
-	try {
-
-/// catch block
-#define CATCH(cmd)    \
-	} \
-	catch (exception &E) { \
-		_LastError = E.what(); cmd; \
-	} \
-	catch (const char *E) { \
-		_LastError = E; cmd; \
-	} \
-	catch (...) { \
-		_LastError = "unknown error!"; cmd; \
-	} \
-
-/// try block
 #define CORE_TRY    \
 	bool has_error = false; \
 	SEXP rv_ans = R_NilValue; \
-	TRY
+	try {
 
 /// catch block
 #define CORE_CATCH    \
-	CATCH(has_error = true); \
+	} \
+	catch (exception &E) { \
+		_LastError = E.what(); has_error = true; \
+	} \
+	catch (const char *E) { \
+		_LastError = E; has_error = true; \
+	} \
+	catch (...) { \
+		_LastError = "unknown error!"; has_error = true; \
+	} \
 	if (has_error) error(_LastError.c_str()); \
 	return rv_ans;
 
 
-
-// ===========================================================
-// the private functions
-// ===========================================================
-
-/// assign a string
-inline static void RStrAgn(const char *Text, char **rstr)
-{
-	*rstr = R_alloc(strlen(Text)+1, 1);
-	if (*rstr == NULL)
-		throw "R_alloc return NULL!";
-	strcpy(*rstr, Text);
-}
-
+/// the last error information
+std::string _LastError;
 
 
 // ===========================================================
@@ -175,11 +144,11 @@ static bool sortfn(const TAlleleItem *I1, const TAlleleItem *I2)
 
 
 /**
- *  to sort the HLA alleles
+ *  Sort the HLA alleles
  *
  *  \param hlastr     HLA allele strings
 **/
-DLLEXPORT SEXP HIBAG_SortAlleleStr(SEXP hlastr)
+SEXP HIBAG_SortAlleleStr(SEXP hlastr)
 {
 	CORE_TRY
 		const int n = Rf_length(hlastr);
@@ -212,7 +181,7 @@ DLLEXPORT SEXP HIBAG_SortAlleleStr(SEXP hlastr)
 //  SNP functions
 //
 
-/// to detect and correct strand problem
+/// Detect and correct strand problem
 
 static inline bool ATGC(const string &s)
 {
@@ -245,24 +214,32 @@ static inline void split_allele(const char *txt, string &allele1, string &allele
 	}
 }
 
-DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
-	char *allele2[], double afreq2[], int I2[],
-	int *if_same_strand, int *n,
-	LongBool out_flag[], int *out_n_stand_amb, int *out_n_mismatch,
-	LongBool *out_err)
+SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
+	SEXP allele2, SEXP afreq2, SEXP I2, SEXP if_same_strand, SEXP num)
 {
-	TRY
+	double *pAF1 = REAL(afreq1);
+	double *pAF2 = REAL(afreq2);
+	int *pI1 = INTEGER(I1);
+	int *pI2 = INTEGER(I2);
+	const bool check_strand = (Rf_asLogical(if_same_strand) != TRUE);
+	const int n = Rf_asInteger(num);
+
+	CORE_TRY
 		// initialize: A-T pair, C-G pair
 		map<string, string> MAP;
 		MAP["A"] = "T"; MAP["C"] = "G"; MAP["G"] = "C"; MAP["T"] = "A";
 
-		*out_n_stand_amb = 0;
-		*out_n_mismatch = 0;
+		rv_ans = PROTECT(NEW_LIST(3));
 
-		const bool check_strand = (if_same_strand[0] == 0);
+		SEXP Flag = PROTECT(NEW_LOGICAL(n));
+		SET_ELEMENT(rv_ans, 0, Flag);
+		int *out_flag = LOGICAL(Flag);
+
+		int out_n_stand_amb = 0;
+		int out_n_mismatch = 0;
 
 		// loop for each SNP
-		for (int i=0; i < *n; i++)
+		for (int i=0; i < n; i++)
 		{
 			// if true, need switch strand
 			bool switch_flag = false;
@@ -276,12 +253,12 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 			// ``ref / nonref alleles''
 			string s1, s2;
 			string p1, p2;
-			split_allele(allele1[I1[i]-1], s1, s2);
-			split_allele(allele2[I2[i]-1], p1, p2);
+			split_allele(CHAR(STRING_ELT(allele1, pI1[i]-1)), s1, s2);
+			split_allele(CHAR(STRING_ELT(allele2, pI2[i]-1)), p1, p2);
 
 			// allele frequency
-			const double F1 = afreq1[I1[i]-1];
-			const double F2 = afreq2[I2[i]-1];
+			const double F1 = pAF1[pI1[i]-1];
+			const double F2 = pAF2[pI2[i]-1];
 
 			if (ATGC(s1) && ATGC(s2) && ATGC(p1) && ATGC(p2))
 			{
@@ -339,17 +316,19 @@ DLLEXPORT void HIBAG_AlleleStrand(char *allele1[], double afreq1[], int I1[],
 			{
 				switch_flag = (ALLELE_MINOR(F1) != ALLELE_MINOR(F2));
 				if (switch_freq_detect == 1)
-					(*out_n_stand_amb) ++;
+					out_n_stand_amb ++;
 				else
-					(*out_n_mismatch) ++;
+					out_n_mismatch ++;
 			}
 
 			out_flag[i] = switch_flag;
 		}
 
-		*out_err = 0;
+		SET_ELEMENT(rv_ans, 1, ScalarInteger(out_n_stand_amb));
+		SET_ELEMENT(rv_ans, 2, ScalarInteger(out_n_mismatch));
+		UNPROTECT(2);
 
-	CATCH(*out_err = 1)
+	CORE_CATCH
 }
 
 
@@ -387,70 +366,77 @@ static void _Check_HIBAG_Model(int model)
 
 
 /**
- *  to build a HIBAG model
+ *  Build a HIBAG model
  *
  *  \param nSNP       the number of SNPs
  *  \param nSamp      the number of samples
  *  \param nHLA       the number of different HLA alleles
- *  \param out_Model  output the model index
- *  \param out_err    output the error information, 0 -- no error, 1 -- an error exists
+ *  \return a model index
 **/
-DLLEXPORT void HIBAG_New(int *nSamp, int *nSNP, int *nHLA, int *out_Model,
-	LongBool *out_err)
+SEXP HIBAG_New(SEXP nSamp, SEXP nSNP, SEXP nHLA)
 {
-	TRY
+	int NumSamp = Rf_asInteger(nSamp);
+	if (NumSamp <= 0) error("Invalid number of samples.");
+
+	int NumSNP  = Rf_asInteger(nSNP);
+	if (NumSNP <= 0) error("Invalid number of SNPs.");
+
+	int NumHLA  = Rf_asInteger(nHLA);
+	if (NumHLA <= 0) error("Invalid number of unique HLA allele.");
+
+	CORE_TRY
 		int model = _Need_New_HIBAG_Model();
 		_HIBAG_MODELS_[model] = new CAttrBag_Model;
-		_HIBAG_MODELS_[model]->InitTraining(*nSNP, *nSamp, *nHLA);
-		*out_Model = model;
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		_HIBAG_MODELS_[model]->InitTraining(NumSNP, NumSamp, NumHLA);
+		rv_ans = ScalarInteger(model);
+	CORE_CATCH
 }
 
+
 /**
- *  to build a HIBAG model
+ *  Build a HIBAG model
+ *
  *  \param nSNP       the number of SNPs
  *  \param nSamp      the number of samples
  *  \param snp_geno   the SNP genotypes, (0 -- BB, 1 -- AB, 2 -- AA, other -- missing value)
  *  \param nHLA       the number of different HLA alleles
  *  \param H1         the first HLA allele of a HLA type
  *  \param H2         the second HLA allele of a HLA type
- *  \param out_Model  output the model index
- *  \param out_err    output the error information, 0 -- no error, 1 -- an error exists
+ *  \return the model index
 **/
-DLLEXPORT void HIBAG_Training(int *nSNP, int *nSamp, int *snp_geno, int *nHLA,
-	int *H1, int *H2, int *out_Model, LongBool *out_err)
+SEXP HIBAG_Training(SEXP nSNP, SEXP nSamp, SEXP snp_geno,
+	SEXP nHLA, SEXP H1, SEXP H2)
 {
-	TRY
+	CORE_TRY
 		int model = _Need_New_HIBAG_Model();
 		_HIBAG_MODELS_[model] = new CAttrBag_Model;
-		_HIBAG_MODELS_[model]->InitTraining(*nSNP, *nSamp, snp_geno, *nHLA, H1, H2);
-		*out_Model = model;
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		_HIBAG_MODELS_[model]->InitTraining(Rf_asInteger(nSNP),
+			Rf_asInteger(nSamp), INTEGER(snp_geno),
+			Rf_asInteger(nHLA), INTEGER(H1), INTEGER(H2));
+		rv_ans = ScalarInteger(model);
+	CORE_CATCH
 }
 
 
 /**
- *  to close an existing HIBAG model 
+ *  Close an existing HIBAG model 
  *
- *  \param model      the model index
- *  \param out_err    output the error information, 0 -- no error, 1 -- an error exists
+ *  \param model      the index in the model list
 **/
-DLLEXPORT void HIBAG_Close(int *model, LongBool *out_err)
+SEXP HIBAG_Close(SEXP model)
 {
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Model* m = _HIBAG_MODELS_[*model];
-		_HIBAG_MODELS_[*model] = NULL;
+	int midx = Rf_asInteger(model);
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		CAttrBag_Model *m = _HIBAG_MODELS_[midx];
+		_HIBAG_MODELS_[midx] = NULL;
 		delete m;
-		*out_err = 0;
-	CATCH(*out_err = 1)
+	CORE_CATCH
 }
 
 
 /**
- *  to add individual classifiers
+ *  Add individual classifiers
  *
  *  \param model           the model index
  *  \param nclassifier     the total number of individual classifiers to be created
@@ -458,300 +444,255 @@ DLLEXPORT void HIBAG_Close(int *model, LongBool *out_err)
  *  \param prune           if TRUE, perform a parsimonious forward variable selection
  *  \param verbose         show information if TRUE
  *  \param verbose_detail  show more information if TRUE
- *  \param out_err         output the error information, 0 -- no error, 1 -- an error exists
 **/
-DLLEXPORT void HIBAG_NewClassifiers(int *model, int *nclassifier, int *mtry,
-	LongBool *prune, LongBool *verbose, LongBool *verbose_detail,
-	LongBool *out_err)
+SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
+	SEXP prune, SEXP verbose, SEXP verbose_detail)
 {
-	GetRNGstate();
-	TRY
-		_Check_HIBAG_Model(*model);
-		_HIBAG_MODELS_[*model]->BuildClassifiers(*nclassifier, *mtry,
-			*prune, *verbose, *verbose_detail);
-		*out_err = 0;
-	CATCH(*out_err = 1)
-	PutRNGstate();
+	CORE_TRY
+		int midx = Rf_asInteger(model);
+		_Check_HIBAG_Model(midx);
+
+		GetRNGstate();
+		_HIBAG_MODELS_[midx]->BuildClassifiers(
+			Rf_asInteger(nclassifier), Rf_asInteger(mtry),
+			Rf_asLogical(prune) == TRUE, Rf_asLogical(verbose) == TRUE,
+			Rf_asLogical(verbose_detail) == TRUE);
+		PutRNGstate();
+	CORE_CATCH
 }
 
 
 /**
- *  to predict HLA types
+ *  Predict HLA types, output the best-guess and their prob.
  *
  *  \param model        the model index
  *  \param GenoMat      the pointer to the SNP genotypes
  *  \param nSamp        the number of samples in GenoMat
- *  \param out_H1       the first HLA alleles
- *  \param out_H2       the second HLA alleles
- *  \param out_Prob     the posterior probabilities
- *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
+ *  \param vote_method  the voting method
+ *  \param ShowInfo     whether showing information
+ *  \return H1, H2 and posterior prob.
 **/
-DLLEXPORT void HIBAG_Predict_Resp(int *model, int *GenoMat, int *nSamp,
-	int *vote_method, LongBool *ShowInfo,
-	int out_H1[], int out_H2[], double out_Prob[], LongBool *out_err)
+SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
+	SEXP vote_method, SEXP ShowInfo)
 {
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
+	int midx = Rf_asInteger(model);
+	int NumSamp = Rf_asInteger(nSamp);
 
-	#if (HIBAG_FLOAT_TYPE_ID == 0)
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
-		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2, out_Prob,
-			NULL, *ShowInfo);
+		rv_ans = PROTECT(NEW_LIST(3));
+		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
+		SET_ELEMENT(rv_ans, 0, out_H1);
+		SEXP out_H2 = PROTECT(NEW_INTEGER(NumSamp));
+		SET_ELEMENT(rv_ans, 1, out_H2);
+		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
+		SET_ELEMENT(rv_ans, 2, out_Prob);
 
-	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+		M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+			NULL, Rf_asLogical(ShowInfo) == TRUE);
 
-		vector<float> tmp(*nSamp);
-		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2, &tmp[0],
-			NULL, *ShowInfo);
-		for (int i=0; i < *nSamp; i++) out_Prob[i] = tmp[i];
-
-	#else
-	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
-	#endif
-
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		UNPROTECT(4);
+	CORE_CATCH
 }
 
 
 /**
- *  to predict HLA types, output posterior probabilities
+ *  Predict HLA types, output the best-guess, their prob. and a matrix
+ *      of all posterior probabilities
  *
  *  \param model        the model index
  *  \param GenoMat      the pointer to the SNP genotypes
  *  \param nSamp        the number of samples in GenoMat
- *  \param out_H1       the first HLA alleles
- *  \param out_H2       the second HLA alleles
- *  \param out_Prob     the posterior probabilities
- *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
+ *  \param vote_method  the voting method
+ *  \param ShowInfo     whether showing information
+ *  \return H1, H2, prob. and a matrix of all probabilities
 **/
-DLLEXPORT void HIBAG_Predict_Prob(int *model, int *GenoMat, int *nSamp,
-	int *vote_method, LongBool *ShowInfo, double out_Prob[], LongBool *out_err)
+SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
+	SEXP vote_method, SEXP ShowInfo)
 {
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
+	int midx = Rf_asInteger(model);
+	int NumSamp = Rf_asInteger(nSamp);
 
-	#if (HIBAG_FLOAT_TYPE_ID == 0)
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
-		M.PredictHLA_Prob(GenoMat, *nSamp, *vote_method, out_Prob, *ShowInfo);
+		rv_ans = PROTECT(NEW_LIST(4));
 
-	#elif (HIBAG_FLOAT_TYPE_ID == 1)
+		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
+		SET_ELEMENT(rv_ans, 0, out_H1);
+		SEXP out_H2 = PROTECT(NEW_INTEGER(NumSamp));
+		SET_ELEMENT(rv_ans, 1, out_H2);
+		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
+		SET_ELEMENT(rv_ans, 2, out_Prob);
+		SEXP out_MatProb = PROTECT(
+			allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp));
+		SET_ELEMENT(rv_ans, 3, out_MatProb);
 
-		const int n = M.nHLA()*(M.nHLA()+1) / 2;
-		vector<float> tmp(n);
-		M.PredictHLA_Prob(GenoMat, *nSamp, *vote_method, &tmp[0], *ShowInfo);
-		for (int i=0; i < n; i++) out_Prob[i] = tmp[i];
+		M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+			REAL(out_MatProb), Rf_asLogical(ShowInfo) == TRUE);
 
-	#else
-	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
-	#endif
-
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		UNPROTECT(5);
+	CORE_CATCH
 }
 
 
 /**
- *  to predict HLA types
+ *  Create a new individual classifier with specified parameters
  *
  *  \param model        the model index
- *  \param GenoMat      the pointer to the SNP genotypes
- *  \param nSamp        the number of samples in GenoMat
- *  \param out_H1       the first HLA alleles
- *  \param out_H2       the second HLA alleles
- *  \param out_Prob     the posterior probabilities
- *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
-**/
-DLLEXPORT void HIBAG_Predict_Resp_Prob(int *model, int *GenoMat, int *nSamp,
-	int *vote_method, LongBool *ShowInfo,
-	int out_H1[], int out_H2[], double out_MaxProb[],
-	double out_Prob[], LongBool *out_err)
-{
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Model &M = *_HIBAG_MODELS_[*model];
-
-	#if (HIBAG_FLOAT_TYPE_ID == 0)
-
-		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2,
-			out_MaxProb, out_Prob, *ShowInfo);
-
-	#elif (HIBAG_FLOAT_TYPE_ID == 1)
-
-		vector<float> tmp(*nSamp);
-		const int n = M.nHLA()*(M.nHLA()+1) / 2;
-		vector<float> tmp_d(n);
-		M.PredictHLA(GenoMat, *nSamp, *vote_method, out_H1, out_H2, &tmp[0],
-			&tmp_d[0], *ShowInfo);
-		for (int i=0; i < *nSamp; i++) out_Prob[i] = tmp[i];
-		for (int i=0; i < n; i++) out_Prob[i] = tmp_d[i];
-
-	#else
-	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
-	#endif
-
-		*out_err = 0;
-	CATCH(*out_err = 1)
-}
-
-
-/**
- *  to create a new individual classifier with specified parameters
- *
- *  \param model        the model index
- *  \param n_snp        the number of selected SNP markers
  *  \param snpidx       the indices of SNP markers
- *  \param n_haplo      the number of haplotypes
+ *  \param samp_num     the bootstrap count
  *  \param freq         the haplotype frequencies
  *  \param hla          the HLA alleles corresponding to the hapltype list
  *  \param haplo        the vector of characters specifying the SNP haplotype list
  *  \param acc          the out-of-bag accuracy
- *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
 **/
-DLLEXPORT void HIBAG_NewClassifierHaplo(int *model, int *n_snp, int snpidx[],
-	int samp_num[], int *n_haplo, double *freq, int *hla, char *haplo[],
-	double *acc, LongBool *out_err)
+SEXP HIBAG_NewClassifierHaplo(SEXP model, SEXP snpidx,
+	SEXP samp_num, SEXP freq, SEXP hla, SEXP haplo, SEXP acc)
 {
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Classifier *I = _HIBAG_MODELS_[*model]->NewClassifierAllSamp();
+	int midx = Rf_asInteger(model);
+	int nHaplo = Rf_length(freq);
+	if (nHaplo != Rf_length(hla))
+		error("Invalid length of 'hla'.");
+	if (nHaplo != Rf_length(haplo))
+		error("Invalid length of 'haplo'.");
+	double Acc = Rf_isNull(acc) ? 0.0 : Rf_asReal(acc);
 
-	#if (HIBAG_FLOAT_TYPE_ID == 0)
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
 
-		I->Assign(*n_snp, snpidx, samp_num, *n_haplo, freq, hla, haplo, acc);
+		vector<const char*> HapList(nHaplo);
+		for (int i=0; i < nHaplo; i++)
+			HapList[i] = CHAR(STRING_ELT(haplo, i));
 
-	#elif (HIBAG_FLOAT_TYPE_ID == 1)
-
-		float acc_float = *acc;
-		vector<float> tmp(*n_haplo);
-		for (int i=0; i < *n_haplo; i++) tmp[i] = freq[i];
-		I->Assign(*n_snp, snpidx, samp_num, *n_haplo, &tmp[0], hla, haplo,
-			&acc_float);
-
-	#else
-	#  error "Invalid HIBAG_FLOAT_TYPE_ID"
-	#endif
-
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		CAttrBag_Classifier *I =
+			_HIBAG_MODELS_[midx]->NewClassifierAllSamp();
+		I->Assign(Rf_length(snpidx), INTEGER(snpidx),
+			INTEGER(samp_num), nHaplo, REAL(freq), INTEGER(hla),
+			&HapList[0], &Acc);
+	CORE_CATCH
 }
 
 
 /**
- *  to get the number of individual component classifiers
+ *  Get the number of individual component classifiers
  *
  *  \param model        the model index
- *  \param out_Num      output the number of individual classifiers
- *  \param out_err      output the error information, 0 -- no error, 1 -- an error exists
+ *  \return the number of individual classifiers
 **/
-DLLEXPORT void HIBAG_GetNumClassifiers(int *model, int *out_Num, LongBool *out_err)
+SEXP HIBAG_GetNumClassifiers(SEXP model)
 {
-	TRY
-		_Check_HIBAG_Model(*model);
-		*out_Num = _HIBAG_MODELS_[*model]->ClassifierList().size();
-		*out_err = 0;
-	CATCH(*out_err = 1)
+	int midx = Rf_asInteger(model);
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		rv_ans = ScalarInteger(_HIBAG_MODELS_[midx]->ClassifierList().size());
+	CORE_CATCH
 }
 
 
 /**
- *  to get the number of haplotypes and selected SNP markers in a specified individual classifier
+ *  Get the details of a specified individual classifier
  *
  *  \param model         the model index
  *  \param idx           the index of individual classifier
- *  \param out_NumHaplo  output the number of haplotypes
- *  \param out_NumSNP    output the number of selected SNP markers
- *  \param out_err       output the error information, 0 -- no error, 1 -- an error exists
+ *  \return the haplotype frequencies, the HLA alleles, the haplotype list,
+ *          the indices of SNP markers, the indices of samples and
+ *          the out-of-bag accuracy
 **/
-DLLEXPORT void HIBAG_Idv_GetNumHaplo(int *model, int *idx,
-	int *out_NumHaplo, int *out_NumSNP, LongBool *out_err)
+SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 {
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Model *AB = _HIBAG_MODELS_[*model];
-		*out_NumHaplo = AB->ClassifierList()[*idx - 1].nHaplo();
-		*out_NumSNP   = AB->ClassifierList()[*idx - 1].nSNP();
-		*out_err = 0;
-	CATCH(*out_err = 1)
-}
+	int midx = Rf_asInteger(model);
+	int cidx = Rf_asInteger(idx);
 
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		CAttrBag_Model *AB = _HIBAG_MODELS_[midx];
 
-/**
- *  to get the details of a specified individual classifier
- *
- *  \param model         the model index
- *  \param idx           the index of individual classifier
- *  \param out_freq      output the haplotype frequencies
- *  \param out_hla       output the HLA alleles
- *  \param out_haplo     output the haplotype list
- *  \param out_snpidx    output the indices of SNP markers
- *  \param out_acc       output the out-of-bag accuracy
- *  \param out_err       output the error information, 0 -- no error, 1 -- an error exists
-**/
-DLLEXPORT void HIBAG_Classifier_GetHaplos(int *model, int *idx,
-	double out_freq[], int out_hla[], char *out_haplo[], int out_snpidx[], int out_samp_num[],
-	double *out_acc, LongBool *out_err)
-{
-	TRY
-		_Check_HIBAG_Model(*model);
-		CAttrBag_Model *AB = _HIBAG_MODELS_[*model];
-
-		const CAttrBag_Classifier &Voter = AB->ClassifierList()[*idx - 1];
+		const CAttrBag_Classifier &Voter = AB->ClassifierList()[cidx - 1];
+		const int nHaplo = Voter.nHaplo();
 		const vector< vector<THaplotype> > &List = Voter.Haplotype().List;
+		const vector<int> &Num = Voter.BootstrapCount();
 
-		int idx = 0;
-		for (int i=0; i < (int)List.size(); i++)
+		rv_ans = PROTECT(NEW_LIST(6));
+		SEXP out_Freq  = PROTECT(NEW_NUMERIC(nHaplo));
+		SET_ELEMENT(rv_ans, 0, out_Freq);
+		SEXP out_HLA   = PROTECT(NEW_INTEGER(nHaplo));
+		SET_ELEMENT(rv_ans, 1, out_HLA);
+		SEXP out_Haplo = PROTECT(NEW_CHARACTER(nHaplo));
+		SET_ELEMENT(rv_ans, 2, out_Haplo);
+
+		size_t idx = 0;
+		for (size_t i=0; i < List.size(); i++)
 		{
 			vector<THaplotype>::const_iterator it;
 			for (it=List[i].begin(); it != List[i].end(); it++)
 			{
-				out_freq[idx] = it->Frequency;
-				out_hla[idx] = i + 1;
-				RStrAgn(it->HaploToStr(Voter.nSNP()).c_str(), &out_haplo[idx]);
+				REAL(out_Freq)[idx] = it->Frequency;
+				INTEGER(out_HLA)[idx] = i + 1;
+				SET_STRING_ELT(out_Haplo, idx,
+					mkChar(it->HaploToStr(Voter.nSNP()).c_str()));
 				idx ++;
 			}
 		}
-		for (int i=0; i < (int)Voter.SNPIndex().size(); i++)
-			out_snpidx[i] = Voter.SNPIndex()[i] + 1;
-		const vector<int> &N = Voter.BootstrapCount();
-		for (int i=0; i < (int)N.size(); i++)
-			out_samp_num[i] = N[i];
 
-		*out_acc = Voter.OutOfBag_Accuracy();
-		*out_err = 0;
-	CATCH(*out_err = 1)
+		SEXP out_SNPIdx = PROTECT(NEW_INTEGER(Voter.SNPIndex().size()));
+		SET_ELEMENT(rv_ans, 3, out_SNPIdx);
+		for (size_t i=0; i < Voter.SNPIndex().size(); i++)
+			INTEGER(out_SNPIdx)[i] = Voter.SNPIndex()[i] + 1;
+
+		SEXP out_SampNum = PROTECT(NEW_INTEGER(Num.size()));
+		SET_ELEMENT(rv_ans, 4, out_SampNum);
+		for (size_t i=0; i < Num.size(); i++)
+			INTEGER(out_SampNum)[i] = Num[i];
+
+		SET_ELEMENT(rv_ans, 5, ScalarReal(Voter.OutOfBag_Accuracy()));
+		UNPROTECT(6);
+
+	CORE_CATCH
 }
 
 
 /**
- *  to estimate the confusion matrix
+ *  Estimate the confusion matrix
  *
  *  \param n_hla         the number of different HLA alleles
  *  \param init_mat      the initial confusion matrix without any ambiguous state
  *  \param n_DConfusion  the number of double confusions
  *  \param D_mat
- *  \param out_mat       the output confusion matrix
- *  \param out_err       output the error information, 0 -- no error, 1 -- an error exists
+ *  \return a confusion matrix
 **/
-DLLEXPORT void HIBAG_Confusion(int *n_hla, double *init_mat,
-	int *n_DConfusion, int *D_mat, double *out_mat, double *tmp_mat,
-	LongBool *out_err)
+SEXP HIBAG_Confusion(SEXP n_hla, SEXP init_mat, SEXP n_DConfusion,
+	SEXP D_mat)
 {
 	// the max number of iterations
 	const int N_MAX_ITERATION = 100;
+	// the number of unique HLA alleles
+	const int nHLA = Rf_asInteger(n_hla);
+	// the number of double confusions
+	const int nDConf = Rf_asInteger(n_DConfusion);
 
-	TRY
-		const int nHLA = *n_hla;
-		const int SIZE_MAT = sizeof(double)*nHLA*(nHLA+1);
+	CORE_TRY
+		const size_t SIZE_MAT = sizeof(double)*nHLA*(nHLA+1);
+
 		#define INDEX(T, P, var) var[(nHLA+1)*T + P]
 
+		rv_ans = allocMatrix(REALSXP, nHLA+1, nHLA);
+		double *out_mat = REAL(rv_ans);
+
+		vector<double> TmpMat(nHLA*(nHLA+1));
+		double *tmp_mat = &TmpMat[0];
+
 		// initial values
-		memcpy(out_mat, init_mat, SIZE_MAT);
-		for (int i=0; i < *n_DConfusion; i++)
+		memcpy(out_mat, REAL(init_mat), SIZE_MAT);
+		for (int i=0; i < nDConf; i++)
 		{
-			int *T = &D_mat[i*4], *P = &D_mat[i*4+2];
+			int *T = INTEGER(D_mat) + i*4;
+			int *P = INTEGER(D_mat) + i*4 + 2;
 			INDEX(T[0], P[0], out_mat) += 0.5;
 			INDEX(T[0], P[1], out_mat) += 0.5;
 			INDEX(T[1], P[0], out_mat) += 0.5;
@@ -765,10 +706,11 @@ DLLEXPORT void HIBAG_Confusion(int *n_hla, double *init_mat,
 			// copy the current probabilities to the old ones
 			memcpy(tmp_mat, out_mat, SIZE_MAT);
 			// update ...
-			memcpy(out_mat, init_mat, SIZE_MAT);
-			for (int i=0; i < *n_DConfusion; i++)
+			memcpy(out_mat, REAL(init_mat), SIZE_MAT);
+			for (int i=0; i < nDConf; i++)
 			{
-				int *T = &D_mat[i*4], *P = &D_mat[i*4+2];
+				int *T = INTEGER(D_mat) + i*4;
+				int *P = INTEGER(D_mat) + i*4 + 2;
 
 				f1 = INDEX(T[0], P[0], tmp_mat);
 				f2 = INDEX(T[0], P[1], tmp_mat);
@@ -784,53 +726,16 @@ DLLEXPORT void HIBAG_Confusion(int *n_hla, double *init_mat,
 			}
 		}
 
-		// output
-		*out_err = 0;
-	CATCH(*out_err = 1)
+	CORE_CATCH
 }
 
 
 /**
- *  to get the algorithm parameters
- *
- *  \param EM_MaxNum        The max number of iterations for EM algorithm
- *  \param EM_RelTol        The reltol convergence tolerance
- *  \param Search_MaxNum    The max number of SNP markers in an individual classifier
-**/
-DLLEXPORT void HIBAG_GetParam(int *EM_MaxNum, double *EM_RelTol, int *Search_MaxNum)
-{
-	*EM_MaxNum = EM_MaxNum_Iterations;
-	*EM_RelTol = EM_FuncRelTol;
-	*Search_MaxNum = HIBAG_MAXNUM_SNP_IN_CLASSIFIER;
-}
-
-
-/**
- *  to set the algorithm parameters
- *
- *  \param EM_MaxNum        The max number of iterations for EM algorithm
- *  \param EM_RelTol        The reltol convergence tolerance
- *  \param Search_MaxNum    The max number of SNP markers in an individual classifier
-**/
-DLLEXPORT void HIBAG_SetParam(int *EM_MaxNum, LongBool *If_EM_MaxNum,
-	double *EM_RelTol, LongBool *If_EM_RelTol,
-	int *Search_MaxNum, LongBool *If_Search_MaxNum)
-{
-	if (*If_EM_MaxNum)
-		EM_MaxNum_Iterations = *EM_MaxNum;
-	if (*If_EM_RelTol)
-		EM_FuncRelTol = *EM_RelTol;
-//	if (*If_Search_MaxNum)
-//		SEARCH_SNP_MAXNUM = *Search_MaxNum;
-}
-
-
-/**
- *  to detect the storage mode of a PLINK BED file
+ *  Detect the storage mode of a PLINK BED file
  *
  *  \param bedfn         the file name of PLINK BED file
 **/
-DLLEXPORT SEXP HIBAG_BEDFlag(SEXP bedfn)
+SEXP HIBAG_BEDFlag(SEXP bedfn)
 {
 	const char *fn = CHAR(STRING_ELT(bedfn, 0));
 
@@ -841,56 +746,68 @@ DLLEXPORT SEXP HIBAG_BEDFlag(SEXP bedfn)
 		char prefix[3];
 		file.read(prefix, 3);
 		if ((prefix[0] != 0x6C) || (prefix[1] != 0x1B))
-			throw ErrHLA("Invalid prefix in the bed file.");
+			throw ErrHLA("Invalid prefix in the PLINK BED file.");
 		rv_ans = ScalarInteger((unsigned char)prefix[2]);
 	CORE_CATCH
 }
 
 
 /**
- *  to convert from a PLINK BED file
+ *  Convert from a PLINK BED file
  *
  *  \param bedfn         the file name of PLINK BED file
  *  \param n_samp        the number of samples
  *  \param n_snp         the number of SNPs
- *  \param mode          the storage mode
- *  \param verbose       if TRUE, show information
- *  \param out_geno      output genotypes
- *  \param out_err       output the error information, 0 -- no error, 1 -- an error exists
+ *  \param n_save_snp    the number of imported SNPs
+ *  \param snp_flag      the flag of whether it is selected
+ *  \return a matrix of genotypes
 **/
-DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_snp,
-	LongBool *mode, LongBool *snp_flag, LongBool *verbose, int *out_geno,
-	LongBool *out_err)
+SEXP HIBAG_ConvBED(SEXP bedfn, SEXP n_samp, SEXP n_snp, SEXP n_save_snp,
+	SEXP snp_flag)
 {
-	TRY
+	const char *fn     = CHAR(STRING_ELT(bedfn, 0));
+	const int NumSamp  = Rf_asInteger(n_samp);
+	const int NumSNP   = Rf_asInteger(n_snp);
+	const int NumSvSNP = Rf_asInteger(n_save_snp);
+	const int *pflag   = LOGICAL(snp_flag);
+
+	CORE_TRY
 		// open file
-		ifstream file(*bedfn, ios::binary);
+		ifstream file(fn, ios::binary);
 		if (!file.good())
-			throw ErrHLA("Fail to open the file \"%s\".", *bedfn);
+			throw ErrHLA("Fail to open the file \"%s\".", fn);
 
 		// read prefix
 		char prefix[3];
 		file.read(prefix, 3);
+		if ((prefix[0] != 0x6C) || (prefix[1] != 0x1B))
+			throw ErrHLA("Invalid prefix in the PLINK BED file.");
+		int mode = prefix[2];
 
 		// determine the values of packed genotypes
 		int nRe, nPack, nNumPack, nNum;
-		if (*mode)
+		if (mode == 0)
 		{
 			// the individual-major mode
-			nRe = (*n_snp) % 4; nNumPack = (*n_snp)/4;
+			nRe = NumSNP % 4;
+			nNumPack = NumSNP / 4;
 			nPack = (nRe > 0) ? (nNumPack + 1) : nNumPack;
-			nNum = (*n_samp);
+			nNum = NumSamp;
 		} else {
 			// the SNP-major mode
-			nRe = (*n_samp) % 4; nNumPack = (*n_samp)/4;
+			nRe = NumSamp % 4;
+			nNumPack = NumSamp / 4;
 			nPack = (nRe > 0) ? (nNumPack + 1) : nNumPack;
-			nNum = (*n_snp);
+			nNum = NumSNP;
 		}
 
 		vector<char> srcgeno(nPack);
 		vector<int> dstgeno((nNumPack+1) * 4);
-		static const int cvt[4] = { 2, INT_MIN, 1, 0 };
+		static const int cvt[4] = { 2, NA_INTEGER, 1, 0 };
 		int I_SNP = 0;
+
+		// output
+		rv_ans = allocMatrix(INTSXP, NumSvSNP, NumSamp);
 
 		// for - loop
 		for (int i=0; i < nNum; i++)
@@ -917,67 +834,67 @@ DLLEXPORT void HIBAG_ConvBED(char **bedfn, int *n_samp, int *n_snp, int *n_save_
 			}
 
 			// write
-			if (*mode)
+			if (mode == 0)
 			{
 				// the individual-major mode
-				int *pI = (out_geno + i * (*n_save_snp));
-				for (int j=0; j < *n_snp; j++)
+				int *pI = INTEGER(rv_ans) + i * NumSvSNP;
+				for (int j=0; j < NumSNP; j++)
 				{
-					if (snp_flag[j])
+					if (pflag[j])
 						*pI++ = dstgeno[j];
 				}
 			} else {
 				// the SNP-major mode
-				if (snp_flag[i])
+				if (pflag[i])
 				{
-					int *pI = (out_geno + I_SNP);
+					int *pI = INTEGER(rv_ans) + I_SNP;
 					I_SNP ++;
-					for (int j=0; j < *n_samp; j++)
+					for (int j=0; j < NumSamp; j++)
 					{
 						*pI = dstgeno[j];
-						pI += *n_save_snp;
+						pI += NumSvSNP;
 					}
 				}
 			}
 		}
-		*out_err = 0;
-	CATCH(*out_err = 1)
+
+	CORE_CATCH
 }
 
 
-// -----------------------------------------------------------------------
-// -----------------------------------------------------------------------
 /**
- *  to get an error message
- *  \param Msg           the last error information
+ *  Get an error message
 **/
-DLLEXPORT SEXP HIBAG_ErrMsg()
+SEXP HIBAG_ErrMsg()
 {
 	return mkString(_LastError.c_str());
 }
 
 
 /**
- *  to get the SSE information
+ *  Get the version and SSE information
 **/
-DLLEXPORT SEXP HIBAG_SSE_Flag()
+SEXP HIBAG_Kernel_Version()
 {
-	SEXP ans = NEW_INTEGER(2);
+	SEXP ans = NEW_INTEGER(4);
+
+	INTEGER(ans)[0] = HIBAG_KERNEL_VERSION_MAJOR;
+	INTEGER(ans)[1] = HIBAG_KERNEL_VERSION_MINOR;
 
 	#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
 	#   ifdef HIBAG_SSE_HARDWARE_POPCNT
-		INTEGER(ans)[0] = 2;
+		INTEGER(ans)[2] = 2;
 	#   else
-		INTEGER(ans)[0] = 1;
+		INTEGER(ans)[2] = 1;
 	#   endif
 	#else
-		INTEGER(ans)[0] = 0;
+		INTEGER(ans)[2] = 0;
 	#endif
 
 	#ifdef HIBAG_REG_BIT64
-		INTEGER(ans)[1] = 64;
+		INTEGER(ans)[3] = 64;
 	#else
-		INTEGER(ans)[1] = 0;
+		INTEGER(ans)[3] = 0;
 	#endif
 
 	return ans;
@@ -989,30 +906,38 @@ DLLEXPORT SEXP HIBAG_SSE_Flag()
 // -----------------------------------------------------------------------
 
 /// Initialize the package
-DLLEXPORT void R_init_HIBAG(DllInfo *info)
+void R_init_HIBAG(DllInfo *info)
 {
 	#define CALL(name, num)    { #name, (DL_FUNC)&name, num }
 
 	static R_CallMethodDef callMethods[] =
 	{
+		CALL(HIBAG_AlleleStrand, 8),
 		CALL(HIBAG_BEDFlag, 1),
+		CALL(HIBAG_GetNumClassifiers, 1),
+		CALL(HIBAG_Classifier_GetHaplos, 2),
+		CALL(HIBAG_Close, 1),
+		CALL(HIBAG_Confusion, 4),
+		CALL(HIBAG_ConvBED, 5),
+		CALL(HIBAG_ErrMsg, 0),
+		CALL(HIBAG_Kernel_Version, 0),
+		CALL(HIBAG_New, 3),
+		CALL(HIBAG_NewClassifierHaplo, 7),
+		CALL(HIBAG_NewClassifiers, 6),
+		CALL(HIBAG_Predict_Resp, 5),
+		CALL(HIBAG_Predict_Resp_Prob, 5),
+		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
-		CALL(HIBAG_SSE_Flag, 0),
 		{ NULL, NULL, 0 }
 	};
 
-	static R_CMethodDef cMethods[] = {
-		{ "HIBAG_New", (DL_FUNC)&HIBAG_New, 5 },
-		{ NULL, NULL, 0 }
-	};
-
-	R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
+	R_registerRoutines(info, NULL, callMethods, NULL, NULL);
 
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
 }
 
 /// Finalize the package
-DLLEXPORT void R_unload_HIBAG(DllInfo *info)
+void R_unload_HIBAG(DllInfo *info)
 {
 	try
 	{

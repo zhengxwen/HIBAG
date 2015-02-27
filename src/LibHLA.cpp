@@ -20,10 +20,8 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Version        : 1.3.0
+// Kernel Version : 1.3.0
 // Copyright      : Xiuwen Zheng (GPL v3)
-// Created        : 11/14/2011
-// Last modified  : 02/03/2015
 // Description    : HLA imputation C++ library
 // ===============================================================
 
@@ -75,13 +73,12 @@ static const TFLOAT STOP_RELTOL_LOGLIK_ADDSNP = 0.001;
 static const TFLOAT PRUNE_RELTOL_LOGLIK = 0.1;
 
 
-// Random number
-
-// return an integer from 0 to n-1 with equal probability
+/// Random number: return an integer from 0 to n-1 with equal probability
 static inline int RandomNum(int n)
 {
+	// 'unif_rand()' returns [0 .. 1]
 	int v = (int)(n * unif_rand());
-	if (v >= n) v = n - 1;  // it seems impossible, but avoid the risk
+	if (v >= n) v = n - 1;
 	return v;
 }
 
@@ -680,6 +677,7 @@ inline int TGenotype::_HamDist(size_t Length,
 	#else
 
 		// two 64-bit integers
+		// suggested by
 		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 
 		// val -= ((val >> 1) & 0x5555555555555555);
@@ -723,7 +721,9 @@ inline int TGenotype::_HamDist(size_t Length,
 		}
 
 		// popcount for '(H1 ^ S1) & MASK'
+		// suggested by
 		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
 		UTYPE v1 = (H1 ^ S1) & MASK;
 	#ifdef HIBAG_REG_BIT64
 		// 64-bit integers
@@ -1549,6 +1549,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 
 		// sample mtry from all candidate SNP markers
 		VarSampling.RandomSelect(mtry);
+
+		// for-loop
 		for (int i=0; i < VarSampling.NumOfSelection(); i++)
 		{
 			if (_EM.PrepareNewSNP(VarSampling[i], OutHaplo, *_SNPMat, _GenoList, NextHaplo))
@@ -1664,7 +1666,7 @@ void CAttrBag_Classifier::InitBootstrapCount(int SampCnt[])
 
 void CAttrBag_Classifier::Assign(int n_snp, const int snpidx[],
 	const int samp_num[], int n_haplo, const TFLOAT *freq, const int *hla,
-	char *const haplo[], TFLOAT *_acc)
+	const char * haplo[], TFLOAT *_acc)
 {
 	// SNP markers
 	_SNPIndex.assign(&snpidx[0], &snpidx[n_snp]);

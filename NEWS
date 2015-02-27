@@ -1,5 +1,14 @@
-CHANGES IN VERSION 1.3.0
+CHANGES IN VERSION 1.3.0-1.3.1
 -------------------------
+
+NEW FEATURES
+
+    o support the human genome "hg20"
+
+    o add a new function `hlaGDS2Geno()` to support SNP GDS files (in the
+      R/Bioconductor package SNPRelate)
+
+    o `hlaReport()` outputs text with markdown format
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
@@ -9,16 +18,14 @@ SIGNIFICANT USER-VISIBLE CHANGES
     o hardware POPCNT: 2.4x speedup for large-scale data, compared to
       the implementation in v1.2.4
 
-    o SSE2 code: 1.5x speedup for large-scale data, compared to the
-      implementation in v1.2.4
-
-    o support the human genome "hg20"
+    o SSE2 popcount implementation: 1.5x speedup for large-scale data,
+      compared to the implementation in v1.2.4
 
 BUG FIXES
 
-    o bug fixes on big-endian machines
+    o bug fixes on big-endian machines (like Solaris SPARC, Apple PowerPC)
 
-    o minor fix on discrete uniform distribution
+    o minor fix on random sampling from discrete uniform distribution
 
     o bug fix if 'requireNamespace("HIBAG")' instead of 'require(HIBAG)' is
       called from other packages
@@ -29,30 +36,25 @@ CHANGES IN VERSION 1.2.1-1.2.4
 
 NEW FEATURES
 
-    o add a new function 'hlaGDS2Geno' to support GDS SNP files (in the
-      R/Bioconductor package SNPRelate)
-
-    o add a new function 'hlaOutOfBag' offering out-of-bag estimation of
+    o add a new function `hlaOutOfBag()` offering out-of-bag estimation of
       overall accuracy, per-allele sensitivity, etc
 
-    o improve the display of the function 'hlaReport'
-
-    o minor improvement
+    o improve the display of the function `hlaReport()`
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
-    o improve the display of 'summary.hlaAlleleClass'
+    o improve the display of `summary.hlaAlleleClass()`
 
-    o fix warnings in R CMD check with v3.1.1
+    o fix warnings in 'R-3.1.1 CMD check'
 
-    o avoid missing values in 'hlaFlankingSNP'
+    o avoid missing values in `hlaFlankingSNP()`
 
-    o add more gene information in 'hlaLociInfo'
+    o add more gene information in `hlaLociInfo()`
 
 BUG FIXES
 
     o make the C function 'HIBAG_SortAlleleStr' compatible with the
-      clang++ compiler (Mac Mavericks)
+      clang++ compiler on Mac Mavericks
 
 
 CHANGES IN VERSION 1.2.0
@@ -60,13 +62,13 @@ CHANGES IN VERSION 1.2.0
 
 NEW FEATURES
 
-    o add a new function 'hlaPredMerge' to merge predictions from multiple
+    o add a new function `hlaPredMerge()` to merge predictions from multiple
       models via voting
 
     o add assembly information (like hg19) to the objects of
       'hlaAttrBagClass' and 'hlaAttrBagObj'
 
-    o add a new argument 'stop.cluster' to 'hlaParallelAttrBagging'
+    o add a new argument 'stop.cluster' to `hlaParallelAttrBagging()`
 
     o allow matching SNPs by positions only
 
@@ -84,11 +86,11 @@ SIGNIFICANT USER-VISIBLE CHANGES
     o the code optimization guarantees the same training and predictive
       accuracies as version 1.1.0
 
-    o remove unused row names in the function 'hlaCompareAllele'
+    o remove unused row names in the function `hlaCompareAllele()`
 
-    o improve the function 'hlaPublish'
+    o improve the function `hlaPublish()`
 
-    o improve documents
+    o improve vignettes and documents
 
 
 CHANGES IN VERSION 1.1.0
@@ -98,11 +100,11 @@ NEW FEATURES
 
     o add genome assembly information (such like hg18, hg19)
 
-    o allow class majority voting in 'predict.hlaAttrBagClass'
+    o allow class majority voting in `predict.hlaAttrBagClass()`
 
-    o add an autosave function to 'hlaParallelAttrBagging'
+    o add an autosave function to `hlaParallelAttrBagging()`
 
-    o add a new function 'hlaPublish'
+    o add a new function `hlaPublish()`
 
     o allow additional information in the objects of 'hlaAttrBagClass' and
       'hlaAttrBagObj'
@@ -111,7 +113,7 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
     o update citation information
 
-    o change 'hlaModelfromObj' to 'hlaModelFromObj' (a typo)
+    o change `hlaModelfromObj()` to `hlaModelFromObj()` (a typo)
 
     o improvement in mismatching alleles for allelic strands
 
@@ -126,7 +128,8 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
 BUG FIXES
 
-    o use 'useDynLib()' in NAMESPACE instead of 'library.dynam()'
+    o use `useDynLib()` in NAMESPACE instead of 'library.dynam()' since
+      R-Ext strongly suggests to use `useDynLib()`
 
     o update citation information
 
@@ -138,31 +141,31 @@ CHANGES IN VERSION 0.9.2-0.9.4
 
 NEW FEATURES
 
-    o add a load balancing function to 'hlaParallelAttrBagging'
+    o add a load balancing function to `hlaParallelAttrBagging()`
 
-    o add 'hlaUniqueAllele'
+    o add `hlaUniqueAllele()`
 
-    o add an argument 'match.pos' to the functions 'predict.hlaAttrBagClass',
-      'hlaGenoCombine', 'hlaGenoSwitchStrand'
+    o add an argument 'match.pos' to the functions `predict.hlaAttrBagClass()`,
+      `hlaGenoCombine()`, `hlaGenoSwitchStrand()`
 
-    o add an argument 'with.pos' to the function 'hlaSNPID'
+    o add an argument 'with.pos' to the function `hlaSNPID()`
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
-    o give more warnings about missing SNPs in 'predict.hlaAttrBagClass'
+    o give more warnings about missing SNPs in `predict.hlaAttrBagClass()`
 
     o a warning is given for strand mismatching when calling
-      'hlaGenoSwitchStrand'
+      `hlaGenoSwitchStrand()`
 
 BUG FIXES
 
-    o bug fix: passing only one individual to 'predict.hlaAttrBagClass'
+    o bug fix: passing only one individual to `predict.hlaAttrBagClass()`
 
-    o avoid segmentation fault in 'predict.hlaAttrBagClass'
+    o avoid the segmentation fault in `predict.hlaAttrBagClass()`
       when all SNPs are missing.
 
 
 CHANGES IN VERSION 0.9.1
 -------------------------
 
-    o first public release of HIBAG
+    o first release of HIBAG in July, 2012

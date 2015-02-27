@@ -1,24 +1,24 @@
 Package: HIBAG
 Type: Package
 Title: HLA Genotype Imputation with Attribute Bagging
-Version: 1.3.0
-Date: 2015-02-03
+Version: 1.3.1
+Date: 2015-02-23
 Depends: R (>= 2.14.0)
-Imports: methods, GenomicRanges
-Suggests: parallel, RUnit, BiocStyle, BiocGenerics, knitr,
-    gdsfmt (>= 1.2.2), SNPRelate (>= 1.1.6)
+Imports: methods
+Suggests: parallel, BiocStyle, knitr, gdsfmt (>= 1.2.2),
+    SNPRelate (>= 1.1.6)
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre"),
     email="zhengx@u.washington.edu"),
     person("Bruce", "Weir", role=c("ctb", "ths"),
     email="bsweir@u.washington.edu"))
-Description: HIBAG is a state of the art software package for imputing HLA
-    types using SNP data, and it relies on a training set of HLA and SNP
-    genotypes. HIBAG can be used by researchers with published parameter
-    estimates instead of requiring access to large training sample datasets.
-    It combines the concepts of attribute bagging, an ensemble classifier
-    method, with haplotype inference for SNPs and HLA types. Attribute bagging
-    is a technique which improves the accuracy and stability of classifier
-    ensembles using bootstrap aggregating and random variable selection.
+Description: It is a software package for imputing HLA types using SNP data,
+    and relies on a training set of HLA and SNP genotypes. HIBAG can be used
+    by researchers with published parameter estimates instead of requiring
+    access to large training sample datasets. It combines the concepts of
+    attribute bagging, an ensemble classifier method, with haplotype inference
+    for SNPs and HLA types. Attribute bagging is a technique which improves
+    the accuracy and stability of classifier ensembles using bootstrap
+    aggregating and random variable selection.
 License: GPL-3
 LazyData: yes
 VignetteBuilder: knitr
