@@ -680,9 +680,15 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
 {
     # library
     if (!requireNamespace("gdsfmt"))
-        stop("The gdsfmt package should be installed.")
+    {
+        warning("The gdsfmt package should be installed.", immediate.=TRUE)
+        return(NULL)
+    }
     if (!requireNamespace("SNPRelate"))
-        stop("The SNPRelate package should be installed.")
+    {
+        warning("The SNPRelate package should be installed.", immediate.=TRUE)
+        return(NULL)
+    }
 
     # check
     stopifnot(is.character(gds.fn) & is.vector(gds.fn))

@@ -35,9 +35,3 @@ artifacts:
 
   - path: '*.Rcheck\**\*.Rout'
     name: Logs
-
-  - path: '\*_*.tar.gz'
-    name: Bits
-
-  - path: '\*_*.zip'
-    name: Bits
