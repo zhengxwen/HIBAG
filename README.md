@@ -73,14 +73,14 @@ R CMD INSTALL HIBAG_latest.tar.gz
 You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
 
 Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher, assuming GNU Compilers (gcc/g++) or Clang compiler (clang++) are installed:
-```
+```sh
 ## for C code
 CFLAGS=-g -O3 -march=native
 ## for C++ code
 CXXFLAGS=-g -O3 -march=native
 ```
 Or force to create hardware POPCNT code:
-```
+```sh
 ## for C code
 CFLAGS=-g -O3 -msse4.2 -mpopcnt
 ## for C++ code
