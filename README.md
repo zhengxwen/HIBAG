@@ -75,9 +75,9 @@ You have to customize the package compilation, see: [CRAN: Customizing-package-c
 Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher, assuming GNU Compilers (gcc/g++) or Clang compiler (clang++) are installed:
 ```sh
 ## for C code
-CFLAGS=-g -O3 -march=native
+CFLAGS=-g -O3 -march=native -mtune=native
 ## for C++ code
-CXXFLAGS=-g -O3 -march=native
+CXXFLAGS=-g -O3 -march=native -mtune=native
 ```
 Or force to create hardware POPCNT code:
 ```sh
