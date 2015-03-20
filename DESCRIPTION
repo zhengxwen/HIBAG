@@ -7,7 +7,7 @@ Depends: R (>= 2.14.0)
 Imports: methods
 Suggests: parallel, BiocStyle, knitr, gdsfmt (>= 1.2.2),
     SNPRelate (>= 1.1.6)
-Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre"),
+Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu"),
     person("Bruce", "Weir", role=c("ctb", "ths"),
     email="bsweir@u.washington.edu"))
@@ -25,5 +25,3 @@ VignetteBuilder: knitr
 biocViews: Genetics, StatisticalMethod
 URL: http://www.biostat.washington.edu/~bsweir/HIBAG/,
     http://github.com/zhengxwen/HIBAG
-Author: Xiuwen Zheng [aut, cre], Bruce Weir [ctb, ths]
-Maintainer: Xiuwen Zheng <zhengx@u.washington.edu>
