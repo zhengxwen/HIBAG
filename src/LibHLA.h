@@ -51,7 +51,7 @@
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 
-#   ifdef __SSE4_2__
+#   if defined(__SSE4_2__) || defined(__POPCNT__)
 #       define HIBAG_SSE_HARDWARE_POPCNT
 #       include <nmmintrin.h>  // SSE4_2, for POPCNT
 #   endif
