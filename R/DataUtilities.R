@@ -33,6 +33,14 @@
     if (num > 1) "s" else ""
 }
 
+.strbp <- function(bp)
+{
+    if (is.na(bp) | !is.finite(bp))
+        "unknown"
+    else
+        paste(bp, "bp", sep="")
+}
+
 #######################################################################
 # get the name of HLA gene
 #
@@ -1645,7 +1653,8 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
     if (show)
     {
         cat("Gene: ", .hla_gene_name_string(hla$locus), "\n", sep="")
-        cat(sprintf("Range: [%dbp, %dbp]", hla$pos.start, hla$pos.end))
+        cat(sprintf("Range: [%s, %s]",
+            .strbp(hla$pos.start), .strbp(hla$pos.end)))
         if (!is.null(hla$assembly))
             cat(" on ", hla$assembly, "\n", sep="")
         else
