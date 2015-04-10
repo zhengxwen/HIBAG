@@ -15,11 +15,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
-```{r style, echo=FALSE, results="asis", message=FALSE}
-BiocStyle::markdown()
-knitr::opts_chunk$set(tidy=FALSE, message=FALSE)
-```
-
 # Overview
 
 The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation [@Shiina09]. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the *HLA--B* locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database [@Robinson13] ([http://www.ebi.ac.uk/imgt/hla/](http://www.ebi.ac.uk/imgt/hla/)).
