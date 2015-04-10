@@ -17,10 +17,9 @@ BiocStyle::latex()
     HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging
 }
 \author{
-    Xiuwen Zheng \\
-    Department of Biostatistics, University of Washington -- Seattle
+    Xiuwen Zheng
 }
-\date{Feb 20, 2015}
+\date{Apr 10, 2015}
 
 
 \maketitle
