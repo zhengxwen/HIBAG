@@ -1,6 +1,13 @@
+#############################################################
+#
+# DESCRIPTION: Unit tests in the HIBAG package
+#
+
 # load the HIBAG package
 library(HIBAG)
 
+
+#############################################################
 
 # a list of HLA genes
 hla.list <- c("A", "B", "C", "DQA1", "DQB1", "DRB1")
@@ -61,4 +68,75 @@ for (hla.idx in seq_len(length(hla.list)))
 	}
 
 	cat("\n\n")
+}
+
+
+
+#############################################################
+
+function.list <- c(
+	"HIBAG-package",
+	"HLA_Type_Table",
+	"HapMap_CEU_Geno",
+	"hlaAllele",
+	"hlaAlleleClass",
+	"hlaAlleleDigit",
+	"hlaAlleleSubset",
+	"hlaAttrBagClass",
+	"hlaAttrBagObj",
+	"hlaAttrBagging",
+	"hlaBED2Geno",
+	"hlaCheckSNPs",
+	"hlaClose",
+	"hlaCombineAllele",
+	"hlaCombineModelObj",
+	"hlaCompareAllele",
+	"hlaErrMsg",
+	"hlaFlankingSNP",
+	"hlaGDS2Geno",
+	"hlaGeno2PED",
+	"hlaGenoAFreq",
+	"hlaGenoCombine",
+	"hlaGenoLD",
+	"hlaGenoMFreq",
+	"hlaGenoMRate",
+	"hlaGenoMRate_Samp",
+	"hlaGenoSubset",
+	"hlaGenoSwitchStrand",
+	"hlaLociInfo",
+	"hlaMakeSNPGeno",
+	"hlaModelFiles",
+	"hlaModelFromObj",
+	"hlaOutOfBag",
+	"hlaParallelAttrBagging",
+	"hlaPredMerge",
+	"hlaPublish",
+	"hlaReport",
+	"hlaSNPGenoClass",
+	"hlaSNPID",
+	"hlaSampleAllele",
+	"hlaSplitAllele",
+	"hlaSubModelObj",
+	"hlaUniqueAllele",
+	"plot.hlaAttrBagObj",
+	"predict.hlaAttrBagClass",
+	"print.hlaAttrBagClass",
+	"summary.hlaAlleleClass",
+	"summary.hlaSNPGenoClass"
+)
+
+{
+	sapply(function.list, FUN = function(func.name)
+		{
+			args <- list(
+				topic   = func.name,
+				package = "HIBAG",
+				echo = FALSE,
+				verbose = FALSE,
+				ask = FALSE
+			)
+			suppressWarnings(do.call(example, args))
+			NULL
+		})
+	invisible()
 }

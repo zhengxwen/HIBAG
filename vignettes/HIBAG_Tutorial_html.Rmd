@@ -3,10 +3,11 @@ title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging
 author: "Xiuwen Zheng"
 date: "Apr 10, 2015"
 output:
-  BiocStyle::html_document:
-    toc: true
-  BiocStyle::pdf_document:
-    toc: true
+  html_document:
+    theme: spacelab
+    toc: yes
+  pdf_document:
+    toc: yes
     toc_depth: 3
 bibliography: HIBAG_Ref.bib
 vignette: >

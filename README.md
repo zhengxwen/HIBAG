@@ -3,8 +3,12 @@ HLA Genotype Imputation with Attribute Bagging
 
 Kernel Version: v1.3
 
+![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
+[GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
+
 [![Build Status](https://travis-ci.org/zhengxwen/HIBAG.png)](https://travis-ci.org/zhengxwen/HIBAG)
 [![Build status](https://ci.appveyor.com/api/projects/status/v650qe8ap4bojxuf?svg=true)](https://ci.appveyor.com/project/zhengxwen/hibag)
+[![codecov.io](https://codecov.io/github/zhengxwen/HIBAG/coverage.svg?branch=master)](https://codecov.io/github/zhengxwen/HIBAG?branch=master)
 
 
 ## Features
@@ -27,12 +31,6 @@ Development Version:
 * optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
 * hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
 * SSE2 popcount implementation without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
-
-
-## License
-
-![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
-[GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
 
 
 ## Package Maintainer
