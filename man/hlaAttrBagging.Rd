@@ -152,6 +152,10 @@ summary(pred)
     call.threshold=0))
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0.5))
+
+
+# delete the temporary files
+unlink(c("HIBAG_model.RData", "testgeno.RData", "HLASplit.RData"), force=TRUE)
 }
 
 \keyword{HLA}

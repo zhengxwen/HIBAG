@@ -66,6 +66,10 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 summary(hla)
+
+
+# encode other loci
+hlaAllele("HD0010", "1", "2", locus="NewLocus")
 }
 
 \keyword{HLA}

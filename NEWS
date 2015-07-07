@@ -1,7 +1,13 @@
+CHANGES IN VERSION 1.5.0
+-------------------------
+
+    o increase the test coverage
+
+
 CHANGES IN VERSION 1.4.0
 -------------------------
 
-    o The version number was bumped for the Bioconductor release version
+    o the version number was bumped for the Bioconductor release version
 
 
 CHANGES IN VERSION 1.3.0-1.3.2

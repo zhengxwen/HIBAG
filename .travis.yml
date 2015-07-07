@@ -8,13 +8,12 @@ before_install:
   - ./pkg-build.sh bootstrap
 
 install:
-  - ./pkg-build.sh install_github zhengxwen/gdsfmt zhengxwen/SNPRelate jimhester/covr
+  - ./pkg-build.sh install_github zhengxwen/gdsfmt zhengxwen/SNPRelate
   - ./pkg-build.sh install_deps
   - ./pkg-build.sh install_bioc_deps
 
 script:
   - ./pkg-build.sh run_tests
-  - ./pkg-build.sh run_script -e 'library(covr);codecov()'
 
 after_failure:
   - ./pkg-build.sh dump_logs
@@ -26,5 +25,6 @@ notifications:
 
 env:
   matrix:
+    - RVERSION=3.2.0
     - RVERSION=devel
 

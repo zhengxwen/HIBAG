@@ -42,6 +42,10 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
     snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
 
 hlaGeno2PED(train.geno, "test")
+
+
+# delete the temporary files
+unlink(c("test.map", "test.ped"), force=TRUE)
 }
 
 \keyword{SNP}

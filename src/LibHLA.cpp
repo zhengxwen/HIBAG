@@ -20,7 +20,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Kernel Version : 1.3.0
+// Kernel Version : 1.3
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Description    : HLA imputation C++ library
 // ===============================================================
@@ -442,21 +442,6 @@ size_t CHaplotypeList::TotalNumOfHaplo() const
 	return Cnt;
 }
 
-void CHaplotypeList::Print()
-{
-	const size_t i_n = List.size();
-	for (size_t i=0; i < i_n; i++)
-	{
-		vector<THaplotype> &L = List[i];
-		vector<THaplotype>::const_iterator it;
-		for (it=L.begin(); it != L.end(); it++)
-		{
-			Rprintf("%0.7f\tHLA: %4d, %s\n", it->Frequency, (int)i,
-				it->HaploToStr(Num_SNP).c_str());
-		}
-	}
-}
-
 
 
 // -------------------------------------------------------------------------
@@ -814,18 +799,6 @@ void CGenotypeList::ReduceSNP()
 	Num_SNP --;
 }
 
-void CGenotypeList::Print()
-{
-	int idx = 0;
-	vector<TGenotype>::const_iterator it;
-	for (it = List.begin(); it != List.end(); it++)
-	{
-		idx ++;
-		Rprintf("%d\t[%d]\t%s\n", idx, it->BootstrapCount,
-			it->SNPToString(Num_SNP).c_str());
-	}
-}
-
 
 
 // -------------------------------------------------------------------------
@@ -1134,16 +1107,6 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 #if (HIBAG_TIMING == 2)
 	_inc_timing();
 #endif
-}
-
-void CAlg_EM::THaploPairList::Print(const int Length)
-{
-	vector<THaploPair>::const_iterator it;
-	for (it = PairList.begin(); it != PairList.end(); it++)
-	{
-		Rprintf("%s, %s\n", it->H1->HaploToStr(Length).c_str(),
-			it->H2->HaploToStr(Length).c_str());
-	}
 }
 
 

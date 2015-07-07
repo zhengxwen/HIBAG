@@ -33,7 +33,8 @@ hlaGDS2Geno(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
 # Import a SNP GDS file
 fn <- system.file("extdata", "HapMap_CEU_Chr6.gds", package="HIBAG")
 
-geno <- hlaGDS2Geno(fn, assembly="hg18")
+geno <- hlaGDS2Geno(fn, assembly="hg18",
+    rm.invalid.allele=TRUE, import.chr="6")
 
 summary(geno)
 }

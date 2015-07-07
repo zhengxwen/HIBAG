@@ -20,7 +20,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Kernel Version : 1.3.0
+// Kernel Version : 1.3
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Description    : HLA imputation C++ library
 // ===============================================================
@@ -199,9 +199,6 @@ namespace HLA_LIB
 		/// the total number of unique HLA alleles
 		inline size_t nHLA() const { return List.size(); }
 
-		/// print all haplotypes
-		void Print();
-
 		/// haplotype list with HLA allele index
 		vector< vector<THaplotype> > List;
 		/// the number of SNP markers
@@ -292,8 +289,6 @@ namespace HLA_LIB
 		void AddSNP(int IdxSNP, const CSNPGenoMatrix &SNPMat);
 		/// remove the last SNP
 		void ReduceSNP();
-		/// print all SNP genotypes
-		void Print();
 
 		/// return the total number of samples
 		inline int nSamp() const { return List.size(); }
@@ -430,9 +425,6 @@ namespace HLA_LIB
 			int BootstrapCount;           //< the count in the bootstrapped data
 			int SampIndex;                //< the sample index in the source data
 			vector<THaploPair> PairList;  //< a list of haplotype pairs
-			
-			/// print information
-			void Print(const int Length);
 		};
 
 		/// pairs of haplotypes for individuals

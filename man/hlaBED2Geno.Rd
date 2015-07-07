@@ -38,7 +38,12 @@ fam.fn <- system.file("extdata", "HapMap_CEU.fam", package="HIBAG")
 bim.fn <- system.file("extdata", "HapMap_CEU.bim", package="HIBAG")
 
 hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
+summary(hapmap.ceu)
 
+# Or
+
+hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19",
+    rm.invalid.allele=TRUE, import.chr="6")
 summary(hapmap.ceu)
 }
 

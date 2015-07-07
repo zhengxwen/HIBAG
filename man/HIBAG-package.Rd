@@ -42,7 +42,7 @@ ensembles using bootstrap aggregating and random variable selection.
     \url{http://www.nature.com/tpj/journal/v14/n2/full/tpj201318a.html}
 }
 \author{
-    Xiuwen Zheng [aut, cre] \email{zhengx@u.washington.edu},
+    Xiuwen Zheng [aut, cre, cph] \email{zhengx@u.washington.edu},
     Bruce S. Weir [ctb, ths] \email{bsweir@u.washington.edu}
 }
 
@@ -153,9 +153,7 @@ head(pred$value)
 
 
 # delete the temporary files
-unlink("HIBAG_model.RData", force=TRUE)
-unlink("testgeno.RData", force=TRUE)
-unlink("HLASplit.RData", force=TRUE)
+unlink(c("HIBAG_model.RData", "testgeno.RData", "HLASplit.RData"), force=TRUE)
 }
 
 \keyword{HLA}

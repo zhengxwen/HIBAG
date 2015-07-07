@@ -59,6 +59,10 @@ save(mobj3, file="tm3.RData")
 # load all of mobj1, mobj2 and mobj3
 mobj <- hlaModelFiles(c("tm1.RData", "tm2.RData", "tm3.RData"))
 summary(mobj)
+
+
+# delete the temporary files
+unlink(c("tm1.RData", "tm2.RData", "tm3.RData"), force=TRUE)
 }
 
 \keyword{HLA}

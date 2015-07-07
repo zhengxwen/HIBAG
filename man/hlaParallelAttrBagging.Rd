@@ -130,6 +130,10 @@ summary(pred)
 
 # stop parallel nodes
 stopCluster(cl)
+
+
+# delete the temporary file
+unlink(c("tmp_model.RData"), force=TRUE)
 }
 
 \keyword{HLA}

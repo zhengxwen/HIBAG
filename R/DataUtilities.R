@@ -181,7 +181,7 @@
 
 #######################################################################
 #
-# the functions for SNP genotypes and haplotypes
+# the functions for SNP genotypes
 #
 #######################################################################
 
@@ -342,8 +342,6 @@ hlaGenoSwitchStrand <- function(target, template,
     if (inherits(target, "hlaSNPGenoClass"))
     {
         target.afreq <- rowMeans(target$genotype, na.rm=TRUE) * 0.5
-    } else {
-        target.afreq <- rowMeans(target$haplotype, na.rm=TRUE)
     }
 
     # call
@@ -888,12 +886,12 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
 
 #######################################################################
 #
-# the function list for genotypes and haplotypes
+# the function list for genotypes
 #
 #######################################################################
 
 #######################################################################
-# To the allele frequencies from genotypes or haplotypes
+# To the allele frequencies from genotypes
 #
 
 hlaGenoAFreq <- function(obj)
@@ -905,7 +903,7 @@ hlaGenoAFreq <- function(obj)
 
 
 #######################################################################
-# To the minor allele frequencies from genotypes or haplotypes
+# To the minor allele frequencies from genotypes
 #
 
 hlaGenoMFreq <- function(obj)
@@ -918,7 +916,7 @@ hlaGenoMFreq <- function(obj)
 
 
 #######################################################################
-# To the missing rates from genotypes or haplotypes per SNP
+# To the missing rates from genotypes per SNP
 #
 
 hlaGenoMRate <- function(obj)
@@ -930,7 +928,7 @@ hlaGenoMRate <- function(obj)
 
 
 #######################################################################
-# To the missing rates from genotypes or haplotypes per sample
+# To the missing rates from genotypes per sample
 #
 
 hlaGenoMRate_Samp <- function(obj)
@@ -1365,7 +1363,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
                     cnt.ind <- cnt.ind + 1
                 }
 
-                # correct count of haplotypes
+                # count of correct haplotypes
                 s <- c(ts1[i], ts2[i]); p <- c(ps1[i], ps2[i])
                 ind.truehla[i] <- paste(s[order(s)], collapse="/")
                 ind.predhla[i] <- paste(p[order(p)], collapse="/")
