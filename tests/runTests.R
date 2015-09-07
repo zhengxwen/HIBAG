@@ -74,58 +74,10 @@ for (hla.idx in seq_len(length(hla.list)))
 
 #############################################################
 
-function.list <- c(
-	"HIBAG-package",
-	"HLA_Type_Table",
-	"HapMap_CEU_Geno",
-	"hlaAllele",
-	"hlaAlleleClass",
-	"hlaAlleleDigit",
-	"hlaAlleleSubset",
-	"hlaAttrBagClass",
-	"hlaAttrBagObj",
-	"hlaAttrBagging",
-	"hlaBED2Geno",
-	"hlaCheckSNPs",
-	"hlaClose",
-	"hlaCombineAllele",
-	"hlaCombineModelObj",
-	"hlaCompareAllele",
-	"hlaErrMsg",
-	"hlaFlankingSNP",
-	"hlaGDS2Geno",
-	"hlaGeno2PED",
-	"hlaGenoAFreq",
-	"hlaGenoCombine",
-	"hlaGenoLD",
-	"hlaGenoMFreq",
-	"hlaGenoMRate",
-	"hlaGenoMRate_Samp",
-	"hlaGenoSubset",
-	"hlaGenoSwitchStrand",
-	"hlaLociInfo",
-	"hlaMakeSNPGeno",
-	"hlaModelFiles",
-	"hlaModelFromObj",
-	"hlaOutOfBag",
-	"hlaParallelAttrBagging",
-	"hlaPredMerge",
-	"hlaPublish",
-	"hlaReport",
-	"hlaSNPGenoClass",
-	"hlaSNPID",
-	"hlaSampleAllele",
-	"hlaSplitAllele",
-	"hlaSubModelObj",
-	"hlaUniqueAllele",
-	"plot.hlaAttrBagObj",
-	"predict.hlaAttrBagClass",
-	"print.hlaAttrBagClass",
-	"summary.hlaAlleleClass",
-	"summary.hlaSNPGenoClass"
-)
-
 {
+	function.list <- readRDS(
+		system.file("Meta", "Rd.rds", package="HIBAG"))$Name
+
 	sapply(function.list, FUN = function(func.name)
 		{
 			args <- list(

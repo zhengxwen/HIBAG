@@ -41,8 +41,7 @@ genes must be able to present a wide range of peptides. Evolutionary pressure
 at these loci have given rise to a great deal of functional diversity. For
 example, the {\em HLA--B} locus has 1,898 four-digit alleles listed in the
 April 2012 release of the IMGT-HLA Database
-\cite{Robinson13}
-(\url{http://www.ebi.ac.uk/imgt/hla/}).
+\cite{Robinson13}(\url{http://www.ebi.ac.uk/imgt/hla/}).
 
 Classical HLA genotyping methodologies have been predominantly developed
 for tissue typing purposes, with sequence based typing (SBT) approaches

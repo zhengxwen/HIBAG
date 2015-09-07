@@ -53,6 +53,12 @@ Zheng, X. *et al*. HIBAG-HLA genotype imputation with attribute bagging. *Pharma
 
 ## Installation
 
+* Bioconductor repository:
+```R
+source("http://bioconductor.org/biocLite.R")
+biocLite("HIBAG")
+```
+
 * Development version from Github:
 ```R
 library("devtools")
