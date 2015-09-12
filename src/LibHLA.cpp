@@ -179,13 +179,8 @@ void CdProgression::ShowProgress()
 	time_t tm; time(&tm);
 	string s(ctime(&tm));
 	s.erase(s.size()-1, 1);
-	if (Info.empty())
-	{
-		Rprintf("%s\t%d%%\n", s.c_str(), int(fPercent*StepPercent));
-	} else {
-		Rprintf("%s\t%s\t%d%%\n", Info.c_str(), s.c_str(),
-			int(fPercent*StepPercent));
-	}
+	Rprintf("%s\t%s\t%d%%\n", Info.c_str(), s.c_str(),
+		int(fPercent*StepPercent));
 }
 
 

@@ -4,10 +4,12 @@ CHANGES IN VERSION 1.6.0
     o the version number was bumped for the Bioconductor release version 3.2
 
 
-CHANGES IN VERSION 1.5.0
+CHANGES IN VERSION 1.5.0-1.5.1
 -------------------------
 
     o increase the test coverage
+
+    o bug an issue when `predict.hlaAttrBagClass(..., allele.check=FALSE)`
 
 
 CHANGES IN VERSION 1.4.0
@@ -45,7 +47,7 @@ BUG FIXES
 
     o minor fix on random sampling from discrete uniform distribution
 
-    o bug fix if 'requireNamespace("HIBAG")' instead of 'require(HIBAG)' is
+    o bug fix if `requireNamespace("HIBAG")` instead of `require(HIBAG)` is
       called from other packages
 
 

@@ -30,7 +30,7 @@
 
 .plural <- function(num)
 {
-    if (num > 1) "s" else ""
+    if (num > 1L) "s" else ""
 }
 
 .strbp <- function(bp)
@@ -131,8 +131,8 @@
             submit <- function(node, job)
                 sendCall(cl[[node]], fun, argfun(job), tag = job)
 
-            for (i in 1:min(n, p)) submit(i, i)
-            for (i in 1:n)
+            for (i in 1L:min(n, p)) submit(i, i)
+            for (i in 1L:n)
             {
                 d <- recvOneResult(cl)
                 j <- i + min(n, p)
@@ -166,7 +166,7 @@
             }
         }
     } else {
-        for (i in 1:n)
+        for (i in 1L:n)
         {
             dv <- fun(i, ...)
             msg.fn(i, dv)
@@ -328,7 +328,7 @@ hlaGenoSwitchStrand <- function(target, template,
     if (flag)
     {
         s <- intersect(s1, s2)
-        if (length(s) <= 0) stop("There is no common SNP.")
+        if (length(s) <= 0L) stop("There is no common SNP.")
         I1 <- match(s, s1); I2 <- match(s, s2)
     }
 
@@ -355,9 +355,9 @@ hlaGenoSwitchStrand <- function(target, template,
     {
         # switched allele pairs
         x <- sum(gz$flag)
-        if (x > 0)
+        if (x > 0L)
         {
-            if (x > 1)
+            if (x > 1L)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -371,9 +371,9 @@ hlaGenoSwitchStrand <- function(target, template,
         }
 
         # the number of ambiguity
-        if (gz$n.amb > 0)
+        if (gz$n.amb > 0L)
         {
-            if (gz$n.amb > 1)
+            if (gz$n.amb > 1L)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -386,9 +386,9 @@ hlaGenoSwitchStrand <- function(target, template,
         }
 
         # the number of mismatching
-        if (gz$n.mismatch > 0)
+        if (gz$n.mismatch > 0L)
         {
-            if (gz$n.mismatch > 1)
+            if (gz$n.mismatch > 1L)
             {
                 a <- "are"; s <- "s"
             } else {
@@ -404,9 +404,9 @@ hlaGenoSwitchStrand <- function(target, template,
     # output
     geno <- target$genotype[I2, ]
     if (is.vector(geno))
-        geno <- matrix(geno, ncol=1)
+        geno <- matrix(geno, ncol=1L)
     for (i in which(gz$flag))
-        geno[i, ] <- 2 - geno[i, ]
+        geno[i, ] <- 2L - geno[i, ]
 
     rv <- list(genotype = geno)
     rv$sample.id <- target$sample.id
@@ -502,13 +502,13 @@ hlaGeno2PED <- function(geno, out.fn)
 
     # PED file
     n <- length(geno$sample.id)
-    m <- matrix("", nrow=n, ncol=2*length(geno$snp.id))
-    for (i in 1:length(geno$snp.id))
+    m <- matrix("", nrow=n, ncol=2L*length(geno$snp.id))
+    for (i in 1L:length(geno$snp.id))
     {
         allele <- unlist(strsplit(geno$snp.allele[i], "/"))
-        g <- geno$genotype[i, ] + 1
-        m[, 2*(i-1)+1] <- allele[c(2, 1, 1)[g]]
-        m[, 2*(i-1)+2] <- allele[c(2, 2, 1)[g]]
+        g <- geno$genotype[i, ] + 1L
+        m[, 2L*(i-1L) + 1L] <- allele[c(2L, 1L, 1L)[g]]
+        m[, 2L*(i-1L) + 2L] <- allele[c(2L, 2L, 1L)[g]]
     }
     rv <- cbind(Family=geno$sample.id, Ind=geno$sample.id,
         Paternal=rep(0, n), Maternal=rep(0, n),
@@ -529,12 +529,12 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     import.chr="xMHC", assembly="auto", verbose=TRUE)
 {
     # check
-    stopifnot(is.character(bed.fn) & (length(bed.fn)==1))
-    stopifnot(is.character(fam.fn) & (length(fam.fn)==1))
-    stopifnot(is.character(bim.fn) & (length(bim.fn)==1))
+    stopifnot(is.character(bed.fn), length(bed.fn)==1L)
+    stopifnot(is.character(fam.fn), length(fam.fn)==1L)
+    stopifnot(is.character(bim.fn), length(bim.fn)==1L)
     stopifnot(is.character(import.chr))
-    stopifnot(is.logical(rm.invalid.allele) & (length(rm.invalid.allele)==1))
-    stopifnot(is.logical(verbose) & (length(verbose)==1))
+    stopifnot(is.logical(rm.invalid.allele), length(rm.invalid.allele)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
 
     assembly <- .hla_assembly(assembly)
 
@@ -543,7 +543,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     if (verbose)
     {
         cat("Open \"", bed.fn, sep="")
-        if (bed.flag == 0)
+        if (bed.flag == 0L)
             cat("\" in the individual-major mode.\n")
         else
             cat("\" in the SNP-major mode.\n")
@@ -552,12 +552,12 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     # read fam.fn
     famD <- read.table(fam.fn, header=FALSE, stringsAsFactors=FALSE)
     names(famD) <- c("FamilyID", "InvID", "PatID", "MatID", "Sex", "Pheno")
-    if (length(unique(famD$InvID)) == dim(famD)[1])
+    if (length(unique(famD$InvID)) == dim(famD)[1L])
     {
         sample.id <- famD$InvID
     } else {
         sample.id <- paste(famD$FamilyID, famD$InvID, sep="-")
-        if (length(unique(sample.id)) != dim(famD)[1])
+        if (length(unique(sample.id)) != dim(famD)[1L])
             stop("IDs in PLINK bed are not unique!")
     }
     if (verbose)
@@ -613,14 +613,14 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     if (!is.null(import.chr))
     {
         snp.flag <- (chr %in% import.chr) & (snp.pos>0)
-        n.snp <- as.integer(sum(snp.flag))
+        n.snp <- sum(snp.flag)
         if (verbose)
         {
             cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
                 .plural(n.snp), paste(import.chr, collapse=",")))
         }
     }
-    if (n.snp <= 0)
+    if (n.snp <= 0L)
         stop("There is no SNP imported.")
 
     # call the C function
@@ -654,7 +654,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         flag <- sapply(strsplit(snp.allele, "/"),
             FUN=function(x)
             {
-                if (length(x) == 2)
+                if (length(x) == 2L)
                 {
                     all(x %in% c("A", "G", "C", "T"))
                 } else {
@@ -697,16 +697,10 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
     }
 
     # check
-    stopifnot(is.character(gds.fn) & is.vector(gds.fn))
-    stopifnot(length(gds.fn) == 1L)
-
-    stopifnot(is.logical(rm.invalid.allele) & is.vector(rm.invalid.allele))
-    stopifnot(length(rm.invalid.allele) == 1L)
-
+    stopifnot(is.character(gds.fn), length(gds.fn)==1L)
+    stopifnot(is.logical(rm.invalid.allele), length(rm.invalid.allele)==1L)
     stopifnot(is.character(import.chr))
-
-    stopifnot(is.logical(verbose) & is.vector(verbose))
-    stopifnot(length(verbose) == 1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
 
     assembly <- .hla_assembly(assembly)
 
@@ -766,14 +760,14 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
     if (!is.null(import.chr))
     {
         snp.flag <- (chr %in% import.chr) & (snp.pos>0)
-        n.snp <- as.integer(sum(snp.flag))
+        n.snp <- sum(snp.flag)
         if (verbose)
         {
             cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
                 .plural(n.snp), paste(import.chr, collapse=",")))
         }
     }
-    if (n.snp <= 0)
+    if (n.snp <= 0L)
         stop("There is no SNP imported.")
 
     # result
@@ -809,7 +803,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         flag <- sapply(strsplit(snp.allele, "/"),
             function(x)
             {
-                if (length(x) == 2)
+                if (length(x) == 2L)
                 {
                     all(x %in% c("A", "G", "C", "T"))
                 } else {
@@ -993,7 +987,7 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
     {
         if (is.character(obj))
         {
-            len <- c(1, 2, 3, 4, 1, 2, 1, 2, 3, 4)
+            len <- c(1L, 2L, 3L, 4L, 1L, 2L, 1L, 2L, 3L, 4L)
             names(len) <- c("2-digit", "4-digit", "6-digit", "8-digit",
                 "allele", "protein", "2", "4", "6", "8")
             maxlen <- len[[as.character(max.resolution)]]
@@ -1007,15 +1001,15 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
                             if (length(idx) < length(s)) s <- s[idx]
                             if (length(idx) == length(s))
                             {
-                                if (rm.suffix & (nchar(s[length(s)])>0))
+                                if (rm.suffix & (nchar(s[length(s)])>0L))
                                 {
                                     z <- unlist(strsplit(s[length(s)], ""))
-                                    for (i in 1:length(z))
+                                    for (i in 1L:length(z))
                                     {
                                         if (!(z[i] %in% as.character(0:9)))
                                         {
-                                            if (i > 1)
-                                                z <- z[1:(i-1)]
+                                            if (i > 1L)
+                                                z <- z[1L:(i-1)]
                                             break
                                         }
                                     }
@@ -1025,7 +1019,7 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
                             paste(s, collapse=":")
                         }
                     },
-                idx = 1:maxlen)
+                idx = 1L:maxlen)
         } else {
             rv <- list(locus = obj$locus,
                 pos.start = obj$pos.start, pos.end = obj$pos.end,
@@ -1137,13 +1131,13 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.integer(samp.sel))
     if (is.logical(samp.sel))
-        stopifnot(length(samp.sel) == dim(hla$value)[1])
+        stopifnot(length(samp.sel) == dim(hla$value)[1L])
     if (is.integer(samp.sel))
         stopifnot(length(unique(samp.sel)) == length(samp.sel))
 
     # result
     if (is.null(samp.sel))
-        samp.sel <- rep(TRUE, dim(hla$value)[1])
+        samp.sel <- rep(TRUE, dim(hla$value)[1L])
     rv <- list(locus = hla$locus,
         pos.start = hla$pos.start, pos.end = hla$pos.end,
         value = hla$value[samp.sel, ],
@@ -1173,7 +1167,7 @@ hlaCombineAllele <- function(H1, H2)
     # check
     stopifnot(inherits(H1, "hlaAlleleClass"))
     stopifnot(inherits(H2, "hlaAlleleClass"))
-    stopifnot(length(intersect(H1$sample.id, H2$sample.id)) == 0)
+    stopifnot(length(intersect(H1$sample.id, H2$sample.id)) == 0L)
     stopifnot(H1$locus == H2$locus)
     stopifnot(H1$pos.start == H2$pos.start)
     stopifnot(H1$pos.end == H2$pos.end)
@@ -1300,7 +1294,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
         if ((length(tmp) != length(allele)) & !is.null(TrainFreq))
         {
             x <- rep(0, length(allele))
-            for (i in 1:length(allele))
+            for (i in 1L:length(allele))
                 x[i] <- sum(TrainFreq[tmp == allele[i]])
             TrainFreq <- x
         }
@@ -1335,7 +1329,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 
     if (n > 0L)
     {
-        for (i in 1:n)
+        for (i in 1L:n)
         {
             # increase
             TrueNumAll[[ ts1[i] ]] <- TrueNumAll[[ ts1[i] ]] + 1L
@@ -1369,16 +1363,16 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
                 ind.predhla[i] <- paste(p[order(p)], collapse="/")
                 
                 hnum <- 0L
-                if ((s[1]==p[1]) | (s[1]==p[2]))
+                if ((s[1L]==p[1L]) | (s[1L]==p[2L]))
                 {
-                    if (s[1]==p[1]) { p[1] <- "" } else { p[2] <- "" }
-                    confusion[s[1], s[1]] <- confusion[s[1], s[1]] + 1L
+                    if (s[1L]==p[1L]) { p[1L] <- "" } else { p[2L] <- "" }
+                    confusion[s[1L], s[1L]] <- confusion[s[1L], s[1L]] + 1L
                     cnt.haplo <- cnt.haplo + 1L
                     hnum <- hnum + 1L
                 }
-                if ((s[2]==p[1]) | (s[2]==p[2]))
+                if ((s[2L]==p[1L]) | (s[2L]==p[2L]))
                 {
-                    confusion[s[2], s[2]] <- confusion[s[2], s[2]] + 1L
+                    confusion[s[2L], s[2L]] <- confusion[s[2L], s[2L]] + 1L
                     cnt.haplo <- cnt.haplo + 1L
                     hnum <- hnum + 1L
                 }
@@ -1388,30 +1382,30 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
                 s <- c(ts1[i], ts2[i]); p <- c(ps1[i], ps2[i])
                 if (hnum == 1L)
                 {
-                    if ((s[1]==p[1]) | (s[1]==p[2]))
+                    if ((s[1L]==p[1L]) | (s[1L]==p[2L]))
                     {
-                        if (s[1]==p[1])
+                        if (s[1L]==p[1L])
                         {
-                            confusion[fn(p[2], allele), s[2]] <-
-                                confusion[fn(p[2], allele), s[2]] + 1L
+                            confusion[fn(p[2L], allele), s[2L]] <-
+                                confusion[fn(p[2L], allele), s[2L]] + 1L
                         } else {
-                            confusion[fn(p[1], allele), s[2]] <-
-                                confusion[fn(p[1], allele), s[2]] + 1L
+                            confusion[fn(p[1L], allele), s[2L]] <-
+                                confusion[fn(p[1L], allele), s[2L]] + 1L
                         }
                     } else {
-                        if (s[2]==p[1])
+                        if (s[2L]==p[1L])
                         {
-                            confusion[fn(p[2], allele), s[1]] <-
-                                confusion[fn(p[2], allele), s[1]] + 1L
+                            confusion[fn(p[2L], allele), s[1L]] <-
+                                confusion[fn(p[2L], allele), s[1L]] + 1L
                         } else {
-                            confusion[fn(p[1], allele), s[1]] <-
-                                confusion[fn(p[1], allele), s[1]] + 1L
+                            confusion[fn(p[1L], allele), s[1L]] <-
+                                confusion[fn(p[1L], allele), s[1L]] + 1L
                         }
                     }
-                } else if (hnum == 0)
+                } else if (hnum == 0L)
                 {
                     WrongTab <- cbind(WrongTab,
-                        c(s, fn(p[1], allele), fn(p[2], allele)))
+                        c(s, fn(p[1L], allele), fn(p[2L], allele)))
                 }
 
                 # the number of calling
@@ -1438,7 +1432,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     # confusion matrix
     if (is.null(WrongTab))
     {
-        nw <- as.integer(0)
+        nw <- 0L
     } else {
         nw <- ncol(WrongTab)
     }
@@ -1459,14 +1453,14 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     detail$call.rate <- TrueNum / TrueNumAll
 
     sens <- diag(confusion) / TrueNum
-    spec <- 1 - (PredNum[1:m] - diag(confusion)) / (2*cnt.call - TrueNum)
+    spec <- 1 - (PredNum[1L:m] - diag(confusion)) / (2*cnt.call - TrueNum)
     detail$accuracy <- (sens*TrueNum + spec*(2*cnt.call - TrueNum)) /
         (2*cnt.call)
     detail$sensitivity <- sens
     detail$specificity <- spec
-    detail$ppv <- diag(confusion) / rowSums(confusion)[1:m]
+    detail$ppv <- diag(confusion) / rowSums(confusion)[1L:m]
     detail$npv <- 1 - (TrueNum - diag(confusion)) /
-        (2*n - rowSums(confusion)[1:m])
+        (2*n - rowSums(confusion)[1L:m])
 
     detail$call.rate[!is.finite(detail$call.rate)] <- 0
     detail[detail$call.rate<=0,
@@ -1474,9 +1468,9 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
 
     # get miscall
     rv <- confusion; diag(rv) <- 0
-    m.max <- apply(rv, 2, max); m.idx <- apply(rv, 2, which.max)
+    m.max <- apply(rv, 2L, max); m.idx <- apply(rv, 2L, which.max)
     s <- names(PredNum)[m.idx]; s[m.max<=0] <- NA
-    p <- m.max / apply(rv, 2, sum)
+    p <- m.max / apply(rv, 2L, sum)
     detail <- cbind(detail, miscall=s, miscall.prop=p, stringsAsFactors=FALSE)
     rownames(detail) <- NULL
 
@@ -1551,15 +1545,15 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 
     train.set <- NULL
     H <- HLA
-    while (dim(H$value)[1] > 0)
+    while (dim(H$value)[1L] > 0L)
     {
         v <- summary(H, show=FALSE)
-        if (dim(v)[1] > 1)
+        if (dim(v)[1L] > 1L)
         {
             v <- v[order(v[, "count"]), ]
         }
 
-        allele <- rownames(v)[1]
+        allele <- rownames(v)[1L]
         samp.id <- H$value$sample.id[ H$value$allele1==allele |
             H$value$allele2==allele ]
         samp.id <- as.character(samp.id)
@@ -1636,13 +1630,13 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
     # get the number of unique genotypes
     m <- data.frame(a1 = hla$value$allele1,
         a2 = hla$value$allele2, stringsAsFactors=FALSE)
-    lst <- apply(m, 1, FUN=function(x) {
-        if (!is.na(x[1]) & !is.na(x[2]))
+    lst <- apply(m, 1L, FUN=function(x) {
+        if (!is.na(x[1L]) & !is.na(x[2L]))
         {
-            if (x[1] <= x[2])
-                paste(x[1], x[2], sep="/")
+            if (x[1L] <= x[2L])
+                paste(x[1L], x[2L], sep="/")
             else
-                paste(x[2], x[1], sep="/")
+                paste(x[2L], x[1L], sep="/")
         } else
             NA
     })
@@ -1657,7 +1651,7 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
             cat(" on ", hla$assembly, "\n", sep="")
         else
             cat("\n")
-        cat(sprintf("# of samples: %d\n", dim(hla$value)[1]))
+        cat(sprintf("# of samples: %d\n", dim(hla$value)[1L]))
         cat(sprintf("# of unique HLA alleles: %d\n", length(count)))
         cat(sprintf("# of unique HLA genotypes: %d\n", unique.n.geno))
 
@@ -1719,7 +1713,7 @@ hlaCheckSNPs <- function(model, object,
     NumOfValidSNP <- integer(length(model$classifiers))
 
     # enumerate each classifier
-    for (i in 1:length(model$classifiers))
+    for (i in 1L:length(model$classifiers))
     {
         v <- model$classifiers[[i]]
         flag <- src.snp[v$snpidx] %in% target.snp
@@ -1755,7 +1749,7 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
     stopifnot(is.null(platform) | is.character(platform))
     stopifnot(is.null(information) | is.character(information))
     stopifnot(is.null(warning) | is.character(warning))
-    stopifnot(is.logical(rm.unused.snp) & (length(rm.unused.snp)==1))
+    stopifnot(is.logical(rm.unused.snp) & (length(rm.unused.snp)==1L))
     stopifnot(is.logical(verbose))
     if (inherits(mobj, "hlaAttrBagClass"))
         mobj <- hlaModelToObj(mobj)
@@ -1775,7 +1769,7 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
     {
         # get frequency of use for SNPs
         snp.hist <- rep(0, length(mobj$snp.id))
-        for (i in 1:length(mobj$classifiers))
+        for (i in 1L:length(mobj$classifiers))
         {
             idx <- mobj$classifiers[[i]]$snpidx
             snp.hist[idx] <- snp.hist[idx] + 1
@@ -1788,7 +1782,7 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
             {
                 cnt <- mobj$n.snp - sum(flag)
                 cat(sprintf("Remove %d unused SNP%s.\n",
-                    cnt, if (cnt>1) "s" else ""))
+                    cnt, if (cnt>1L) "s" else ""))
             }
         }
         mobj$n.snp <- sum(flag)
@@ -1798,9 +1792,9 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
         mobj$snp.allele.freq <- mobj$snp.allele.freq[flag]
 
         idx.list <- rep(0, length(flag))
-        idx.list[flag] <- 1:mobj$n.snp
+        idx.list[flag] <- 1L:mobj$n.snp
 
-        for (i in 1:length(mobj$classifiers))
+        for (i in 1L:length(mobj$classifiers))
         {
             mobj$classifiers[[i]]$snpidx <-
                 idx.list[ mobj$classifiers[[i]]$snpidx ]
@@ -1811,7 +1805,7 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
     if (anonymize)
     {
         mobj$sample.id <- NULL
-        for (i in 1:length(mobj$classifiers))
+        for (i in 1L:length(mobj$classifiers))
         {
             mobj$classifiers[[i]]$samp.num <- NULL
         }
@@ -1873,11 +1867,8 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
 
-    stopifnot(is.numeric(call.threshold) & is.vector(call.threshold))
-    stopifnot(length(call.threshold) == 1L)
-
-    stopifnot(is.logical(verbose) & is.vector(verbose))
-    stopifnot(length(verbose) == 1L)
+    stopifnot(is.numeric(call.threshold), length(call.threshold)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
 
 
     ######################################################
@@ -1916,19 +1907,19 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
         "ppv", "npv")
 
     # for-loop
-    for (i in 1:nclass)
+    for (i in 1L:nclass)
     {
         mx <- model
         mx$classifiers <- mx$classifiers[i]
-        s <- mx$classifiers[[1]]$samp.num
+        s <- mx$classifiers[[1L]]$samp.num
         if (is.null(s))
             stop("There is no bootstrap sample index.")
 
         tmp.model <- hlaModelFromObj(mx)
-        tmp.geno <- geno[, s == 0]
+        tmp.geno <- geno[, s == 0L]
         v <- predict(tmp.model, tmp.geno, verbose=FALSE)
         hlaClose(tmp.model)
-        v$value$sample.id <- mx$sample.id[s == 0]
+        v$value$sample.id <- mx$sample.id[s == 0L]
         pam <- hlaCompareAllele(hla, v, allele.limit=mx,
             call.threshold=call.threshold, verbose=FALSE)
 
@@ -1968,9 +1959,9 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 
     # get miscall
     rv <- ans$confusion; diag(rv) <- 0
-    m.max <- apply(rv, 2, max); m.idx <- apply(rv, 2, which.max)
+    m.max <- apply(rv, 2L, max); m.idx <- apply(rv, 2L, which.max)
     s <- rownames(ans$confusion)[m.idx]; s[m.max<=0] <- NA
-    p <- m.max / apply(rv, 2, sum)
+    p <- m.max / apply(rv, 2L, sum)
 
     # output
     ans$detail <- cbind(ans$detailhead, ans$detail,
@@ -2014,7 +2005,7 @@ hlaReport <- function(object, export.fn="",
     if (!is.null(object$detail$train.freq))
     {
         d$FreqTrain <- sprintf("%0.4f", object$detail$train.freq)
-        d$FreqTrain[d$NumTrain <= 0] <- "0"
+        d$FreqTrain[d$NumTrain <= 0L] <- "0"
 
         L1 <- c("Allele", "Num.", "Freq.", "Num.", "Freq.",
             "CR", "ACC", "SEN", "SPE", "PPV", "NPV", "Miscall")
@@ -2033,7 +2024,7 @@ hlaReport <- function(object, export.fn="",
 
     d$NumValid <- object$detail$valid.num
     d$FreqValid <- sprintf("%0.4f", object$detail$valid.freq)
-    d$FreqValid[d$NumValid <= 0] <- "0"
+    d$FreqValid[d$NumValid <= 0L] <- "0"
 
     d$CR <- sprintf("%0.1f", object$detail$call.rate*100)
     d$CR[object$detail$call.rate < 0.0005] <- "--"
@@ -2171,7 +2162,7 @@ hlaReport <- function(object, export.fn="",
 
         cat("<h1>Imputation Evaluation</h1>",
             "<p></p>",
-            "<h3><b>Table 1:</b> The sensitivity (SEN), specificity (SPE),",
+            "<h3><b>Table 1L:</b> The sensitivity (SEN), specificity (SPE),",
             "positive predictive value (PPV), negative predictive value (NPV)",
             "and call rate (CR).</h3>",
             file=f, append=TRUE, sep="\n")
@@ -2189,7 +2180,7 @@ hlaReport <- function(object, export.fn="",
             "</tr>",
             file=f, append=TRUE, sep="\n")
 
-        for (i in 1:nrow(d))
+        for (i in 1L:nrow(d))
         {
             cat("<tr>", 
                 paste(paste("<td>", d[i, ], "</td>", sep=""), collapse=" "),
@@ -2217,7 +2208,7 @@ hlaReport <- function(object, export.fn="",
         d <- as.matrix(d)
         dm <- paste(" ", d, " ", sep="")
         dim(dm) <- dim(d)
-        dm <- cbind(rep("", dim(dm)[1]), dm)
+        dm <- cbind(rep("", dim(dm)[1L]), dm)
         write.table(dm, file=f, append=TRUE, quote=FALSE, sep="|",
             row.names=FALSE, col.names=FALSE, eol="|\n")
     }
