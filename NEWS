@@ -9,7 +9,7 @@ CHANGES IN VERSION 1.5.0-1.5.1
 
     o increase the test coverage
 
-    o bug an issue when `predict.hlaAttrBagClass(..., allele.check=FALSE)`
+    o fix an issue when `predict.hlaAttrBagClass(..., allele.check=FALSE)`
 
 
 CHANGES IN VERSION 1.4.0

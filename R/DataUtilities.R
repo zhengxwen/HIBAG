@@ -511,8 +511,8 @@ hlaGeno2PED <- function(geno, out.fn)
         m[, 2L*(i-1L) + 2L] <- allele[c(2L, 2L, 1L)[g]]
     }
     rv <- cbind(Family=geno$sample.id, Ind=geno$sample.id,
-        Paternal=rep(0, n), Maternal=rep(0, n),
-        Sex=rep(0, n), Pheno=rep(-9, n), m)
+        Paternal=rep(0L, n), Maternal=rep(0L, n),
+        Sex=rep(0L, n), Pheno=rep(-9L, n), m)
     write.table(rv, file=paste(out.fn, ".ped", sep=""),
         row.names=FALSE, col.names=FALSE, quote=FALSE)
 
@@ -1009,7 +1009,7 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
                                         if (!(z[i] %in% as.character(0:9)))
                                         {
                                             if (i > 1L)
-                                                z <- z[1L:(i-1)]
+                                                z <- z[1L:(i-1L)]
                                             break
                                         }
                                     }
