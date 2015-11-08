@@ -1,16 +1,15 @@
 language: r
+sudo: required
 
 warnings_are_errors: true
-bioc_required: true
 
 r_binary_packages:
   - RUnit
-  - crayon
 
-# Install packages from github
-r_github_packages:
-  - zhengxwen/gdsfmt
-  - zhengxwen/SNPRelate
+bioc_packages:
+  - BiocStyle
+  - gdsfmt
+  - SNPRelate
 
 os:
   - linux

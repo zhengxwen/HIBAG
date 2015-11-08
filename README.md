@@ -18,15 +18,15 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor Package
 
-Release Version:
+Release Version: 1.6.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 
-Development Version:
+Development Version: 1.7.0
 
 [http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
 
-### Changes in Bioconductor Version:
+### Changes in Bioconductor Version (since v1.3.0):
 
 * optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
 * hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
