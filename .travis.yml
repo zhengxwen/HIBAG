@@ -14,5 +14,4 @@ bioc_packages:
 
 os:
   - linux
-  - osx
 
