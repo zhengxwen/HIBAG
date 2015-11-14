@@ -1,6 +1,6 @@
 # Load the shared object
 useDynLib(HIBAG,
-    HIBAG_AlleleStrand, HIBAG_BEDFlag,
+    HIBAG_AlleleStrand, HIBAG_AlleleStrand2, HIBAG_BEDFlag,
     HIBAG_ConvBED, HIBAG_Close, HIBAG_Confusion,
     HIBAG_GetNumClassifiers, HIBAG_Classifier_GetHaplos,
     HIBAG_New, HIBAG_NewClassifiers, HIBAG_NewClassifierHaplo,

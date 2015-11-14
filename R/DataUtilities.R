@@ -1672,6 +1672,18 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 
 
 #######################################################################
+# Check alleles
+#
+
+hlaCheckAllele <- function(allele1, allele2)
+{
+    stopifnot(is.character(allele1))
+    stopifnot(is.character(allele2))
+    .Call(HIBAG_AlleleStrand2, allele1, allele2)
+}
+
+
+#######################################################################
 # Check missing SNP predictors
 #
 

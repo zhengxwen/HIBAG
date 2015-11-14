@@ -332,6 +332,62 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 }
 
 
+SEXP HIBAG_AlleleStrand2(SEXP allele1, SEXP allele2)
+{
+	if (XLENGTH(allele1) != XLENGTH(allele2))
+		error("'allele1' and 'allele2' should have the same length.");
+
+	CORE_TRY
+		// initialize: A-T pair, C-G pair
+		map<string, string> MAP;
+		MAP["A"] = "T"; MAP["C"] = "G"; MAP["G"] = "C"; MAP["T"] = "A";
+
+		const int n = XLENGTH(allele1);
+		rv_ans = PROTECT(NEW_LOGICAL(n));
+		int *pValid = LOGICAL(rv_ans);
+
+		// loop for each SNP
+		for (int i=0; i < n; i++)
+		{
+			// if true, need switch strand
+			bool valid = false;
+
+			// ``ref / nonref alleles''
+			string s1, s2;
+			string p1, p2;
+			split_allele(CHAR(STRING_ELT(allele1, i)), s1, s2);
+			split_allele(CHAR(STRING_ELT(allele2, i)), p1, p2);
+
+			if (ATGC(s1) && ATGC(s2) && ATGC(p1) && ATGC(p2))
+			{
+				// check
+				if ( (s1 == p1) && (s2 == p2) )
+				{
+					valid = true;
+				} else if ( (s1 == p2) && (s2 == p1) )
+				{
+					valid = true;
+				} else {
+					if ( (s1 == MAP[p1]) && (s2 == MAP[p2]) )
+					{
+						// for example, + C/G <---> - G/C, strand ambi
+						valid = true;
+					} else if ( (s1 == MAP[p2]) && (s2 == MAP[p1]) )
+					{
+						valid = true;
+					}
+				}
+			}
+
+			pValid[i] = valid;
+		}
+
+		UNPROTECT(1);
+
+	CORE_CATCH
+}
+
+
 
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
@@ -913,6 +969,7 @@ void R_init_HIBAG(DllInfo *info)
 	static R_CallMethodDef callMethods[] =
 	{
 		CALL(HIBAG_AlleleStrand, 8),
+		CALL(HIBAG_AlleleStrand2, 2),
 		CALL(HIBAG_BEDFlag, 1),
 		CALL(HIBAG_GetNumClassifiers, 1),
 		CALL(HIBAG_Classifier_GetHaplos, 2),
