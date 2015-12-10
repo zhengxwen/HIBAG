@@ -5,7 +5,7 @@ Version: 1.7.2
 Date: 2015-12-09
 Depends: R (>= 3.2.0)
 Imports: methods
-Suggests: parallel, nlme, knitr, gdsfmt (>= 1.2.2), SNPRelate (>= 1.1.6)
+Suggests: parallel, knitr, gdsfmt (>= 1.2.2), SNPRelate (>= 1.1.6)
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu"),
     person("Bruce", "Weir", role=c("ctb", "ths"),

@@ -316,6 +316,47 @@ save(ModelList, file="HIBAG_Model_List.RData")
 ```
 
 
+## Association Tests
+
+In the association tests of HLA allele, four models (dominant, additive, recessive and genotype) are allowed, and linear logistic regressions can be conducted according to the dependent variable.
+
+| Model     | Description (given a specific HLA allele h) |
+|:----------|:-------------------------------------------|
+| dominant  | [-/-] vs. [-/h,h/h] |
+| additive  | the allele dosage, 0: -/-, 1: -/h, 2: h/h |
+| recessive | [-/-,-/h] vs. [h/h] |
+| genotype  | [-/-], [-/h], [h/h] |
+
+```{r}
+# prepare data
+hla.id <- "A"
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+    H1 = HLA_Type_Table[, paste0(hla.id, ".1")], H2 = HLA_Type_Table[, paste0(hla.id, ".2")],
+    locus=hla.id, assembly="hg19")
+
+set.seed(1000)
+n <- nrow(hla$value)
+dat <- data.frame(case = as.factor(c(rep(0, n/2), rep(1, n/2))),
+    trait = rnorm(n), pc1 = rnorm(n))
+options(width=110)
+```
+
+`h` in the formula is used for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
+
+```{r}
+hlaAssocTest(hla, case ~ h, data=dat)  # 95% confidence interval (h.25%, h.75%)
+
+hlaAssocTest(hla, case ~ h, data=dat, showOR=TRUE)  # report odd ratio instead of log odd ratio
+
+hlaAssocTest(hla, case ~ h + pc1, data=dat)  # confounding variable pc1
+
+hlaAssocTest(hla, case ~ h, data=dat, model="additive")  # use an additive model
+
+hlaAssocTest(hla, trait ~ h, data=dat)  # continuous outcome
+```
+
+
+
 # Resources
 
 * Allele Frequency Net Database (AFND): [http://www.allelefrequencies.net](http://www.allelefrequencies.net).

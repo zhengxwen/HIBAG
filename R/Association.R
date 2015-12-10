@@ -34,7 +34,7 @@
 
 hlaAssocTest <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm", "nlme"), showOR=FALSE, ...)
+    model.fit=c("glm"), showOR=FALSE, ...)
 {
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(formula, "formula"))
@@ -128,6 +128,57 @@ hlaAssocTest <- function(hla, formula, data,
         ans$chisq.st <- w1
         ans$chisq.p <- w2
         ans$fisher.p <- w3
+
+    } else {
+        if (model == "dominant")
+        {
+            mat <- matrix(NaN, nrow=length(allele), ncol=3L)
+            colnames(mat) <- c("avg.[-/-]", "avg.[-/h,h/h]", "ttest.p")
+            for (i in seq_along(allele))
+            {
+                s <- allele[i]
+                x <- with(hla$value, (allele1==s) | (allele2==s))
+                mat[i, 1L] <- suppressWarnings(mean(y[x==FALSE], na.rm=TRUE))
+                mat[i, 2L] <- suppressWarnings(mean(y[x==TRUE], na.rm=TRUE))
+                a <- try(v <- t.test(y[x==FALSE], y[x==TRUE]), silent=TRUE)
+                if (!inherits(a, "try-error"))
+                    mat[i, 3L] <- v$p.value
+            }
+        } else if (model == "recessive")
+        {
+            mat <- matrix(NaN, nrow=length(allele), ncol=3L)
+            colnames(mat) <- c("avg.[-/-,-/h]", "avg.[h/h]", "ttest.p")
+            for (i in seq_along(allele))
+            {
+                s <- allele[i]
+                x <- with(hla$value, (allele1==s) & (allele2==s))
+                mat[i, 1L] <- suppressWarnings(mean(y[x==FALSE], na.rm=TRUE))
+                mat[i, 2L] <- suppressWarnings(mean(y[x==TRUE], na.rm=TRUE))
+                a <- try(v <- t.test(y[x==FALSE], y[x==TRUE]), silent=TRUE)
+                if (!inherits(a, "try-error"))
+                    mat[i, 3L] <- v$p.value
+            }
+        } else {
+            mat <- matrix(NaN, nrow=length(allele), ncol=4L)
+            colnames(mat) <- c("avg.[-/-]", "avg.[-/h]", "avg.[h/h]", "anova.p")
+            for (i in seq_along(allele))
+            {
+                s <- allele[i]
+                x <- with(hla$value, (allele1==s) + (allele2==s))
+                mat[i, 1L] <- suppressWarnings(mean(y[x==0L], na.rm=TRUE))
+                mat[i, 2L] <- suppressWarnings(mean(y[x==1L], na.rm=TRUE))
+                mat[i, 3L] <- suppressWarnings(mean(y[x==2L], na.rm=TRUE))
+                x <- as.factor(x)
+                a <- try(v <- aov(y ~ x), silent=TRUE)
+                if (!inherits(a, "try-error"))
+                {
+                    v <- summary(v)
+                    mat[i, 4L] <- v[[1L]]$`Pr(>F)`[1L]
+                }
+            }
+        }
+
+        ans <- cbind(ans, mat)
     }
 
     # regression
@@ -142,6 +193,7 @@ hlaAssocTest <- function(hla, formula, data,
         if (!is.data.frame(data))
             stop("'data' should be `data.frame`.")
 
+        param <- list(...)
         mat <- vector("list", length(allele))
         for (i in seq_along(allele))
         {
@@ -156,8 +208,16 @@ hlaAssocTest <- function(hla, formula, data,
                 genotype =
                     as.factor(with(hla$value, (allele1==s) + (allele2==s)))
             )
-            a <- try(m <- glm(formula, data=data, family="binomial", ...),
-                silent=TRUE)
+
+            if (is.null(param$family))
+            {
+                a <- try({
+                    if (is.factor(y))
+                        m <- glm(formula, data=data, family=binomial, ...)
+                    else
+                        m <- glm(formula, data=data, ...)
+                }, silent=TRUE)
+            }
             if (!inherits(a, "try-error"))
             {
                 z <- summary(m)$coefficients
@@ -169,7 +229,7 @@ hlaAssocTest <- function(hla, formula, data,
                     nm <- rownames(z)[-1L]
                     names(v) <- c(rbind(paste0(nm, ".est"), paste0(nm, ".25%"),
                         paste0(nm, ".75%"), paste0(nm, ".pval")))
-                    if (showOR)
+                    if (is.factor(y) & showOR)
                     {
                         if (model != "genotype")
                             nm <- c("h.est", "h.25%", "h.75%")

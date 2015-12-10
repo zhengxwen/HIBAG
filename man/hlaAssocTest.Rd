@@ -10,7 +10,7 @@ Fisher's exact test, logistic regression, random effect models.
 \usage{
 hlaAssocTest(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm", "nlme"), showOR=FALSE, ...)
+    model.fit=c("glm"), showOR=FALSE, ...)
 }
 \arguments{
     \item{hla}{an object of \code{\link{hlaAlleleClass}}}
@@ -22,7 +22,7 @@ hlaAssocTest(hla, formula, data,
         are taken from \code{environment(formula)}}
     \item{model}{dominant, additive, recessive or genotype models:
         \code{"dominant"} is default}
-    \item{model.fit}{"none"}
+    \item{model.fit}{"glm" -- generalized linear regression}
     \item{showOR}{show odd ratio (OR) instead of log OR if \code{TRUE}}
     \item{...}{optional arguments to \code{\link{glm}} or \code{nlme} call}
 }
@@ -65,17 +65,27 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 
+set.seed(1000)
 n <- nrow(hla$value)
-dat <- data.frame(group=c(rep("A", n/2), rep("B", n/2)), pc1=rnorm(n))
+dat <- data.frame(case = as.factor(c(rep(0, n/2), rep(1, n/2))),
+    y = rnorm(n), pc1 = rnorm(n))
 
-hlaAssocTest(hla, group ~ 1, data=dat)
-hlaAssocTest(hla, group ~ h, data=dat)
-hlaAssocTest(hla, group ~ h + pc1, data=dat)
-hlaAssocTest(hla, group ~ h + pc1, data=dat, showOR=TRUE)
+hlaAssocTest(hla, case ~ 1, data=dat)
+hlaAssocTest(hla, case ~ 1, data=dat, model="genotype")
+hlaAssocTest(hla, y ~ 1, data=dat)
+hlaAssocTest(hla, y ~ 1, data=dat, model="genotype")
 
-hlaAssocTest(hla, group ~ h, data=dat, model="additive")
-hlaAssocTest(hla, group ~ h, data=dat, model="recessive")
-hlaAssocTest(hla, group ~ h, data=dat, model="genotype")
+hlaAssocTest(hla, case ~ h, data=dat)
+hlaAssocTest(hla, case ~ h + pc1, data=dat)
+hlaAssocTest(hla, case ~ h + pc1, data=dat, showOR=TRUE)
+
+hlaAssocTest(hla, y ~ h, data=dat)
+hlaAssocTest(hla, y ~ h + pc1, data=dat)
+hlaAssocTest(hla, y ~ h + pc1, data=dat, showOR=TRUE)
+
+hlaAssocTest(hla, case ~ h, data=dat, model="additive")
+hlaAssocTest(hla, case ~ h, data=dat, model="recessive")
+hlaAssocTest(hla, case ~ h, data=dat, model="genotype")
 }
 
 \keyword{HLA}
