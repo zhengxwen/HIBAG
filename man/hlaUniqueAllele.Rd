@@ -38,7 +38,7 @@ expressed may have the suffix 'L', 'S', 'C', 'A' or 'Q'.
     \url{http://hla.alleles.org/nomenclature/index.html}
 }
 \value{
-    Return a vector of HLA alleles
+    Return a character vector of HLA alleles
 }
 \author{Xiuwen Zheng}
 \seealso{

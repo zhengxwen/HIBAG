@@ -565,7 +565,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     n.samp <- dim(snp)[2L]
     n.hla <- length(object$hla.allele)
     if (verbose)
-        cat(sprintf("The number of samples: %d.\n", n.samp))
+        cat(sprintf("Number of samples: %d.\n", n.samp))
 
     # parallel units
     if (is.null(cl))

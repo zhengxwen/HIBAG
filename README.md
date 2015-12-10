@@ -6,6 +6,8 @@ Kernel Version: v1.3
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
 [GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
 
+[![Availability](http://www.bioconductor.org/shields/availability/release/HIBAG.svg)](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
+[![Years-in-BioC](http://www.bioconductor.org/shields/years-in-bioc/HIBAG.svg)](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 [![Build Status](https://travis-ci.org/zhengxwen/HIBAG.png)](https://travis-ci.org/zhengxwen/HIBAG)
 [![Build status](https://ci.appveyor.com/api/projects/status/v650qe8ap4bojxuf?svg=true)](https://ci.appveyor.com/project/zhengxwen/hibag)
 [![codecov.io](https://codecov.io/github/zhengxwen/HIBAG/coverage.svg?branch=master)](https://codecov.io/github/zhengxwen/HIBAG?branch=master)
@@ -22,7 +24,7 @@ Release Version: 1.6.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 
-Development Version: 1.7.0
+Development Version: 1.7.2
 
 [http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
 

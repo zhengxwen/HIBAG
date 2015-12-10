@@ -15,6 +15,7 @@ export(.onAttach)
 
 # Imports
 import(methods)
+import(stats)
 
 # Registering S3 methods
 S3method(plot, hlaAttrBagClass)
