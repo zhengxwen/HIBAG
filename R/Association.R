@@ -34,7 +34,7 @@
 
 hlaAssocTest <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), showOR=FALSE, ...)
+    model.fit=c("glm"), showOR=FALSE, verbose=TRUE, ...)
 {
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(formula, "formula"))
@@ -60,33 +60,77 @@ hlaAssocTest <- function(hla, formula, data,
     # ans
     allele <- with(hla$value, hlaUniqueAllele(c(allele1, allele2)))
 
+    # need proportion (%)
+    flag <- is.factor(y)
+    if (flag)
+    {
+        flag <- (nlevels(y) == 2L)
+        if (flag) yy <- as.integer(y) - 1L
+    } else {
+        if (all(y %in% c(0,1), na.rm=TRUE))
+        {
+            y <- as.factor(y)
+            flag <- (nlevels(y) == 2L)
+            if (flag) yy <- as.integer(y) - 1L
+        }
+    }
+
     # genotype distribution: dominant, additive, recessive, genotype
-    mat <- NULL
+    mat <- mat2 <- NULL
     for (i in seq_along(allele))
     {
         s <- allele[i]
-        switch(model,
+        suppressWarnings(switch(model,
             dominant = {
                     v <- with(hla$value, (allele1==s) | (allele2==s))
                     x <- c(sum(v==FALSE, na.rm=TRUE), sum(v==TRUE, na.rm=TRUE))
+                    if (flag)
+                    {
+                        b <- c(mean(yy[v==FALSE], na.rm=TRUE),
+                            mean(yy[v==TRUE], na.rm=TRUE))
+                    }
                 },
             additive = {
                     v <- with(hla$value, (allele1==s) + (allele2==s))
                     x <- c(sum(v==0L, na.rm=TRUE), sum(v==1L, na.rm=TRUE),
                         sum(v==2L, na.rm=TRUE))
+                    if (flag)
+                    {
+                        b <- c(mean(yy[v==0L], na.rm=TRUE),
+                            mean(yy[v==1L], na.rm=TRUE),
+                            mean(yy[v==2L], na.rm=TRUE))
+                    }
                 },
             recessive = {
                     v <- with(hla$value, (allele1==s) & (allele2==s))
                     x <- c(sum(v==FALSE, na.rm=TRUE), sum(v==TRUE, na.rm=TRUE))
+                    if (flag)
+                    {
+                        b <- c(mean(yy[v==FALSE], na.rm=TRUE),
+                            mean(yy[v==TRUE], na.rm=TRUE))
+                    }
                 },
             genotype = {
                     v <- with(hla$value, (allele1==s) + (allele2==s))
                     x <- c(sum(v==0L, na.rm=TRUE), sum(v==1L, na.rm=TRUE),
                         sum(v==2L, na.rm=TRUE))
+                    if (flag)
+                    {
+                        b <- c(mean(yy[v==0L], na.rm=TRUE),
+                            mean(yy[v==1L], na.rm=TRUE),
+                            mean(yy[v==2L], na.rm=TRUE))
+                    }
                 }
-        )
+        ))
+        if (flag)
+        {
+            b <- round(b * 100.0, 1)
+            b[!is.finite(b)] <- NaN
+            mat2 <- rbind(mat2, b)
+        }
         mat <- rbind(mat, x)
     }
+
     switch(model,
         dominant = { colnames(mat) <- c("[-/-]", "[-/h,h/h]") },
         additive = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") },
@@ -95,6 +139,13 @@ hlaAssocTest <- function(hla, formula, data,
     )
     ans <- as.data.frame(mat)
     rownames(ans) <- allele
+    pidx <- NULL
+
+    if (!is.null(mat2))
+    {
+        colnames(mat2) <- paste0("%.", colnames(mat))
+        ans <- cbind(ans, mat2)
+    }
 
     # chi-sq tests
     if (is.factor(y))
@@ -128,6 +179,7 @@ hlaAssocTest <- function(hla, formula, data,
         ans$chisq.st <- w1
         ans$chisq.p <- w2
         ans$fisher.p <- w3
+        pidx <- c(pidx, ncol(ans)-1L, ncol(ans))
 
     } else {
         if (model == "dominant")
@@ -179,6 +231,7 @@ hlaAssocTest <- function(hla, formula, data,
         }
 
         ans <- cbind(ans, mat)
+        pidx <- c(pidx, ncol(ans))
     }
 
     # regression
@@ -194,6 +247,18 @@ hlaAssocTest <- function(hla, formula, data,
             stop("'data' should be `data.frame`.")
 
         param <- list(...)
+        if (verbose)
+        {
+            if (is.null(param$family))
+            {
+                if (is.factor(y))
+                    cat("Logistic regression:\n")
+                else
+                    cat("Linear regression:\n")
+            } else
+                cat("Regression: ", format(param$family)[1L], "\n", sep="")
+        }
+
         mat <- vector("list", length(allele))
         for (i in seq_along(allele))
         {
@@ -209,15 +274,13 @@ hlaAssocTest <- function(hla, formula, data,
                     as.factor(with(hla$value, (allele1==s) + (allele2==s)))
             )
 
-            if (is.null(param$family))
-            {
-                a <- try({
-                    if (is.factor(y))
-                        m <- glm(formula, data=data, family=binomial, ...)
-                    else
-                        m <- glm(formula, data=data, ...)
-                }, silent=TRUE)
-            }
+            a <- try({
+                if (is.null(param$family) & is.factor(y))
+                    m <- glm(formula, data=data, family=binomial, ...)
+                else
+                    m <- glm(formula, data=data, ...)
+                NULL
+            }, silent=TRUE)
             if (!inherits(a, "try-error"))
             {
                 z <- summary(m)$coefficients
@@ -265,10 +328,37 @@ hlaAssocTest <- function(hla, formula, data,
             }
             mat <- t(matrix(unlist(mat), nrow=length(nm)))
             colnames(mat) <- nm
+            pidx <- c(pidx, ncol(ans) + seq(4L, ncol(mat), 4L))
             ans <- cbind(ans, mat)
         } else
             warning(model.fit, " does not work.", immediate.=TRUE)
     }
 
-    ans
+    if (verbose)
+    {
+        v <- ans
+        p <- v[, pidx]
+        x <- sprintf("%.3f", as.matrix(p)); dim(x) <- dim(p)
+        x[p < 0.0001] <- "< 0.0001"
+        x[(p >= 0.0001) & (p < 0.001)] <- "< 0.001"
+        flag <- (p >= 0.001) & (p <= 0.05)
+        flag[is.na(flag)] <- FALSE
+        if (any(flag, na.rm=TRUE))
+            x[flag] <- paste("*", x[flag])
+        v[, pidx] <- x
+        print(v, digits=4L)
+    }
+    invisible(ans)
 }
+
+
+
+##########################################################################
+# Convert HLA Alleles to Amino Acid Sequences
+#
+
+# hlaConvSequence <- function(hla, method=c("AminoAcid"))
+# {
+#    stopifnot(inherits(hla, "hlaAlleleClass"))
+#    method <- match.arg(method)
+# }

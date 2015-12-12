@@ -1,10 +1,11 @@
 ---
 title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging"
 author: "Xiuwen Zheng"
-date: "Apr 10, 2015"
+date: "Dec 11, 2015"
 output:
   html_document:
-    theme: spacelab
+    theme: default
+    highlight: tango
     toc: yes
   pdf_document:
     toc: yes
@@ -321,11 +322,11 @@ save(ModelList, file="HIBAG_Model_List.RData")
 In the association tests of HLA allele, four models (dominant, additive, recessive and genotype) are allowed, and linear logistic regressions can be conducted according to the dependent variable.
 
 | Model     | Description (given a specific HLA allele h) |
-|:----------|:-------------------------------------------|
+|:----------|:--------------------------------------------|
 | dominant  | [-/-] vs. [-/h,h/h] |
-| additive  | the allele dosage, 0: -/-, 1: -/h, 2: h/h |
+| additive  | allelic dosage, 0: -/-, 1: -/h, 2: h/h |
 | recessive | [-/-,-/h] vs. [h/h] |
-| genotype  | [-/-], [-/h], [h/h] |
+| genotype  | [-/-] vs. [-/h] vs. [h/h] |
 
 ```{r}
 # prepare data
@@ -336,8 +337,7 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
 
 set.seed(1000)
 n <- nrow(hla$value)
-dat <- data.frame(case = as.factor(c(rep(0, n/2), rep(1, n/2))),
-    trait = rnorm(n), pc1 = rnorm(n))
+dat <- data.frame(case = c(rep(0, n/2), rep(1, n/2)), trait = rnorm(n), pc1 = rnorm(n))
 options(width=110)
 ```
 

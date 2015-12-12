@@ -1,7 +1,7 @@
-CHANGES IN VERSION 1.7.0-1.7.1
+CHANGES IN VERSION 1.7.0-1.7.2
 -------------------------
 
-    o new function `hlaCheckAllele()`
+    o new function `hlaCheckAllele()` and `hlaAssocTest()`
 
 
 CHANGES IN VERSION 1.6.0

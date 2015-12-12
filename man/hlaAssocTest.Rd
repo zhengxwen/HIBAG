@@ -10,7 +10,7 @@ Fisher's exact test, logistic regression, random effect models.
 \usage{
 hlaAssocTest(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), showOR=FALSE, ...)
+    model.fit=c("glm"), showOR=FALSE, verbose=TRUE, ...)
 }
 \arguments{
     \item{hla}{an object of \code{\link{hlaAlleleClass}}}
@@ -24,6 +24,7 @@ hlaAssocTest(hla, formula, data,
         \code{"dominant"} is default}
     \item{model.fit}{"glm" -- generalized linear regression}
     \item{showOR}{show odd ratio (OR) instead of log OR if \code{TRUE}}
+    \item{verbose}{if TRUE, show information}
     \item{...}{optional arguments to \code{\link{glm}} or \code{nlme} call}
 }
 \details{
@@ -47,10 +48,14 @@ hlaAssocTest(hla, formula, data,
         two specified HLA alleles}
     \item{[-/-,-/h]}{the number of individuals or haplotypes carrying at most
         one specified HLA allele}
+    \item{\%.[-/-], ...}{case/disease proportion in the group [-/-], ...}
+    \item{avg.[-/-], ...}{outcome average in the group [-/-], ...}
     \item{chisq.st}{the value the chi-squared test statistic}
     \item{chisq.p}{the p-value for the Chi-squared test}
-    \item{fisher.p}{the p-value for the Fisher's exact test}
-  
+    \item{fisher.p}{the p-value for the Fisher's exact test} 
+    \item{h.est}{the coefficient estimate of HLA allele}
+    \item{h.25\%, h.75\%}{the 95\% confidence interval for HLA allele}
+    \item{h.pval}{p value for HLA allele}
 }
 \author{Xiuwen Zheng}
 \seealso{
@@ -67,8 +72,8 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
 
 set.seed(1000)
 n <- nrow(hla$value)
-dat <- data.frame(case = as.factor(c(rep(0, n/2), rep(1, n/2))),
-    y = rnorm(n), pc1 = rnorm(n))
+dat <- data.frame(case = c(rep(0, n/2), rep(1, n/2)), y = rnorm(n),
+    pc1 = rnorm(n))
 
 hlaAssocTest(hla, case ~ 1, data=dat)
 hlaAssocTest(hla, case ~ 1, data=dat, model="genotype")
