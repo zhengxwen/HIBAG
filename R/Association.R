@@ -34,12 +34,13 @@
 
 hlaAssocTest <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), showOR=FALSE, verbose=TRUE, ...)
+    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, verbose=TRUE, ...)
 {
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(formula, "formula"))
     model <- match.arg(model)
     model.fit <- match.arg(model.fit)
+    stopifnot(is.logical(use.prob), length(use.prob)==1L)
     stopifnot(is.logical(showOR), length(showOR)==1L)
     if (missing(data)) 
         data <- environment(formula)
@@ -56,6 +57,12 @@ hlaAssocTest <- function(hla, formula, data,
     y <- data[[yv]]
     if (is.null(y))
         stop(sprintf("Dependent variable '%s' does not exist in `data`.", yv))
+
+    if (isTRUE(use.prob))
+    {
+        if (is.null(hla$value$prob))
+            stop("There is no posterior probability.")
+    }
 
     # ans
     allele <- with(hla$value, hlaUniqueAllele(c(allele1, allele2)))
@@ -263,9 +270,23 @@ hlaAssocTest <- function(hla, formula, data,
 
             a <- try({
                 if (is.null(param$family) & is.factor(y))
-                    m <- glm(formula, data=data, family=binomial, ...)
-                else
-                    m <- glm(formula, data=data, ...)
+                {
+                    if (!isTRUE(use.prob))
+                    {
+                        m <- glm(formula, data=data, family=binomial, ...)
+                    } else {
+                        prob <- hla$value$prob
+                        m <- glm(formula, data=data, family=binomial, weights=prob, ...)
+                    }
+                } else {
+                    if (!isTRUE(use.prob))
+                    {
+                        m <- glm(formula, data=data, ...)
+                    } else {
+                        prob <- hla$value$prob
+                        m <- glm(formula, data=data, weights=prob, ...)
+                    }
+                }
                 NULL
             }, silent=TRUE)
             if (!inherits(a, "try-error"))
@@ -326,6 +347,14 @@ hlaAssocTest <- function(hla, formula, data,
             ans <- cbind(ans, mat)
         } else
             warning(model.fit, " does not work.", immediate.=TRUE)
+    } else {
+        if (isTRUE(use.prob))
+        {
+            warning(ifelse(is.factor(y),
+                "Chi-squared and Fisher's exact tests do not use posterior probabilities.",
+                "T test or ANOVA does not use posterior probabilities."),
+                immediate.=TRUE)
+        }
     }
 
     if (verbose)
