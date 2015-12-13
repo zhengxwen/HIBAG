@@ -1,9 +1,8 @@
-\name{hlaAlleleClass}
-\alias{hlaAlleleClass}
-\title{Class of HLA Type}
+\name{hlaSeqClass}
+\alias{hlaSeqClass}
+\title{Class of HLA Sequence Type}
 \description{
-    The definition of a class for HLA types, returned from
-\code{\link{hlaAllele}}.
+    The definition of a class for HLA sequence genotype.
 }
 \value{
     There are following components:
@@ -12,18 +11,18 @@
     \item{pos.end}{the end position in basepair}
     \item{value}{a data frame}
     \item{assembly}{the human genome reference, such like "hg19"}
-    \item{postprob}{if applicable, a matrix of all posterior probabilities}
 
     The component \code{value} includes:
     \item{sample.id}{sample ID}
-    \item{allele1}{HLA allele}
-    \item{allele2}{HLA allele}
-    \item{prob}{if applicable, the posterior probability}
+    \item{allele1}{amino acid or nucleotide sequence}
+    \item{allele2}{amino acid or nucleotide sequence}
+    \item{P1, ..., Pn}{if applicable, a matrix of posterior probability,
+        row -- sample, column -- position of amino acid}
 }
 
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{hlaAllele}}
+    \code{\link{hlaConvSequence}}
 }
 
 \keyword{HLA}

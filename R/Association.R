@@ -29,7 +29,7 @@
 #
 
 ##########################################################################
-# Fit statistical models in assocation tests
+# Fit statistical models in assocation tests for HLA alleles
 #
 
 hlaAssocTest <- function(hla, formula, data,
@@ -85,41 +85,27 @@ hlaAssocTest <- function(hla, formula, data,
                     v <- with(hla$value, (allele1==s) | (allele2==s))
                     x <- c(sum(v==FALSE, na.rm=TRUE), sum(v==TRUE, na.rm=TRUE))
                     if (flag)
-                    {
-                        b <- c(mean(yy[v==FALSE], na.rm=TRUE),
-                            mean(yy[v==TRUE], na.rm=TRUE))
-                    }
+                        b <- sapply(c(FALSE, TRUE), function(i) mean(yy[v==i], na.rm=TRUE))
                 },
             additive = {
                     v <- with(hla$value, (allele1==s) + (allele2==s))
                     x <- c(sum(v==0L, na.rm=TRUE), sum(v==1L, na.rm=TRUE),
                         sum(v==2L, na.rm=TRUE))
                     if (flag)
-                    {
-                        b <- c(mean(yy[v==0L], na.rm=TRUE),
-                            mean(yy[v==1L], na.rm=TRUE),
-                            mean(yy[v==2L], na.rm=TRUE))
-                    }
+                        b <- sapply(c(0L,1L,2L), function(i) mean(yy[v==i], na.rm=TRUE))
                 },
             recessive = {
                     v <- with(hla$value, (allele1==s) & (allele2==s))
                     x <- c(sum(v==FALSE, na.rm=TRUE), sum(v==TRUE, na.rm=TRUE))
                     if (flag)
-                    {
-                        b <- c(mean(yy[v==FALSE], na.rm=TRUE),
-                            mean(yy[v==TRUE], na.rm=TRUE))
-                    }
+                        b <- sapply(c(FALSE, TRUE), function(i) mean(yy[v==i], na.rm=TRUE))
                 },
             genotype = {
                     v <- with(hla$value, (allele1==s) + (allele2==s))
                     x <- c(sum(v==0L, na.rm=TRUE), sum(v==1L, na.rm=TRUE),
                         sum(v==2L, na.rm=TRUE))
                     if (flag)
-                    {
-                        b <- c(mean(yy[v==0L], na.rm=TRUE),
-                            mean(yy[v==1L], na.rm=TRUE),
-                            mean(yy[v==2L], na.rm=TRUE))
-                    }
+                        b <- sapply(c(0L,1L,2L), function(i) mean(yy[v==i], na.rm=TRUE))
                 }
         ))
         if (flag)
@@ -132,10 +118,10 @@ hlaAssocTest <- function(hla, formula, data,
     }
 
     switch(model,
-        dominant = { colnames(mat) <- c("[-/-]", "[-/h,h/h]") },
-        additive = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") },
+        dominant  = { colnames(mat) <- c("[-/-]", "[-/h,h/h]") },
+        additive  = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") },
         recessive = { colnames(mat) <- c("[-/-,-/h]", "[h/h]") },
-        genotype = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") }
+        genotype  = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") }
     )
     ans <- as.data.frame(mat)
     rownames(ans) <- allele
@@ -260,6 +246,7 @@ hlaAssocTest <- function(hla, formula, data,
         }
 
         mat <- vector("list", length(allele))
+        summ <- NULL
         for (i in seq_along(allele))
         {
             s <- allele[i]
@@ -283,7 +270,8 @@ hlaAssocTest <- function(hla, formula, data,
             }, silent=TRUE)
             if (!inherits(a, "try-error"))
             {
-                z <- summary(m)$coefficients
+                summ <- summary(m)
+                z <- summ$coefficients
                 if (nrow(z) > 1L)
                 {
                     ci <- confint.default(m)
@@ -292,7 +280,7 @@ hlaAssocTest <- function(hla, formula, data,
                     nm <- rownames(z)[-1L]
                     names(v) <- c(rbind(paste0(nm, ".est"), paste0(nm, ".25%"),
                         paste0(nm, ".75%"), paste0(nm, ".pval")))
-                    if (is.factor(y) & showOR)
+                    if (is.factor(y) & isTRUE(showOR))
                     {
                         if (model != "genotype")
                             nm <- c("h.est", "h.25%", "h.75%")
@@ -307,6 +295,12 @@ hlaAssocTest <- function(hla, formula, data,
                     mat[[i]] <- v
                 }
             }
+        }
+
+        if (verbose & !is.null(summ$call))
+        {
+            s <- gsub("formula = formula", fa, format(summ$call), fixed=TRUE)
+            cat("  ", s, "\n", sep="")
         }
 
         nm <- NULL
@@ -350,15 +344,3 @@ hlaAssocTest <- function(hla, formula, data,
     }
     invisible(ans)
 }
-
-
-
-##########################################################################
-# Convert HLA Alleles to Amino Acid Sequences
-#
-
-# hlaConvSequence <- function(hla, method=c("AminoAcid"))
-# {
-#    stopifnot(inherits(hla, "hlaAlleleClass"))
-#    method <- match.arg(method)
-# }

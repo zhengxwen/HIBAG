@@ -24,7 +24,7 @@ Release Version: 1.6.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 
-Development Version: 1.7.2
+Development Version: 1.7.3
 
 [http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
 

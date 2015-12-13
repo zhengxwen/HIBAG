@@ -1128,7 +1128,7 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
 hlaAlleleSubset <- function(hla, samp.sel=NULL)
 {
     # check
-    stopifnot(inherits(hla, "hlaAlleleClass"))
+    stopifnot(inherits(hla, "hlaAlleleClass") | inherits(hla, "hlaSeqClass"))
     stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.integer(samp.sel))
     if (is.logical(samp.sel))
         stopifnot(length(samp.sel) == dim(hla$value)[1L])
@@ -1153,7 +1153,7 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
         }
     }
 
-    class(rv) <- "hlaAlleleClass"
+    class(rv) <- class(hla)
     rv
 }
 
@@ -2226,4 +2226,86 @@ hlaReport <- function(object, export.fn="",
     }
 
     invisible()
+}
+
+
+
+##########################################################################
+# Convert HLA Alleles to Amino Acid Sequences
+#
+
+hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"))
+{
+    stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass"))
+    method <- match.arg(method)
+
+    if (inherits(hla, "hlaAlleleClass"))
+    {
+        if (!is.null(locus))
+            warning("'locus' should be NULL.")
+        locus <- hla$locus
+    }
+
+    hlalist <- c("A", "B", "C", "DRB1", "DRB3", "DRB4", "DRB5",
+        "DQA1", "DQB1", "DPB1", "DPA1")
+    if (locus %in% hlalist)
+    {
+        if (inherits(hla, "hlaAlleleClass"))
+        {
+            s <- hlaConvSequence(c(hla$value$allele1, hla$value$allele2),
+                locus=hla$locus)
+            n <- length(s)
+            # result
+            rv <- list(locus = hla$locus,
+                pos.start = hla$locus.pos.start, pos.end = hla$locus.pos.end,
+                value = data.frame(sample.id = hla$value$sample.id,
+                    allele1 = s[seq.int(1L, n/2)],
+                    allele2 = s[seq.int(n/2+1L, n)],
+                    stringsAsFactors=FALSE),
+                assembly = hla$assembly
+            )
+            if (!is.null(hla$value$prob))
+                rv$value$prob <- hla$value$prob
+            class(rv) <- "hlaSeqClass"
+
+        } else {
+            hla <- paste0(locus, "*", hla)
+            fn <- system.file("extdata", "Sequence", paste0(method, ".RData"),
+                package="HIBAG")
+            .nom <- get(load(fn))
+            rv <- with(.nom$Sequence, AminoAcid[match(hla, Allele)])
+
+            # G code
+            if (anyNA(rv))
+            {
+                s <- with(.nom$GCode, Allele[match(hla[is.na(rv)], Code)])
+                s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
+                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+            }
+            if (anyNA(rv))
+            {
+                s <- with(.nom$GCode, Allele[match(paste0(hla[is.na(rv)], "G"), Code)])
+                s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
+                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+            }
+
+            # P code
+            if (anyNA(rv))
+            {
+                s <- with(.nom$PCode, Allele[match(hla[is.na(rv)], Code)])
+                s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
+                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+            }
+            if (anyNA(rv))
+            {
+                s <- with(.nom$PCode, Allele[match(paste0(hla[is.na(rv)], "P"), Code)])
+                s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
+                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+            }
+        }
+        rv
+    } else {
+        s <- ifelse(inherits(hla, "hlaAlleleClass"), "hla$locus", "'locus'")
+        stop(s, " should be one of ", paste(hlalist, collapse=", "))
+    }
 }

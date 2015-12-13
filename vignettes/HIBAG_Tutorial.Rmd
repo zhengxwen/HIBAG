@@ -326,7 +326,7 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 | dominant  | [-/-] vs. [-/h,h/h] |
 | additive  | allelic dosage, 0: -/-, 1: -/h, 2: h/h |
 | recessive | [-/-,-/h] vs. [h/h] |
-| genotype  | [-/-] vs. [-/h] vs. [h/h] |
+| genotype  | three categories: [-/-], [-/h], [h/h] |
 
 ```{r}
 # prepare data
