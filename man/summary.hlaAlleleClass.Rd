@@ -1,35 +1,31 @@
 \name{summary.hlaAlleleClass}
 \alias{summary.hlaAlleleClass}
+\alias{summary.hlaSeqClass}
 \title{
-    Summarize a ``hlaAlleleClass'' object
+    Summarize a ``hlaAlleleClass'' or ``hlaSeqClass'' object
 }
 \description{
-    Show the information of a \code{\link{hlaAlleleClass}} object.
+    Show the information of a \code{\link{hlaAlleleClass}} or
+\code{\link{hlaSeqClass}} object.
 }
 \usage{
-\method{summary}{hlaAlleleClass}(object, show=TRUE, ...)
+\method{summary}{hlaAlleleClass}(object, verbose=TRUE, ...)
+\method{summary}{hlaSeqClass}(object, verbose=TRUE, ...)
 }
 \arguments{
-    \item{object}{an object of \code{\link{hlaAlleleClass}}}
-    \item{show}{if TRUE, show information}
+    \item{object}{an object of \code{\link{hlaAlleleClass}} or
+        \code{\link{hlaSeqClass}}}
+    \item{verbose}{if TRUE, show information}
     \item{...}{further arguments passed to or from other methods}
 }
 \value{
-    Return a \code{data.frame} of count and frequency for each HLA allele.
+    Return a \code{data.frame} of count and frequency for each HLA allele, if
+\code{object} is \code{hlaAlleleClass}; a matrix of cross tabulation of amino
+acids at each position, if \code{object} is \code{hlaSeqClass}.
 }
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{hlaAllele}}
-}
-
-\examples{
-# make a "hlaAlleleClass" object
-hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id,
-    H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
-    H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
-    locus=hla.id, assembly="hg19")
-summary(hla)
+    \code{\link{hlaAllele}}, \code{\link{hlaConvSequence}}
 }
 
 \keyword{HLA}

@@ -1614,10 +1614,11 @@ hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
 # Summary a "hlaAlleleClass" object
 #
 
-summary.hlaAlleleClass <- function(object, show=TRUE, ...)
+summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
 {
     # check
     stopifnot(inherits(object, "hlaAlleleClass"))
+    stopifnot(is.logical(verbose), length(verbose)==1L)
     hla <- object
 
     HUA <- hlaUniqueAllele(c(hla$value$allele1, hla$value$allele2))
@@ -1642,7 +1643,7 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
     })
     unique.n.geno <- nlevels(factor(lst))
 
-    if (show)
+    if (isTRUE(verbose))
     {
         cat("Gene: ", .hla_gene_name_string(hla$locus), "\n", sep="")
         cat(sprintf("Range: [%s, %s]",
@@ -1668,6 +1669,49 @@ summary.hlaAlleleClass <- function(object, show=TRUE, ...)
 
     # return
     invisible(rv)
+}
+
+
+#######################################################################
+# Summary a "hlaSeqClass" object
+#
+
+summary.hlaSeqClass <- function(object, verbose=TRUE, ...)
+{
+    # check
+    stopifnot(inherits(object, "hlaSeqClass"))
+    stopifnot(is.logical(verbose), length(verbose)==1L)
+
+    aa <- c(object$value$allele1, object$value$allele2)
+    lst <- sapply(aa, function(s) as.integer(charToRaw(s)), USE.NAMES=FALSE)
+    n <- lengths(lst)
+    lst <- sapply(lst, function(a,n) a[seq_len(n)], n=max(n))
+    m <- matrix(unlist(lst), nrow=max(n))
+
+    level <- unique(c(m))
+    level <- level[!is.na(level)]
+    level <- level[order(level)]
+    levelstr <- sapply(level, function(x) rawToChar(as.raw(x)))
+
+    mt <- apply(m, 1, function(x)
+        c(sum(is.finite(x), na.rm=TRUE),
+        sapply(level, function(y) sum(x==y, na.rm=TRUE))))
+    mt <- t(matrix(unlist(mt), nrow=length(level)+1L))
+    colnames(mt) <- c("Num", levelstr)
+
+    if (verbose)
+    {
+        z <- mt
+        storage.mode(z) <- "character"
+        z[z == "0"] <- "."
+        z <- rbind(c("Num", levelstr), z)
+        z <- cbind(c("Pos", seq_len(nrow(z)-1L)), z)
+        z <- format(z, justify="right")
+        apply(z, 1L, function(x) cat(x, "\n"))
+    }
+
+    # return
+    invisible(mt)
 }
 
 
@@ -2234,10 +2278,21 @@ hlaReport <- function(object, export.fn="",
 # Convert HLA Alleles to Amino Acid Sequences
 #
 
-hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"))
+hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"),
+    replace=NULL)
 {
     stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass"))
     method <- match.arg(method)
+    stopifnot(is.null(replace) | is.character(replace))
+    if (is.character(replace))
+    {
+        stopifnot(is.vector(replace))
+        if (is.null(names(replace)))
+        {
+            stop("'replace' should be a character vector with names, ",
+                "like c(\"09:02\"=\"107:01\")")
+        }
+    }
 
     if (inherits(hla, "hlaAlleleClass"))
     {
@@ -2253,7 +2308,7 @@ hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"))
         if (inherits(hla, "hlaAlleleClass"))
         {
             s <- hlaConvSequence(c(hla$value$allele1, hla$value$allele2),
-                locus=hla$locus)
+                locus=hla$locus, method=method, replace=replace)
             n <- length(s)
             # result
             rv <- list(locus = hla$locus,
@@ -2269,39 +2324,55 @@ hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"))
             class(rv) <- "hlaSeqClass"
 
         } else {
+            # replace
+            if (is.character(replace))
+            {
+                i <- match(hla, names(replace))
+                hla[!is.na(i)] <- replace[i[!is.na(i)]]
+            }
+
+            if (method == "AminoAcid_v3.22")
+            {
+                .amino_acid <- get(load(system.file("extdata", "Sequence",
+                    "HLA_AminoAcid.RData", package="HIBAG")))
+                .hla_nom <- get(load(system.file("extdata", "Sequence",
+                    "HLA_Nom_v3.22.RData", package="HIBAG")))
+            } else
+                stop("Invalid 'method'.")
+
             hla <- paste0(locus, "*", hla)
-            fn <- system.file("extdata", "Sequence", paste0(method, ".RData"),
-                package="HIBAG")
-            .nom <- get(load(fn))
-            rv <- with(.nom$Sequence, AminoAcid[match(hla, Allele)])
+            rv <- with(.amino_acid, AminoAcid[match(hla, Allele)])
 
             # G code
             if (anyNA(rv))
             {
-                s <- with(.nom$GCode, Allele[match(hla[is.na(rv)], Code)])
+                s <- with(.hla_nom$GCode, Allele[match(hla[is.na(rv)], Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
-                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+                rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
             if (anyNA(rv))
             {
-                s <- with(.nom$GCode, Allele[match(paste0(hla[is.na(rv)], "G"), Code)])
+                s <- with(.hla_nom$GCode, Allele[match(paste0(hla[is.na(rv)], "G"), Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
-                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+                rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
 
             # P code
             if (anyNA(rv))
             {
-                s <- with(.nom$PCode, Allele[match(hla[is.na(rv)], Code)])
+                s <- with(.hla_nom$PCode, Allele[match(hla[is.na(rv)], Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
-                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+                rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
             if (anyNA(rv))
             {
-                s <- with(.nom$PCode, Allele[match(paste0(hla[is.na(rv)], "P"), Code)])
+                s <- with(.hla_nom$PCode, Allele[match(paste0(hla[is.na(rv)], "P"), Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
-                rv[is.na(rv)] <- with(.nom$Sequence, AminoAcid[match(s, Allele)])
+                rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
+
+            if (anyNA(rv))
+                message("No matching: ", paste(hla[is.na(rv)], collapse=", "))
         }
         rv
     } else {

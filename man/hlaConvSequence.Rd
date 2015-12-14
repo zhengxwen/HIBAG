@@ -7,7 +7,7 @@
     Convert (P-coded or G-coded) HLA alleles to Amino Acid sequences.
 }
 \usage{
-hlaConvSequence(hla, locus=NULL, method=c("AminoAcid_v3.22"))
+hlaConvSequence(hla, locus=NULL, method=c("AminoAcid_v3.22"), replace=NULL)
 }
 \arguments{
     \item{hla}{characters, or an object of \code{\link{hlaAlleleClass}}
@@ -15,10 +15,13 @@ hlaConvSequence(hla, locus=NULL, method=c("AminoAcid_v3.22"))
     \item{locus}{"A", "B", "C", "DRB1", "DQA1", "DQB1", "DPB1" or "DPA1"}
     \item{method}{"AminoAcid_v3.22" -- output amino acids using
         IPD-IMGT/HLA 3.22.0 database (2015-10-07)}
+    \item{replace}{NULL, or a character vector, like \code{c("09:02"="107:01")},
+        any "09:02" will be replaced by "107:01"}
 }
 \details{
-    The P codes for reporting of ambiguous allele typings can be found:
-\url{http://hla.alleles.org/alleles/p_groups.html}. The amino acids for each
+    The P or G codes for reporting of ambiguous allele typings can be found:
+\url{http://hla.alleles.org/alleles/p_groups.html} or
+\url{http://hla.alleles.org/alleles/g_groups.html}. The amino acids for each
 HLA alleles could be found, e.g., 
 \url{http://www.ebi.ac.uk/cgi-bin/ipd/imgt/hla/get_allele.cgi?A*01:02}.
 Due to allelic ambiguity, multiple higher-resolution alleles are assigned to a
@@ -40,6 +43,9 @@ acid sequences of the first higher-resolution allele is employed.
 hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
     locus="A")
 
+hlaConvSequence(c("09:01", "09:02"), locus="DPB1", replace=c("09:02"="107:01"))
+
+
 # make a "hlaAlleleClass" object
 hla.id <- "C"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
@@ -47,7 +53,8 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 
-hlaConvSequence(hla)
+v <- hlaConvSequence(hla)
+summary(v)
 }
 
 \keyword{HLA}
