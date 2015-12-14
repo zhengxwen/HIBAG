@@ -11,9 +11,10 @@ hlaAlleleDigit(obj, max.resolution="4-digit", rm.suffix=FALSE)
 }
 \arguments{
     \item{obj}{should be a \code{\link{hlaAlleleClass}} object or characters}
-    \item{max.resolution}{"2-digit", "4-digit", "6-digit", "8-digit", "allele",
-        "protein", "2", "4", "6", "8", "full" or "": "allele" = "2-digit",
-        "protein" = "4-digit", "full" and "" indicating no limit on resolution}
+    \item{max.resolution}{"2-digit", "1-field", "4-digit", "2-field", "6-digit",
+        "3-field", "8-digit", "4-field", "allele", "protein", "full", "",
+        "none": "allele" = "2-digit"; "protein" = "4-digit"; "full" and ""
+        indicating no limit on resolution}
     \item{rm.suffix}{whether remove the suffix, e.g., for "01:22N", "N" is a
         suffix}
 }

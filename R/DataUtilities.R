@@ -980,16 +980,21 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
     stopifnot(is.logical(rm.suffix))
     if (is.character(obj))
         stopifnot(is.vector(obj))
-    stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit", "8-digit",
-        "allele", "protein", "2", "4", "6", "8", "full", ""))
+    reslist <- c("2-digit", "1-field", "4-digit", "2-field", "6-digit",
+        "3-filed", "8-digit", "4-field", "allele", "protein", "full", "")
+    if (!(max.resolution %in% reslist))
+    {
+        stop("'max.resolution' should be one of ",
+            paste(sQuote(reslist), collapse=", "), ".")
+    }
 
     if (!(max.resolution %in% c("full", "")))
     {
         if (is.character(obj))
         {
-            len <- c(1L, 2L, 3L, 4L, 1L, 2L, 1L, 2L, 3L, 4L)
-            names(len) <- c("2-digit", "4-digit", "6-digit", "8-digit",
-                "allele", "protein", "2", "4", "6", "8")
+            len <- c(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L, 1L, 2L)
+            names(len) <- c("2-digit", "1-field", "4-digit", "2-field",
+                "6-digit", "3-field", "8-digit", "4-field", "allele", "protein")
             maxlen <- len[[as.character(max.resolution)]]
 
             obj <- sapply(strsplit(obj, ":"), FUN =

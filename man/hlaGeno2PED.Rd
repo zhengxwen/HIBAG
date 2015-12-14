@@ -31,7 +31,7 @@ hla.id <- "A"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
     H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
-    max.resolution=4, locus=hla.id, assembly="hg19")
+    max.resolution="4-digit", locus=hla.id, assembly="hg19")
 
 # training genotypes
 region <- 500   # kb
