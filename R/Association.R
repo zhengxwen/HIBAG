@@ -245,11 +245,12 @@ hlaAssocTest <- function(hla, formula, data,
             if (is.null(param$family))
             {
                 if (is.factor(y))
-                    cat("Logistic regression:\n")
+                    cat("Logistic regression")
                 else
-                    cat("Linear regression:\n")
+                    cat("Linear regression")
             } else
-                cat("Regression: ", format(param$family)[1L], "\n", sep="")
+                cat("Regression [", format(param$family)[1L], "]", sep="")
+            cat(" (", model, " model):\n", sep="")
         }
 
         mat <- vector("list", length(allele))
@@ -348,6 +349,7 @@ hlaAssocTest <- function(hla, formula, data,
         } else
             warning(model.fit, " does not work.", immediate.=TRUE)
     } else {
+        if (verbose) cat(model, "model:\n")
         if (isTRUE(use.prob))
         {
             warning(ifelse(is.factor(y),
@@ -362,8 +364,8 @@ hlaAssocTest <- function(hla, formula, data,
         v <- ans
         p <- v[, pidx]
         x <- sprintf("%.3f", as.matrix(p)); dim(x) <- dim(p)
-        x[p < 0.0001] <- "< 0.0001"
-        x[(p >= 0.0001) & (p < 0.001)] <- "< 0.001"
+        x[p < 0.0001] <- "<0.0001"
+        x[(p >= 0.0001) & (p < 0.001)] <- "<0.001"
         flag <- (p >= 0.001) & (p <= 0.05)
         flag[is.na(flag)] <- FALSE
         if (any(flag, na.rm=TRUE))

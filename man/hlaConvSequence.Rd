@@ -40,11 +40,19 @@ acid sequences of the first higher-resolution allele is employed.
 }
 
 \examples{
+# P and G codes
+fn <- system.file("extdata", "Sequence", "HLA_Nom_v3.22.RData", package="HIBAG")
+HLA_Nom <- get(load(fn))
+
+HLA_Nom$Version  # "IPD-IMGT/HLA 3.22.0"
+head(HLA_Nom$PCode, n=1L)  # Code / Alleles
+head(HLA_Nom$GCode, n=1L)  # Code / Alleles
+
+
+# amino acids
 hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
     locus="A")
-
 hlaConvSequence(c("09:01", "09:02"), locus="DPB1", replace=c("09:02"="107:01"))
-
 
 # make a "hlaAlleleClass" object
 hla.id <- "C"
@@ -53,8 +61,7 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 
-v <- hlaConvSequence(hla)
-summary(v)
+summary(hlaConvSequence(hla))
 }
 
 \keyword{HLA}

@@ -1681,14 +1681,15 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
 # Summary a "hlaSeqClass" object
 #
 
-summary.hlaSeqClass <- function(object, verbose=TRUE, ...)
+summary.hlaSeqClass <- function(object, head=100L, verbose=TRUE, ...)
 {
     # check
     stopifnot(inherits(object, "hlaSeqClass"))
     stopifnot(is.logical(verbose), length(verbose)==1L)
 
     aa <- c(object$value$allele1, object$value$allele2)
-    lst <- sapply(aa, function(s) as.integer(charToRaw(s)), USE.NAMES=FALSE)
+    lst <- sapply(aa, function(s) as.integer(charToRaw(s)),
+        simplify=FALSE, USE.NAMES=FALSE)
     n <- lengths(lst)
     lst <- sapply(lst, function(a,n) a[seq_len(n)], n=max(n))
     m <- matrix(unlist(lst), nrow=max(n))
@@ -1712,7 +1713,12 @@ summary.hlaSeqClass <- function(object, verbose=TRUE, ...)
         z <- rbind(c("Num", levelstr), z)
         z <- cbind(c("Pos", seq_len(nrow(z)-1L)), z)
         z <- format(z, justify="right")
-        apply(z, 1L, function(x) cat(x, "\n"))
+        if (head < 1L) head <- 1L
+        head <- head + 1L
+        for (i in 1L:min(head, nrow(z)))
+            cat(z[i, ], "\n")
+        if (nrow(z) > head)
+            cat("......\n")
     }
 
     # return
