@@ -33,7 +33,7 @@ hlaAssocTest(hla, formula, data,
 \tabular{ll}{
     \bold{model} \tab \bold{description (given a specific HLA allele h)} \cr
     dominant  \tab [-/-] vs. [-/h,h/h] \cr
-    additive  \tab the allele dosage, 0: -/-, 1: -/h, 2: h/h \cr
+    additive  \tab [-] vs. [h] in Chi-squared and Fisher's exact test, the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h) \cr
     recessive \tab [-/-,-/h] vs. [h/h] \cr
     genotype  \tab [-/-], [-/h], [h/h] \cr
 }
@@ -44,6 +44,9 @@ be useful in the sensitivity analysis.
 }
 \value{
     Return a \code{data.frame} with
+    \item{[-]}{the number of haplotypes not carrying the specified HLA allele}
+    \item{[h]}{the number of haplotype carrying the specified HLA allele}
+    \item{\%.[-], ...}{case/disease proportion in the group [-], ...}
     \item{[-/-]}{the number of individuals or haplotypes not carrying the
         specified HLA allele}
     \item{[-/h]}{the number of individuals or haplotypes carrying one
@@ -82,7 +85,10 @@ dat <- data.frame(case = c(rep(0, n/2), rep(1, n/2)), y = rnorm(n),
     pc1 = rnorm(n))
 
 hlaAssocTest(hla, case ~ 1, data=dat)
+hlaAssocTest(hla, case ~ 1, data=dat, model="additive")
+hlaAssocTest(hla, case ~ 1, data=dat, model="recessive")
 hlaAssocTest(hla, case ~ 1, data=dat, model="genotype")
+
 hlaAssocTest(hla, y ~ 1, data=dat)
 hlaAssocTest(hla, y ~ 1, data=dat, model="genotype")
 

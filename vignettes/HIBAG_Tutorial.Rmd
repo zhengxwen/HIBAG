@@ -324,7 +324,7 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 | Model     | Description (given a specific HLA allele h) |
 |:----------|:--------------------------------------------|
 | dominant  | [-/-] vs. [-/h,h/h] |
-| additive  | allelic dosage, 0: -/-, 1: -/h, 2: h/h |
+| additive  | [-] vs. [h] in Chi-squared and Fisher's exact test, the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h) |
 | recessive | [-/-,-/h] vs. [h/h] |
 | genotype  | three categories: [-/-], [-/h], [h/h] |
 
@@ -333,7 +333,7 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 hla.id <- "A"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
     H1 = HLA_Type_Table[, paste0(hla.id, ".1")], H2 = HLA_Type_Table[, paste0(hla.id, ".2")],
-    locus=hla.id, assembly="hg19")
+    locus = hla.id, assembly = "hg19")
 
 set.seed(1000)
 n <- nrow(hla$value)

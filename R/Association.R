@@ -95,11 +95,15 @@ hlaAssocTest <- function(hla, formula, data,
                         b <- sapply(c(FALSE, TRUE), function(i) mean(yy[v==i], na.rm=TRUE))
                 },
             additive = {
-                    v <- with(hla$value, (allele1==s) + (allele2==s))
-                    x <- c(sum(v==0L, na.rm=TRUE), sum(v==1L, na.rm=TRUE),
-                        sum(v==2L, na.rm=TRUE))
+                    x <- with(hla$value, c(
+                        sum(c(allele1, allele2) != s, na.rm=TRUE),
+                        sum(c(allele1, allele2) == s, na.rm=TRUE)))
                     if (flag)
-                        b <- sapply(c(0L,1L,2L), function(i) mean(yy[v==i], na.rm=TRUE))
+                    {
+                        z <- with(hla$value, c(allele1, allele2) == s)
+                        b <- c(mean(c(yy,yy)[!z], na.rm=TRUE),
+                            mean(c(yy,yy)[z], na.rm=TRUE))
+                    }
                 },
             recessive = {
                     v <- with(hla$value, (allele1==s) & (allele2==s))
@@ -112,7 +116,7 @@ hlaAssocTest <- function(hla, formula, data,
                     x <- c(sum(v==0L, na.rm=TRUE), sum(v==1L, na.rm=TRUE),
                         sum(v==2L, na.rm=TRUE))
                     if (flag)
-                        b <- sapply(c(0L,1L,2L), function(i) mean(yy[v==i], na.rm=TRUE))
+                        b <- sapply(0:2, function(i) mean(yy[v==i], na.rm=TRUE))
                 }
         ))
         if (flag)
@@ -126,7 +130,7 @@ hlaAssocTest <- function(hla, formula, data,
 
     switch(model,
         dominant  = { colnames(mat) <- c("[-/-]", "[-/h,h/h]") },
-        additive  = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") },
+        additive  = { colnames(mat) <- c("[-]", "[h]") },
         recessive = { colnames(mat) <- c("[-/-,-/h]", "[h/h]") },
         genotype  = { colnames(mat) <- c("[-/-]", "[-/h]", "[h/h]") }
     )
@@ -144,12 +148,14 @@ hlaAssocTest <- function(hla, formula, data,
     if (is.factor(y))
     {
         w1 <- w2 <- w3 <- rep(NaN, length(allele))
+        yy <- y
+        if (model == "additive") yy <- rep(yy, 2L)
         for (i in seq_along(allele))
         {
             s <- allele[i]
             x <- switch(model,
                 dominant = with(hla$value, (allele1==s) | (allele2==s)),
-                additive = with(hla$value, (allele1==s) + (allele2==s)),
+                additive = with(hla$value, c(allele1, allele2) == s),
                 recessive = with(hla$value, (allele1==s) & (allele2==s)),
                 genotype = {
                     v <- with(hla$value, (allele1==s) + (allele2==s)) + 1L
@@ -159,13 +165,13 @@ hlaAssocTest <- function(hla, formula, data,
                 }  
             )
             x <- as.factor(x)
-            a <- try(v <- suppressWarnings(chisq.test(x, y)), silent=TRUE)
+            a <- try(v <- suppressWarnings(chisq.test(x, yy)), silent=TRUE)
             if (!inherits(a, "try-error"))
             {
                 w1[i] <- v$statistic
                 w2[i] <- v$p.value
             }
-            a <- try(v <- fisher.test(x, y), silent=TRUE)
+            a <- try(v <- fisher.test(x, yy), silent=TRUE)
             if (!inherits(a, "try-error"))
                 w3[i] <- a$p.value
         }
