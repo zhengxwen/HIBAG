@@ -368,8 +368,8 @@ hlaAssocTest <- function(hla, formula, data,
     if (verbose)
     {
         v <- ans
-        p <- v[, pidx]
-        x <- sprintf("%.3f", as.matrix(p)); dim(x) <- dim(p)
+        p <- as.matrix(v[, pidx])
+        x <- sprintf("%.3f", p); dim(x) <- dim(p)
         x[p < 0.0001] <- "<0.0001"
         x[(p >= 0.0001) & (p < 0.001)] <- "<0.001"
         flag <- (p >= 0.001) & (p <= 0.05)
@@ -377,7 +377,19 @@ hlaAssocTest <- function(hla, formula, data,
         if (any(flag, na.rm=TRUE))
             x[flag] <- paste("*", x[flag])
         v[, pidx] <- x
-        print(v, digits=4L)
+
+        s <- format(v, digits=4L)
+        f <- apply(p, 1L, function(x) any(x <= 0.05, na.rm=TRUE))
+        v <- NULL
+        if (sum(f) > 0L)
+        {
+            v <- rbind(v, s[f, ])
+            if (sum(f) < nrow(s))
+                v <- rbind(v, "-----"=rep("", ncol(s)))
+        }
+        if (sum(!f) > 0L)
+            v <- rbind(v, s[!f, ])
+        print(v)
     }
     invisible(ans)
 }

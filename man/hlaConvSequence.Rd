@@ -25,10 +25,11 @@ hlaConvSequence(hla, locus=NULL, method=c("AminoAcid_v3.22"), replace=NULL)
 HLA alleles could be found, e.g., 
 \url{http://www.ebi.ac.uk/cgi-bin/ipd/imgt/hla/get_allele.cgi?A*01:02}.
 Due to allelic ambiguity, multiple higher-resolution alleles are assigned to a
-2-field P-coded allele. If the allele frequency is applicable from previews
-study reports (\url{http://www.allelefrequencies.net}), the most possible
-allele (amino acid sequences) is used for the output. Otherwise, the amino
-acid sequences of the first higher-resolution allele is employed.
+2-field P-coded allele or 3-field G-coded allele. If the allele frequency is
+applicable from previews study reports (\url{http://www.allelefrequencies.net}),
+the most possible allele (amino acid sequences) is used for the output.
+Otherwise, the amino acid sequences of the first higher-resolution allele is
+employed.
 }
 \value{
     Return an object of \code{\link{hlaSeqClass}} or characters.

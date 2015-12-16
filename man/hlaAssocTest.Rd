@@ -5,7 +5,7 @@
 }
 \description{
     To perform statistical association tests via Pearson's Chi-squared test,
-Fisher's exact test, logistic regression, random effect models.
+Fisher's exact test and logistic regressions.
 }
 \usage{
 hlaAssocTest(hla, formula, data,
@@ -33,7 +33,8 @@ hlaAssocTest(hla, formula, data,
 \tabular{ll}{
     \bold{model} \tab \bold{description (given a specific HLA allele h)} \cr
     dominant  \tab [-/-] vs. [-/h,h/h] \cr
-    additive  \tab [-] vs. [h] in Chi-squared and Fisher's exact test, the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h) \cr
+    additive  \tab [-] vs. [h] in Chi-squared and Fisher's exact test,
+        the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h) \cr
     recessive \tab [-/-,-/h] vs. [h/h] \cr
     genotype  \tab [-/-], [-/h], [h/h] \cr
 }

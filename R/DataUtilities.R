@@ -2351,19 +2351,25 @@ hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"),
             } else
                 stop("Invalid 'method'.")
 
-            hla <- paste0(locus, "*", hla)
-            rv <- with(.amino_acid, AminoAcid[match(hla, Allele)])
+            w <- character()
+            h <- paste0(locus, "*", hla)
+            rv <- with(.amino_acid, AminoAcid[match(h, Allele)])
+            if (anyNA(rv))
+            {
+                f <- is.na(rv) & !is.na(hla)
+                if (sum(f) > 0L) w <- unique(h[f])
+            }
 
             # G code
             if (anyNA(rv))
             {
-                s <- with(.hla_nom$GCode, Allele[match(hla[is.na(rv)], Code)])
+                s <- with(.hla_nom$GCode, Allele[match(h[is.na(rv)], Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
                 rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
             if (anyNA(rv))
             {
-                s <- with(.hla_nom$GCode, Allele[match(paste0(hla[is.na(rv)], "G"), Code)])
+                s <- with(.hla_nom$GCode, Allele[match(paste0(h[is.na(rv)], "G"), Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
                 rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
@@ -2371,19 +2377,35 @@ hlaConvSequence <- function(hla, locus=NULL, method=c("AminoAcid_v3.22"),
             # P code
             if (anyNA(rv))
             {
-                s <- with(.hla_nom$PCode, Allele[match(hla[is.na(rv)], Code)])
+                s <- with(.hla_nom$PCode, Allele[match(h[is.na(rv)], Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
                 rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
             if (anyNA(rv))
             {
-                s <- with(.hla_nom$PCode, Allele[match(paste0(hla[is.na(rv)], "P"), Code)])
+                s <- with(.hla_nom$PCode, Allele[match(paste0(h[is.na(rv)], "P"), Code)])
                 s <- paste0(locus, "*", sapply(strsplit(s, "/", fixed=TRUE), `[`, i=1L))
                 rv[is.na(rv)] <- with(.amino_acid, AminoAcid[match(s, Allele)])
             }
 
             if (anyNA(rv))
-                message("No matching: ", paste(hla[is.na(rv)], collapse=", "))
+            {
+                s <- unique(h[is.na(rv) & !is.na(hla)])
+                w <- setdiff(w, s)
+                if ((length(w) > 0L) & (length(s) > 0L))
+                {
+                    warning("\nAllelic ambiguity: ", paste(w, collapse=", "),
+                        "\nNo matching: ", paste(s, collapse=", "),
+                        call.=FALSE, immediate.=TRUE)
+                } else {
+                    if (length(w) > 0L)
+                        warning("\nAllelic ambiguity: ", paste(w, collapse=", "),
+                        call.=FALSE, immediate.=TRUE)
+                    if (length(s) > 0L)
+                        warning("\nNo matching: ", paste(s, collapse=", "),
+                        call.=FALSE, immediate.=TRUE)
+                }
+            }
         }
         rv
     } else {
