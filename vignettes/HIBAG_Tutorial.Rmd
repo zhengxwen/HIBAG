@@ -319,7 +319,7 @@ save(ModelList, file="HIBAG_Model_List.RData")
 
 ## Association Tests
 
-In the association tests of HLA allele, four models (dominant, additive, recessive and genotype) are allowed, and linear logistic regressions can be conducted according to the dependent variable.
+In the association tests of HLA allele, four models (dominant, additive, recessive and genotype) are allowed, and linear/logistic regressions can be conducted according to the dependent variable.
 
 | Model     | Description (given a specific HLA allele h) |
 |:----------|:--------------------------------------------|

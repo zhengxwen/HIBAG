@@ -4,24 +4,37 @@
     Conversion From HLA Alleles to Amino Acid Sequences
 }
 \description{
-    Convert (P-coded or G-coded) HLA alleles to Amino Acid sequences.
+    Convert (P-coded or G-coded) HLA alleles to amino acid sequences.
 }
 \usage{
-hlaConvSequence(hla, locus=NULL, method=c("AminoAcid_v3.22"), replace=NULL)
+hlaConvSequence(hla=character(), locus=NULL,
+    method=c("protein", "protein_reference"),
+    code=c("exact", "P.code", "G.code"), region=c("all", "P.code"),
+    release=c("v3.22.0"), replace=NULL)
 }
 \arguments{
-    \item{hla}{characters, or an object of \code{\link{hlaAlleleClass}}
-        including at least 4-digit or 2-field (P-coded) HLA alleles}
+    \item{hla}{characters, or an object of \code{\link{hlaAlleleClass}},
+        at least 4-digit or 2-field (P-coded) HLA alleles}
     \item{locus}{"A", "B", "C", "DRB1", "DQA1", "DQB1", "DPB1" or "DPA1"}
-    \item{method}{"AminoAcid_v3.22" -- output amino acids using
-        IPD-IMGT/HLA 3.22.0 database (2015-10-07)}
+    \item{method}{"protein": returns protein sequence alignments,
+        "protein_reference": returns the protein sequence alignment reference}
+    \item{code}{"exact": requires full resolution; "P.code": allows ambiguous
+        alleles according to P code; "G.code": allows ambiguous alleles
+        according to G code}
+    \item{region}{"all": returns all amino acid or nucleotide sequences;
+        "P.code": returns the exon 2 and 3 for HLA class I, and the exon 2
+        for HLA class II alleles}
+    \item{release}{"v3.22.0" -- IPD-IMGT/HLA 3.22.0 database (2015-10-07)}
     \item{replace}{NULL, or a character vector, like \code{c("09:02"="107:01")},
         any "09:02" will be replaced by "107:01"}
 }
 \details{
     The P or G codes for reporting of ambiguous allele typings can be found:
 \url{http://hla.alleles.org/alleles/p_groups.html} or
-\url{http://hla.alleles.org/alleles/g_groups.html}. The amino acids for each
+\url{http://hla.alleles.org/alleles/g_groups.html}.
+
+
+The amino acids for each
 HLA alleles could be found, e.g., 
 \url{http://www.ebi.ac.uk/cgi-bin/ipd/imgt/hla/get_allele.cgi?A*01:02}.
 Due to allelic ambiguity, multiple higher-resolution alleles are assigned to a
@@ -30,10 +43,25 @@ applicable from previews study reports (\url{http://www.allelefrequencies.net}),
 the most possible allele (amino acid sequences) is used for the output.
 Otherwise, the amino acid sequences of the first higher-resolution allele is
 employed.
+
+    \url{http://hla.alleles.org/alleles/formats.html},
+    \url{http://hla.alleles.org/alleles/text_index.html}
 }
 \value{
-    Return an object of \code{\link{hlaSeqClass}} or characters.
-\code{NA} indicates no matching.
+    Return an object of \code{\link{hlaSeqClass}} or a list of characters.
+\code{NULL} in the list indicates no matching.
+}
+\references{
+    The licence and disclaimer of distributed HLA data: Creative Commons
+Attribution-NoDerivs Licence (\url{http://hla.alleles.org/terms.html}).
+
+    Robinson J, Halliwell JA, Hayhurst JH, Flicek P, Parham P, Marsh SGE:
+The IPD and IMGT/HLA database: allele variant databases.
+Nucleic Acids Research. 2015 43:D423-431
+
+    Robinson J, Malik A, Parham P, Bodmer JG, Marsh SGE:
+IMGT/HLA - a sequence database for the human major histocompatibility complex.
+Tissue Antigens. 2000 55:280-7
 }
 \author{Xiuwen Zheng}
 \seealso{
@@ -41,19 +69,20 @@ employed.
 }
 
 \examples{
-# P and G codes
-fn <- system.file("extdata", "Sequence", "HLA_Nom_v3.22.RData", package="HIBAG")
-HLA_Nom <- get(load(fn))
+library(HIBAG)
 
-HLA_Nom$Version  # "IPD-IMGT/HLA 3.22.0"
-head(HLA_Nom$PCode, n=1L)  # Code / Alleles
-head(HLA_Nom$GCode, n=1L)  # Code / Alleles
-
-
-# amino acids
+hlaConvSequence(locus="A", method="protein_reference")
 hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
     locus="A")
+hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
+    locus="A", code="P.code", region="P.code")
+
+hlaConvSequence(locus="DPB1", method="protein_reference")
 hlaConvSequence(c("09:01", "09:02"), locus="DPB1", replace=c("09:02"="107:01"))
+hlaConvSequence(c("09:01", "09:02"), locus="DPB1", code="P.code",
+    region="P.code", replace=c("09:02"="107:01"))
+
+
 
 # make a "hlaAlleleClass" object
 hla.id <- "C"
@@ -62,7 +91,7 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 
-summary(hlaConvSequence(hla))
+# summary(hlaConvSequence(hla))
 }
 
 \keyword{HLA}
