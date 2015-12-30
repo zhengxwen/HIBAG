@@ -1,5 +1,6 @@
 \name{predict.hlaAttrBagClass}
 \alias{predict.hlaAttrBagClass}
+\alias{hlaPredict}
 \title{
     HIBAG model prediction (in parallel)
 }
@@ -7,6 +8,10 @@
     To predict HLA type based on a HIBAG model (in parallel).
 }
 \usage{
+hlaPredict(object, snp, cl=NULL,
+    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    same.strand=FALSE, verbose=TRUE)
 \method{predict}{hlaAttrBagClass}(object, snp, cl,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),

@@ -1681,7 +1681,7 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
 # Summary a "hlaSeqClass" object
 #
 
-summary.hlaSeqClass <- function(object, head=100L, verbose=TRUE, ...)
+summary.hlaSeqClass <- function(object, head=0L, verbose=TRUE, ...)
 {
     # check
     stopifnot(inherits(object, "hlaSeqClass"))
@@ -1711,9 +1711,9 @@ summary.hlaSeqClass <- function(object, head=100L, verbose=TRUE, ...)
         storage.mode(z) <- "character"
         z[z == "0"] <- "."
         z <- rbind(c("Num", levelstr), z)
-        z <- cbind(c("Pos", seq_len(nrow(z)-1L)), z)
+        z <- cbind(c("Pos", seq_len(nrow(z)-1L)-object$start.position+1L), z)
         z <- format(z, justify="right")
-        if (head < 1L) head <- 1L
+        if (head < 1L) head <- .Machine$integer.max - 1L
         head <- head + 1L
         for (i in 1L:min(head, nrow(z)))
             cat(z[i, ], "\n")

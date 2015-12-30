@@ -919,6 +919,47 @@ SEXP HIBAG_ConvBED(SEXP bedfn, SEXP n_samp, SEXP n_snp, SEXP n_save_snp,
 
 
 /**
+ *  Merge multiple sequences with asterisk
+**/
+SEXP HIBAG_SeqMerge(SEXP seq)
+{
+	if (!Rf_isNull(seq))
+	{
+		const int len = XLENGTH(seq);
+		if (len <= 0)
+			error("Internal error in 'HIBAG_SeqMerge()'.");
+		// get the maximum length
+		int nmax = -1;
+		for (int i=0; i < len; i++)
+		{
+			int m = strlen(CHAR(STRING_ELT(seq, i)));
+			if (m > nmax) nmax = m;
+		}
+		// the first sequence
+		string ss(nmax, '-');
+		const char *p = CHAR(STRING_ELT(seq, 0));
+		int j = 0;
+		for (; (j < nmax) && (*p); j++) ss[j] = *p++;
+		for (; j < nmax; j++) ss[j] = '*';
+		// other sequences
+		for (int i=1; i < len; i++)
+		{
+			p = CHAR(STRING_ELT(seq, i));
+			j = 0;
+			for (; (j < nmax) && (*p); j++, p++)
+			{
+				if (*p != ss[j]) ss[j] = '*';
+			}
+			for (; j < nmax; j++) ss[j] = '*';
+		}
+		// output
+		return mkString(ss.c_str());
+	} else
+		return Rf_ScalarString(NA_STRING);
+}
+
+
+/**
  *  Get an error message
 **/
 SEXP HIBAG_ErrMsg()
@@ -985,6 +1026,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Predict_Resp_Prob, 5),
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
+		CALL(HIBAG_SeqMerge, 1),
 		{ NULL, NULL, 0 }
 	};
 

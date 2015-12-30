@@ -173,7 +173,8 @@
 
 hlaConvSequence <- function(hla=character(), locus=NULL,
     method=c("protein", "protein_reference"),
-    code=c("exact", "P.code", "G.code"), region=c("all", "P.code"),
+    code=c("exact", "P.code", "G.code", "P.code.merge", "G.code.merge"),
+    region=c("all", "P.code", "G.code"),
     release=c("v3.22.0"), replace=NULL)
 {
     stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass"))
@@ -192,150 +193,178 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
         }
     }
 
+    hlalist <- c("A", "B", "C", "DRB1", "DQA1", "DQB1", "DPB1", "DPA1")
+
     if (inherits(hla, "hlaAlleleClass"))
     {
         if (!is.null(locus))
             warning("'locus' should be NULL.")
+        if (code %in% c("P.code", "G.code"))
+            stop("'code' should be 'exact', 'P.code.merge' or 'G.code.merge'.")
         locus <- hla$locus
+
+        if (!(locus %in% hlalist))
+            stop("`hla$locus` should be one of ", paste(hlalist, collapse=", "))
+
+        p <- .protein(locus, release)
+        s <- hlaConvSequence(c(hla$value$allele1, hla$value$allele2),
+            locus=hla$locus, method=method, code=code, region=region,
+            release=release, replace=replace)
+
+        n <- length(s)
+        ans <- list(locus = hla$locus,
+            pos.start = hla$locus.pos.start, pos.end = hla$locus.pos.end,
+            value = data.frame(sample.id = hla$value$sample.id,
+                allele1 = s[seq.int(1L, n/2)], allele2 = s[seq.int(n/2+1L, n)],
+                stringsAsFactors=FALSE),
+            assembly = hla$assembly,
+            start.position = ifelse(region=="all", p$start, 1L)
+        )
+        if (!is.null(hla$value$prob))
+            ans$value$prob <- hla$value$prob
+        class(ans) <- "hlaSeqClass"
+
     } else {
+
         stopifnot(length(locus) == 1L)
         stopifnot(is.vector(hla))
-    }
+        if (!(locus %in% hlalist))
+            stop("`locus` should be one of ", paste(hlalist, collapse=", "))
 
-    hlalist <- c("A", "B", "C", "DRB1", "DQA1", "DQB1", "DPB1", "DPA1")
-    if (locus %in% hlalist)
-    {
         if (method == "protein_reference")
         {
             if (length(hla) > 0L)
                 warning("the argument 'hla' is ignored.")
             p <- .protein(locus, release)
+            p$feature <- cbind(p$feature, sequence=apply(p$feature[, -1L], 1L,
+                function(x) substr(p$reference, x[1L], x[2L])))
             ans <- list(reference = p$reference, start.position = p$start,
                 feature=p$feature)
 
         } else if (method == "protein")
         {
-            if (is.character(hla))
+            # replace
+            if (is.character(replace))
             {
-                # replace
-                if (is.character(replace))
+                i <- match(hla, names(replace))
+                hla[!is.na(i)] <- replace[i[!is.na(i)]]
+            }
+
+            unihla <- unique(hla)
+            unihla <- unihla[!is.na(unihla)]
+
+            seq <- .protein(locus, release)
+            ss <- seq$sequence[match(unihla, seq$allele)]
+            ans <- sapply(seq_along(ss), FUN=function(i) {
+                if (is.na(ss[i])) NULL else ss[i]
+            }, simplify=FALSE, USE.NAMES=TRUE)
+            names(ans) <- unihla
+
+            if (code %in% c("P.code", "P.code.merge"))
+            {
+                pcode <- .pcode(release)
+                if (anyNA(ss))
                 {
-                    i <- match(hla, names(replace))
-                    hla[!is.na(i)] <- replace[i[!is.na(i)]]
+                    h1 <- paste0(locus, "*", unihla[is.na(ss)])
+                    h2 <- paste0(h1, "P")
+                    i1 <- match(h1, pcode$code)
+                    i2 <- match(h2, pcode$code)
+                    i1[is.na(i1)] <- i2[is.na(i1)]
+                    mat <- sapply(i1, FUN=function(i) {
+                        if (!is.na(i))
+                        {
+                            a <- unlist(strsplit(pcode$allele[i], "/", fixed=TRUE))
+                            m <- seq$sequence[match(a, seq$allele)]
+                            names(m) <- a
+                            m
+                        } else
+                            NULL
+                    }, simplify=FALSE, USE.NAMES=FALSE)
+                    ans[is.na(ss)] <- mat
                 }
-
-                unihla <- unique(hla)
-                unihla <- unihla[!is.na(unihla)]
-
-                seq <- .protein(locus, release)
-                ss <- seq$sequence[match(unihla, seq$allele)]
-                ans <- sapply(seq_along(ss), FUN=function(i) {
-                    if (is.na(ss[i])) NULL else ss[i]
-                }, simplify=FALSE, USE.NAMES=TRUE)
-                names(ans) <- unihla
-
-                if (code == "P.code")
+            } else if (code %in% c("G.code", "G.code.merge"))
+            {
+                gcode <- .gcode(release)
+                if (anyNA(ss))
                 {
-                    pcode <- .pcode(release)
-                    if (anyNA(ss))
-                    {
-                        h1 <- paste0(locus, "*", unihla[is.na(ss)])
-                        h2 <- paste0(h1, "P")
-                        i1 <- match(h1, pcode$code)
-                        i2 <- match(h2, pcode$code)
-                        i1[is.na(i1)] <- i2[is.na(i1)]
-                        mat <- sapply(i1, FUN=function(i) {
-                            if (!is.na(i))
-                            {
-                                a <- unlist(strsplit(pcode$allele[i], "/", fixed=TRUE))
-                                m <- seq$sequence[match(a, seq$allele)]
-                                names(m) <- a
-                                m
-                            } else
-                                NULL
-                        }, simplify=FALSE, USE.NAMES=FALSE)
-                        ans[is.na(ss)] <- mat
-                    }
-                } else if (code == "G.code")
-                {
-                    gcode <- .gcode(release)
-                    if (anyNA(ss))
-                    {
-                        h1 <- paste0(locus, "*", unihla[is.na(ss)])
-                        h2 <- paste0(h1, "G")
-                        i1 <- match(h1, gcode$code)
-                        i2 <- match(h2, gcode$code)
-                        i1[is.na(i1)] <- i2[is.na(i1)]
-                        mat <- sapply(i1, FUN=function(i) {
-                            if (!is.na(i))
-                            {
-                                a <- unlist(strsplit(gcode$allele[i], "/", fixed=TRUE))
-                                m <- seq$sequence[match(a, seq$allele)]
-                                names(m) <- a
-                                m
-                            } else
-                                NULL
-                        }, simplify=FALSE, USE.NAMES=FALSE)
-                        ans[is.na(ss)] <- mat
-                    }
+                    h1 <- paste0(locus, "*", unihla[is.na(ss)])
+                    h2 <- paste0(h1, "G")
+                    i1 <- match(h1, gcode$code)
+                    i2 <- match(h2, gcode$code)
+                    i1[is.na(i1)] <- i2[is.na(i1)]
+                    mat <- sapply(i1, FUN=function(i) {
+                        if (!is.na(i))
+                        {
+                            a <- unlist(strsplit(gcode$allele[i], "/", fixed=TRUE))
+                            m <- seq$sequence[match(a, seq$allele)]
+                            names(m) <- a
+                            m
+                        } else
+                            NULL
+                    }, simplify=FALSE, USE.NAMES=FALSE)
+                    ans[is.na(ss)] <- mat
                 }
+            }
 
-                # any warning?
-                len <- lengths(ans)
-                n1 <- sum(len == 0L)
-                n2 <- sum(len > 1L)
-                if ((n1 > 0L) & (n2 > 0L))
+            # any warning?
+            len <- lengths(ans)
+            n1 <- sum(len == 0L)
+            n2 <- sum(len > 1L)
+            if ((n1 > 0L) & (n2 > 0L))
+            {
+                warning("\nAllelic ambiguity: ",
+                    paste(unihla[len > 1L], collapse=", "),
+                    "\nNo matching: ",
+                    paste(unihla[len == 0L], collapse=", "),
+                    call.=FALSE, immediate.=TRUE)
+            } else {
+                if (n2 > 0L)
                 {
                     warning("\nAllelic ambiguity: ",
                         paste(unihla[len > 1L], collapse=", "),
-                        "\nNo matching: ",
+                        call.=FALSE, immediate.=TRUE)
+                }
+                if (n1 > 0L)
+                {
+                    warning("\nNo matching: ",
                         paste(unihla[len == 0L], collapse=", "),
                         call.=FALSE, immediate.=TRUE)
-                } else {
-                    if (n2 > 0L)
-                    {
-                        warning("\nAllelic ambiguity: ",
-                            paste(unihla[len > 1L], collapse=", "),
-                            call.=FALSE, immediate.=TRUE)
-                    }
-                    if (n1 > 0L)
-                    {
-                        warning("\nNo matching: ",
-                            paste(unihla[len == 0L], collapse=", "),
-                            call.=FALSE, immediate.=TRUE)
-                    }
                 }
-
-                # region
-                if (region == "P.code")
-                {
-                    if (locus %in% c("A", "B", "C"))
-                    {
-                        # classical I
-                        start <- seq$feature$start[2L]
-                        end <- seq$feature$end[3L]
-                    } else {
-                        # classical II
-                        start <- seq$feature$start[2L]
-                        end <- seq$feature$end[2L]
-                    }
-
-                    ans <- sapply(ans, function(x) {
-                        if (!is.null(x))
-                        {
-                            substr(x, start, end)
-                        } else
-                            NULL
-                    }, simplify=FALSE, USE.NAMES=TRUE)
-                }
-
-                # output
-                ans <- ans[match(hla, unihla)]
             }
-        }
-        ans
-    } else {
-        s <- ifelse(inherits(hla, "hlaAlleleClass"), "hla$locus", "'locus'")
-        stop(s, " should be one of ", paste(hlalist, collapse=", "))
+
+            # region
+            if (region %in% c("P.code", "G.code"))
+            {
+                if (locus %in% c("A", "B", "C"))
+                {
+                    # classical I
+                    start <- seq$feature$start[2L]
+                    end <- seq$feature$end[3L]
+                } else {
+                    # classical II
+                    start <- seq$feature$start[2L]
+                    end <- seq$feature$end[2L]
+                }
+
+                ans <- sapply(ans, function(x) {
+                    if (!is.null(x)) substr(x, start, end) else NULL
+                }, simplify=FALSE, USE.NAMES=TRUE)
+            }
+
+            # merge ?
+            if (code %in% c("exact", "P.code.merge", "G.code.merge"))
+            {
+                ans <- unname(sapply(ans, FUN=function(x)
+                    .Call(HIBAG_SeqMerge, x),
+                    simplify=TRUE, USE.NAMES=FALSE))
+            }
+
+            # output
+            ans <- ans[match(hla, unihla)]
+
+        } else
+            ans <- NULL
     }
+
+    ans
 }

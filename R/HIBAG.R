@@ -319,6 +319,16 @@ hlaClose <- function(model)
 # Predict HLA types from unphased SNP data
 #
 
+hlaPredict <- function(object, snp, cl=NULL,
+    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    same.strand=FALSE, verbose=TRUE)
+{
+    stopifnot(inherits(object, "hlaAttrBagClass"))
+    predict(object, snp, cl, type, vote, allele.check, match.type,
+        same.strand, verbose)
+}
+
 predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),

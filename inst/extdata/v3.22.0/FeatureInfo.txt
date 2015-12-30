@@ -1,3 +1,5 @@
+# extracted from https://github.com/jrob119/IMGTHLA/blob/Latest/xml/hla.xml.zip
+# IPD-IMGT/HLA 3.22.0 database (2015-10-07)
 id	name	start	end
 A	5' UTR	1	300
 A	Exon 1	301	373

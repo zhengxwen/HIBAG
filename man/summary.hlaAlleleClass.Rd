@@ -10,12 +10,13 @@
 }
 \usage{
 \method{summary}{hlaAlleleClass}(object, verbose=TRUE, ...)
-\method{summary}{hlaSeqClass}(object, head=100L, verbose=TRUE, ...)
+\method{summary}{hlaSeqClass}(object, head=0L, verbose=TRUE, ...)
 }
 \arguments{
     \item{object}{an object of \code{\link{hlaAlleleClass}} or
         \code{\link{hlaSeqClass}}}
-    \item{head}{show the first \code{head} rows of cross tabulation}
+    \item{head}{show the first \code{head} rows of cross tabulation, or
+        \code{0L} for all rows}
     \item{verbose}{if TRUE, show information}
     \item{...}{further arguments passed to or from other methods}
 }
