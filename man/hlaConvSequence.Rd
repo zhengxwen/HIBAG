@@ -87,9 +87,32 @@ hlaConvSequence(c("09:01", "09:02"), locus="DPB1", code="P.code.merge",
     region="P.code", replace=c("09:02"="107:01"))
 
 
+hlaConvSequence(locus="DQB1", method="protein_reference")
+hlaConvSequence(c("05:01:01:01", "06:01:01"), locus="DQB1")
+hlaConvSequence(c("05:01", "06:01"), locus="DQB1", code="P.code",
+    region="P.code")
+hlaConvSequence(c("05:01", "06:01"), locus="DQB1", code="P.code.merge",
+    region="P.code")
+
+
 
 # make a "hlaAlleleClass" object
 hla.id <- "A"
+hla <- hlaAllele(HLA_Type_Table$sample.id,
+    H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
+    H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
+    locus=hla.id, assembly="hg19")
+
+(v <- hlaConvSequence(hla, code="P.code.merge", region="P.code"))
+summary(v)
+
+v <- hlaConvSequence(hla, code="P.code.merge", region="all")
+summary(v)
+
+
+
+# make a "hlaAlleleClass" object
+hla.id <- "DQB1"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
     H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],

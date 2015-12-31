@@ -960,6 +960,52 @@ SEXP HIBAG_SeqMerge(SEXP seq)
 
 
 /**
+ *  Remove dots in the sequences
+**/
+SEXP HIBAG_SeqRmDot(SEXP ref, SEXP seq)
+{
+	const char *s = CHAR(STRING_ELT(ref, 0));
+	bool has_dot = false;
+	for (; *s; s++)
+	{
+		if (*s == '.')
+			{ has_dot = true; break; }
+	}
+
+	if (has_dot)
+	{
+		PROTECT(ref); PROTECT(seq);
+		// remove dots of reference
+		string ref_str;
+		for (s = CHAR(STRING_ELT(ref, 0)); *s; s++)
+		{
+			if (*s != '.')
+				ref_str.push_back(*s);
+		}
+		// sequences
+		int n = XLENGTH(seq) / 2;
+		for (int i=n; i < 2*n; i++)
+		{
+			string ss;
+			s = CHAR(STRING_ELT(ref, 0));
+			const char *p = CHAR(STRING_ELT(seq, i));
+			for (; *p && *s; p++, s++)
+			{
+				if (*s != '.')
+					ss.push_back(*p);
+			}
+			SET_STRING_ELT(seq, i, mkChar(ss.c_str()));
+		}
+		// set
+		SET_STRING_ELT(ref, 0, mkChar(ref_str.c_str()));
+		UNPROTECT(2);
+	}
+
+	return R_NilValue;
+}
+
+
+/**
  *  Get an error message
 **/
 SEXP HIBAG_ErrMsg()
@@ -1027,6 +1073,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
 		CALL(HIBAG_SeqMerge, 1),
+		CALL(HIBAG_SeqRmDot, 2),
 		{ NULL, NULL, 0 }
 	};
 

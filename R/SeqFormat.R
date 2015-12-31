@@ -125,23 +125,21 @@
         s <- s[flag]
         s <- gsub(shead, "", s, fixed=TRUE)
 
+        # get a matrix, mat[,1] -- allele, mat[,2] -- sequence
         mat <- t(sapply(s, function(x) {
             v <- scan(text=x, what=character(), quiet=TRUE)
             c(v[1L], paste(v[-1L], collapse=""))
         }, USE.NAMES=FALSE))
 
-        # combine
-        i <- which(mat[1L,1L] == mat[,1L])
-        len <- i[2L] - i[1L]
-        ss <- mat[seq.int(1L, len), ]
-        for (j in seq_along(i[-1L]))
-        {
-            k <- seq.int(len*j + 1L, length.out=len)
-            stopifnot(identical(ss[,1L], mat[k, 1L]))
-            ss[,2L] <- paste0(ss[,2L], mat[k, 2L])
-        }
+        # merge
+        id <- mat[, 1L]
+        ss <- t(sapply(unique(id), function(x) {
+            c(x, paste(mat[id == x, 2L], collapse=""))
+        }, USE.NAMES=FALSE))
         reference <- ss[1L,2L]
         ss[1L,2L] <- paste(rep("-", nchar(ss[1L,2L])), collapse="")
+        # remove dots
+        .Call(HIBAG_SeqRmDot, reference, ss)
 
         # get feature information
         fea <- .feature(release)
@@ -164,6 +162,26 @@
     prot
 }
 
+
+# region
+.subset <- function(locus, region, seq)
+{
+    if (region %in% c("P.code", "G.code"))
+    {
+        if (locus %in% c("A", "B", "C"))
+        {
+            # classical I
+            start <- seq$feature$start[2L]
+            end <- seq$feature$end[3L]
+        } else {
+            # classical II
+            start <- seq$feature$start[2L]
+            end <- seq$feature$end[2L]
+        }
+        c(start, end)
+    } else
+        NULL
+}
 
 
 
@@ -211,6 +229,9 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
             locus=hla$locus, method=method, code=code, region=region,
             release=release, replace=replace)
 
+        v <- .subset(locus, region, p)
+        if (is.null(v)) v <- c(1L, 1000000L)
+
         n <- length(s)
         ans <- list(locus = hla$locus,
             pos.start = hla$locus.pos.start, pos.end = hla$locus.pos.end,
@@ -218,7 +239,8 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
                 allele1 = s[seq.int(1L, n/2)], allele2 = s[seq.int(n/2+1L, n)],
                 stringsAsFactors=FALSE),
             assembly = hla$assembly,
-            start.position = ifelse(region=="all", p$start, 1L)
+            start.position = p$start - v[1L] + 1L,
+            reference = substring(p$reference, v[1L], v[2L])
         )
         if (!is.null(hla$value$prob))
             ans$value$prob <- hla$value$prob
@@ -333,21 +355,11 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
             }
 
             # region
-            if (region %in% c("P.code", "G.code"))
+            v <- .subset(locus, region, seq)
+            if (!is.null(v))
             {
-                if (locus %in% c("A", "B", "C"))
-                {
-                    # classical I
-                    start <- seq$feature$start[2L]
-                    end <- seq$feature$end[3L]
-                } else {
-                    # classical II
-                    start <- seq$feature$start[2L]
-                    end <- seq$feature$end[2L]
-                }
-
                 ans <- sapply(ans, function(x) {
-                    if (!is.null(x)) substr(x, start, end) else NULL
+                    if (!is.null(x)) substr(x, v[1L], v[2L]) else NULL
                 }, simplify=FALSE, USE.NAMES=TRUE)
             }
 
