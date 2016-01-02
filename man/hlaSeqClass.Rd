@@ -11,6 +11,8 @@
     \item{pos.end}{the end position in basepair}
     \item{value}{a data frame}
     \item{assembly}{the human genome reference, such like "hg19"}
+    \item{start.position}{the start position}
+    \item{reference}{reference sequence}
 
     The component \code{value} includes:
     \item{sample.id}{sample ID}

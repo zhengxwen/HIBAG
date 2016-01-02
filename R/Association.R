@@ -23,10 +23,48 @@
 #
 
 
+
 ##########################################################################
 #
 # Association Tests
 #
+
+.assoc_show <- function(mat, pval.idx)
+{
+    v <- mat
+    p <- as.matrix(v[, pval.idx])
+    x <- sprintf("%.3f", p); dim(x) <- dim(p)
+    x[p < 0.001] <- "< 0.001"
+
+    flag <- (p >= 0.001) & (p <= 0.05)
+    flag[is.na(flag)] <- FALSE
+    if (any(flag, na.rm=TRUE))
+        x[flag] <- paste(x[flag], "*")
+    flag <- !is.finite(p)
+    if (any(flag, na.rm=TRUE))
+        x[flag] <- "."
+
+    v[, pval.idx] <- x
+    s <- format(v, digits=4L)
+    for (i in pval.idx)
+        s[, i] <- as.character(s[, i])
+
+    f <- apply(p, 1L, function(x) any(x <= 0.05, na.rm=TRUE))
+    v <- NULL
+    if (sum(f) > 0L)
+    {
+        v <- rbind(v, s[f, ])
+        if (sum(f) < nrow(s))
+            v <- rbind(v, "-----"=rep("", ncol(s)))
+    }
+    if (sum(!f) > 0L)
+        v <- rbind(v, s[!f, ])
+    print(v)
+
+    invisible()
+}
+
+
 
 ##########################################################################
 # Fit statistical models in assocation tests for HLA alleles
@@ -36,14 +74,20 @@ hlaAssocTest <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
     model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, verbose=TRUE, ...)
 {
-    stopifnot(inherits(hla, "hlaAlleleClass"))
+    stopifnot(inherits(hla, "hlaAlleleClass") | inherits(hla, "hlaSeqClass"))
     stopifnot(inherits(formula, "formula"))
     model <- match.arg(model)
     model.fit <- match.arg(model.fit)
     stopifnot(is.logical(use.prob), length(use.prob)==1L)
     stopifnot(is.logical(showOR), length(showOR)==1L)
-    if (missing(data)) 
+    if (missing(data))
+    {
         data <- environment(formula)
+    } else if (is.data.frame(data))
+    {
+        if (nrow(data) != nrow(hla$value))
+            stop("'hla' and 'data' must have the same length.")
+    }
 
     # formula
     fa <- format(formula)
@@ -57,6 +101,8 @@ hlaAssocTest <- function(hla, formula, data,
     y <- data[[yv]]
     if (is.null(y))
         stop(sprintf("Dependent variable '%s' does not exist in `data`.", yv))
+    else if (length(y) != nrow(hla$value))
+        stop(sprintf("'hla' and '%s' must have the same length.", yv))
 
     if (isTRUE(use.prob))
     {
@@ -64,8 +110,6 @@ hlaAssocTest <- function(hla, formula, data,
             stop("There is no posterior probability.")
     }
 
-    # ans
-    allele <- with(hla$value, hlaUniqueAllele(c(allele1, allele2)))
 
     # need proportion (%)
     flag <- is.factor(y)
@@ -81,6 +125,46 @@ hlaAssocTest <- function(hla, formula, data,
             if (flag) yy <- as.integer(y) - 1L
         }
     }
+
+    if (inherits(hla, "hlaSeqClass"))
+    {
+        if (!is.factor(y))
+            stop(sprintf("Dependent variable '%s' should be factor.", yv))
+
+        y <- rep(y, 2L)
+        matseq <- .matrix_sequence(c(hla$value$allele1, hla$value$allele2))
+
+        z <- apply(matseq, 1L, FUN=function(x)
+        {
+            x[x == 42] <- NA  # *
+            x <- as.factor(x)
+            s <- rawToChar(as.raw(as.integer(levels(x))))
+            a <- try(v <- fisher.test(x, y), silent=TRUE)
+            if (!inherits(a, "try-error"))
+                p <- a$p.value
+            else
+                p <- NaN
+            data.frame(num = sum(!is.na(x)),
+                poly = paste(unlist(strsplit(s, "", fixed=TRUE)), collapse=","),
+                fisher.p = p, stringsAsFactors=FALSE)
+        })
+
+        ans <- data.frame(
+            position = seq_along(z) - hla$start.position + 1L,
+            num = sapply(z, function(x) x$num),
+            poly = sapply(z, function(x) x$poly),
+            fisher.p = sapply(z, function(x) x$fisher.p),
+            stringsAsFactors=FALSE)
+
+        if (verbose)
+            .assoc_show(ans, 4L)
+
+        return(invisible(ans))
+    }
+
+
+    # ans
+    allele <- with(hla$value, hlaUniqueAllele(c(allele1, allele2)))
 
     # genotype distribution: dominant, additive, recessive, genotype
     mat <- mat2 <- NULL
@@ -366,30 +450,6 @@ hlaAssocTest <- function(hla, formula, data,
     }
 
     if (verbose)
-    {
-        v <- ans
-        p <- as.matrix(v[, pidx])
-        x <- sprintf("%.3f", p); dim(x) <- dim(p)
-        x[p < 0.0001] <- "<0.0001"
-        x[(p >= 0.0001) & (p < 0.001)] <- "<0.001"
-        flag <- (p >= 0.001) & (p <= 0.05)
-        flag[is.na(flag)] <- FALSE
-        if (any(flag, na.rm=TRUE))
-            x[flag] <- paste("*", x[flag])
-        v[, pidx] <- x
-
-        s <- format(v, digits=4L)
-        f <- apply(p, 1L, function(x) any(x <= 0.05, na.rm=TRUE))
-        v <- NULL
-        if (sum(f) > 0L)
-        {
-            v <- rbind(v, s[f, ])
-            if (sum(f) < nrow(s))
-                v <- rbind(v, "-----"=rep("", ncol(s)))
-        }
-        if (sum(!f) > 0L)
-            v <- rbind(v, s[!f, ])
-        print(v)
-    }
+        .assoc_show(ans, pidx)
     invisible(ans)
 }

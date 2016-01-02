@@ -73,7 +73,6 @@ be useful in the sensitivity analysis.
 }
 
 \examples{
-# make a "hlaAlleleClass" object
 hla.id <- "A"
 hla <- hlaAllele(HLA_Type_Table$sample.id,
     H1 = HLA_Type_Table[, paste(hla.id, ".1", sep="")],

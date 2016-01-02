@@ -138,8 +138,13 @@
         }, USE.NAMES=FALSE))
         reference <- ss[1L,2L]
         ss[1L,2L] <- paste(rep("-", nchar(ss[1L,2L])), collapse="")
+
         # remove dots
-        .Call(HIBAG_SeqRmDot, reference, ss)
+        if (hla.id != "DQB1")
+        {
+            # DQB1 reference has deletions
+            .Call(HIBAG_SeqRmDot, reference, ss)
+        }
 
         # get feature information
         fea <- .feature(release)
@@ -192,7 +197,7 @@
 hlaConvSequence <- function(hla=character(), locus=NULL,
     method=c("protein", "protein_reference"),
     code=c("exact", "P.code", "G.code", "P.code.merge", "G.code.merge"),
-    region=c("all", "P.code", "G.code"),
+    region=c("auto", "all", "P.code", "G.code"),
     release=c("v3.22.0"), replace=NULL)
 {
     stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass"))
@@ -209,6 +214,16 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
             stop("'replace' should be a character vector with names, ",
                 "like c(\"09:02\"=\"107:01\")")
         }
+    }
+
+    if (region == "auto")
+    {
+        if (code == "exact")
+            region <- "all"
+        else if (code %in% c("P.code", "P.code.merge"))
+            region <- "P.code"
+        else if (code %in% c("G.code", "G.code.merge"))
+            region <- "G.code"
     }
 
     hlalist <- c("A", "B", "C", "DRB1", "DQA1", "DQB1", "DPB1", "DPA1")
@@ -330,28 +345,15 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
 
             # any warning?
             len <- lengths(ans)
-            n1 <- sum(len == 0L)
-            n2 <- sum(len > 1L)
-            if ((n1 > 0L) & (n2 > 0L))
+            if (sum(len > 1L) > 0L)
             {
-                warning("\nAllelic ambiguity: ",
-                    paste(unihla[len > 1L], collapse=", "),
-                    "\nNo matching: ",
-                    paste(unihla[len == 0L], collapse=", "),
-                    call.=FALSE, immediate.=TRUE)
-            } else {
-                if (n2 > 0L)
-                {
-                    warning("\nAllelic ambiguity: ",
-                        paste(unihla[len > 1L], collapse=", "),
-                        call.=FALSE, immediate.=TRUE)
-                }
-                if (n1 > 0L)
-                {
-                    warning("\nNo matching: ",
-                        paste(unihla[len == 0L], collapse=", "),
-                        call.=FALSE, immediate.=TRUE)
-                }
+                message("Allelic ambiguity: ",
+                    paste(unihla[len > 1L], collapse=", "))
+            }
+            if (sum(len == 0L) > 0L)
+            {
+                warning("No matching: ",
+                    paste(unihla[len == 0L], collapse=", "), immediate.=TRUE)
             }
 
             # region
@@ -379,4 +381,58 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
     }
 
     ans
+}
+
+
+
+#######################################################################
+# Summary a "hlaSeqClass" object
+#
+
+.matrix_sequence <- function(aa)
+{
+    lt <- sapply(aa, function(s) as.integer(charToRaw(s)),
+        simplify=FALSE, USE.NAMES=FALSE)
+    n <- max(lengths(lt))
+    ix <- seq_len(n)
+    lt <- sapply(lt, function(a) a[ix])
+    matrix(unlist(lt), nrow=n)
+}
+
+summary.hlaSeqClass <- function(object, head=0L, verbose=TRUE, ...)
+{
+    # check
+    stopifnot(inherits(object, "hlaSeqClass"))
+    stopifnot(is.logical(verbose), length(verbose)==1L)
+
+    m <- .matrix_sequence(c(object$value$allele1, object$value$allele2))
+    level <- unique(c(m))
+    level <- level[!is.na(level)]
+    level <- level[order(level)]
+    levelstr <- sapply(level, function(x) rawToChar(as.raw(x)))
+
+    mt <- apply(m, 1, function(x)
+        c(sum(is.finite(x), na.rm=TRUE),
+        sapply(level, function(y) sum(x==y, na.rm=TRUE))))
+    mt <- t(matrix(unlist(mt), nrow=length(level)+1L))
+    colnames(mt) <- c("Num", levelstr)
+
+    if (verbose)
+    {
+        z <- mt
+        storage.mode(z) <- "character"
+        z[z == "0"] <- "."
+        z <- rbind(c("Num", levelstr), z)
+        z <- cbind(c("Pos", seq_len(nrow(z)-1L)-object$start.position+1L), z)
+        z <- format(z, justify="right")
+        if (head < 1L) head <- .Machine$integer.max - 1L
+        head <- head + 1L
+        for (i in 1L:min(head, nrow(z)))
+            cat(z[i, ], "\n")
+        if (nrow(z) > head)
+            cat("......\n")
+    }
+
+    # return
+    invisible(mt)
 }
