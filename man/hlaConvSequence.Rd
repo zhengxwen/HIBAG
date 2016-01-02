@@ -69,7 +69,7 @@ represented by a capital X.
 with the package author or anyone who is familiar with HLA sequence alignments.
 }
 \value{
-    Return an object of \code{\link{hlaSeqClass}} or a list of characters.
+    Return an object of \code{\link{hlaAASeqClass}} or a list of characters.
 \code{NULL} or \code{NA} in the list indicates no matching.
 }
 \references{

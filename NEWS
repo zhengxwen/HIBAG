@@ -2,7 +2,7 @@ CHANGES IN VERSION 1.7.0-1.7.5
 -------------------------
 
     o new functions `hlaCheckAllele()`, `hlaAssocTest()`,
-      `hlaConvSequence()` and `summary.hlaSeqClass()`
+      `hlaConvSequence()` and `summary.hlaAASeqClass()`
 
 
 CHANGES IN VERSION 1.6.0

@@ -1133,7 +1133,7 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
 hlaAlleleSubset <- function(hla, samp.sel=NULL)
 {
     # check
-    stopifnot(inherits(hla, "hlaAlleleClass") | inherits(hla, "hlaSeqClass"))
+    stopifnot(inherits(hla, "hlaAlleleClass") | inherits(hla, "hlaAASeqClass"))
     stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.integer(samp.sel))
     if (is.logical(samp.sel))
         stopifnot(length(samp.sel) == dim(hla$value)[1L])

@@ -1,5 +1,7 @@
 \name{hlaAssocTest}
 \alias{hlaAssocTest}
+\alias{hlaAssocTest.hlaAlleleClass}
+\alias{hlaAssocTest.hlaAASeqClass}
 \title{
     Statistical Association Tests
 }
@@ -8,9 +10,13 @@
 Fisher's exact test and logistic regressions.
 }
 \usage{
-hlaAssocTest(hla, formula, data,
+\method{hlaAssocTest}{hlaAlleleClass}(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
     model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, verbose=TRUE, ...)
+\method{hlaAssocTest}{hlaAASeqClass}(hla, formula, data,
+    model=c("dominant", "additive", "recessive", "genotype"),
+    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, show.all=FALSE,
+    verbose=TRUE, ...)
 }
 \arguments{
     \item{hla}{an object of \code{\link{hlaAlleleClass}}}
@@ -26,6 +32,8 @@ hlaAssocTest(hla, formula, data,
     \item{use.prob}{if \code{TRUE}, use the posterior probabilities as weights
         in \code{glm} models}
     \item{showOR}{show odd ratio (OR) instead of log OR if \code{TRUE}}
+    \item{show.all}{if \code{TRUE}, show both significant and non-significant
+        results; if \code{FALSE}, only show significant results}
     \item{verbose}{if TRUE, show information}
     \item{...}{optional arguments to \code{\link{glm}} or \code{nlme} call}
 }

@@ -1,8 +1,8 @@
-\name{hlaSeqClass}
-\alias{hlaSeqClass}
-\title{Class of HLA Sequence Type}
+\name{hlaAASeqClass}
+\alias{hlaAASeqClass}
+\title{Class of HLA Amino Acid Sequence Type}
 \description{
-    The definition of a class for HLA sequence genotype.
+    The definition of a class for HLA protein amino acid sequences.
 }
 \value{
     There are following components:

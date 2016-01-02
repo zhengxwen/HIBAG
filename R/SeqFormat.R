@@ -259,7 +259,7 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
         )
         if (!is.null(hla$value$prob))
             ans$value$prob <- hla$value$prob
-        class(ans) <- "hlaSeqClass"
+        class(ans) <- "hlaAASeqClass"
 
     } else {
 
@@ -386,7 +386,7 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
 
 
 #######################################################################
-# Summary a "hlaSeqClass" object
+# Summary a "hlaAASeqClass" object
 #
 
 .matrix_sequence <- function(aa)
@@ -399,10 +399,10 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
     matrix(unlist(lt), nrow=n)
 }
 
-summary.hlaSeqClass <- function(object, head=0L, verbose=TRUE, ...)
+summary.hlaAASeqClass <- function(object, head=0L, verbose=TRUE, ...)
 {
     # check
-    stopifnot(inherits(object, "hlaSeqClass"))
+    stopifnot(inherits(object, "hlaAASeqClass"))
     stopifnot(is.logical(verbose), length(verbose)==1L)
 
     m <- .matrix_sequence(c(object$value$allele1, object$value$allele2))

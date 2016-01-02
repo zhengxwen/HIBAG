@@ -23,13 +23,20 @@
 #
 
 
-
 ##########################################################################
 #
 # Association Tests
 #
 
-.assoc_show <- function(mat, pval.idx)
+# Define a generic function
+hlaAssocTest <- function(hla, ...)
+{
+    UseMethod("hlaAssocTest", hla)
+}
+
+
+# Print out the results
+.assoc_show <- function(mat, pval.idx, show.all)
 {
     v <- mat
     p <- as.matrix(v[, pval.idx])
@@ -54,10 +61,10 @@
     if (sum(f) > 0L)
     {
         v <- rbind(v, s[f, ])
-        if (sum(f) < nrow(s))
+        if ((sum(f) < nrow(s)) & (sum(!f) > 0L) & show.all)
             v <- rbind(v, "-----"=rep("", ncol(s)))
     }
-    if (sum(!f) > 0L)
+    if ((sum(!f) > 0L) & show.all)
         v <- rbind(v, s[!f, ])
     print(v)
 
@@ -70,11 +77,12 @@
 # Fit statistical models in assocation tests for HLA alleles
 #
 
-hlaAssocTest <- function(hla, formula, data,
+# Association tests are applied to HLA classical alleles
+hlaAssocTest.hlaAlleleClass <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
     model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, verbose=TRUE, ...)
 {
-    stopifnot(inherits(hla, "hlaAlleleClass") | inherits(hla, "hlaSeqClass"))
+    stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(formula, "formula"))
     model <- match.arg(model)
     model.fit <- match.arg(model.fit)
@@ -125,43 +133,6 @@ hlaAssocTest <- function(hla, formula, data,
             if (flag) yy <- as.integer(y) - 1L
         }
     }
-
-    if (inherits(hla, "hlaSeqClass"))
-    {
-        if (!is.factor(y))
-            stop(sprintf("Dependent variable '%s' should be factor.", yv))
-
-        y <- rep(y, 2L)
-        matseq <- .matrix_sequence(c(hla$value$allele1, hla$value$allele2))
-
-        z <- apply(matseq, 1L, FUN=function(x)
-        {
-            x[x == 42] <- NA  # *
-            x <- as.factor(x)
-            s <- rawToChar(as.raw(as.integer(levels(x))))
-            a <- try(v <- fisher.test(x, y), silent=TRUE)
-            if (!inherits(a, "try-error"))
-                p <- a$p.value
-            else
-                p <- NaN
-            data.frame(num = sum(!is.na(x)),
-                poly = paste(unlist(strsplit(s, "", fixed=TRUE)), collapse=","),
-                fisher.p = p, stringsAsFactors=FALSE)
-        })
-
-        ans <- data.frame(
-            position = seq_along(z) - hla$start.position + 1L,
-            num = sapply(z, function(x) x$num),
-            poly = sapply(z, function(x) x$poly),
-            fisher.p = sapply(z, function(x) x$fisher.p),
-            stringsAsFactors=FALSE)
-
-        if (verbose)
-            .assoc_show(ans, 4L)
-
-        return(invisible(ans))
-    }
-
 
     # ans
     allele <- with(hla$value, hlaUniqueAllele(c(allele1, allele2)))
@@ -450,6 +421,123 @@ hlaAssocTest <- function(hla, formula, data,
     }
 
     if (verbose)
-        .assoc_show(ans, pidx)
+        .assoc_show(ans, pidx, TRUE)
+
+    invisible(ans)
+}
+
+
+
+# Association tests are applied to HLA protein sequences
+hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
+    model=c("dominant", "additive", "recessive", "genotype"),
+    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, show.all=FALSE,
+    verbose=TRUE, ...)
+{
+    stopifnot(inherits(hla, "hlaAASeqClass"))
+    stopifnot(inherits(formula, "formula"))
+    model <- match.arg(model)
+    model.fit <- match.arg(model.fit)
+    stopifnot(is.logical(use.prob), length(use.prob)==1L)
+    stopifnot(is.logical(showOR), length(showOR)==1L)
+    stopifnot(is.logical(show.all), length(show.all)==1L)
+    if (missing(data))
+    {
+        data <- environment(formula)
+    } else if (is.data.frame(data))
+    {
+        if (nrow(data) != nrow(hla$value))
+            stop("'hla' and 'data' must have the same length.")
+    }
+
+    # formula
+    fa <- format(formula)
+    s <- unlist(strsplit(fa, "~", fixed=TRUE))
+    if (length(s) != 2L)
+        stop("Invalid `formula`: ", fa)
+    if (s[1L] == "")
+        stop("No dependent variable in `formula`: ", fa)
+
+    yv <- trimws(s[1L])
+    y <- data[[yv]]
+    if (is.null(y))
+        stop(sprintf("Dependent variable '%s' does not exist in `data`.", yv))
+    else if (length(y) != nrow(hla$value))
+        stop(sprintf("'hla' and '%s' must have the same length.", yv))
+
+    if (isTRUE(use.prob))
+    {
+        if (is.null(hla$value$prob))
+            stop("There is no posterior probability.")
+    }
+
+
+    # need proportion (%)
+    flag <- is.factor(y)
+    if (flag)
+    {
+        flag <- (nlevels(y) == 2L)
+        if (flag) yy <- as.integer(y) - 1L
+    } else {
+        if (all(y %in% c(0,1), na.rm=TRUE))
+        {
+            y <- as.factor(y)
+            flag <- (nlevels(y) == 2L)
+            if (flag) yy <- as.integer(y) - 1L
+        }
+    }
+
+    # regression
+    vars <- attr(terms(formula), "term.labels")
+    if (length(vars) > 0L)
+    {
+        if (!is.element("h", vars))
+        {
+            stop("Independent variable 'h' should be in `formula` ",
+                "to include HLA genotypes, like '", fa, " + h'.")
+        }
+        if (!is.data.frame(data))
+            stop("'data' should be `data.frame`.")
+    }
+
+
+    if (is.factor(y))
+    {
+        y2 <- rep(y, 2L)
+        matseq <- .matrix_sequence(c(hla$value$allele1, hla$value$allele2))
+        pos <- 1L - hla$start.position + 1L
+
+
+        z <- apply(matseq, 1L, FUN=function(x)
+        {
+            x[x == 42] <- NA  # *
+            x <- as.factor(x)
+            s <- rawToChar(as.raw(as.integer(levels(x))))
+            a <- try(v <- fisher.test(x, y2), silent=TRUE)
+            pos <<- pos + 1L
+            data.frame(
+                pos = pos - 1L,
+                num = sum(!is.na(x)),
+                poly = paste(unlist(strsplit(s, "", fixed=TRUE)), collapse=","),
+                fisher.p = ifelse(inherits(a, "try-error"), NaN, a$p.value),
+                stringsAsFactors=FALSE)
+        })
+
+        ans <- data.frame(
+            position = sapply(z, function(x) x$pos),
+            num = sapply(z, function(x) x$num),
+            poly = sapply(z, function(x) x$poly),
+            fisher.p = sapply(z, function(x) x$fisher.p),
+            stringsAsFactors=FALSE)
+
+        if (verbose)
+            .assoc_show(ans, 4L, show.all)
+
+    } else {
+        stop(sprintf("Dependent variable '%s' should be factor.", yv))
+    }
+
+
+
     invisible(ans)
 }

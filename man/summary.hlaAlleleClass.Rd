@@ -1,20 +1,20 @@
 \name{summary.hlaAlleleClass}
 \alias{summary.hlaAlleleClass}
-\alias{summary.hlaSeqClass}
+\alias{summary.hlaAASeqClass}
 \title{
-    Summarize a ``hlaAlleleClass'' or ``hlaSeqClass'' object
+    Summarize a ``hlaAlleleClass'' or ``hlaAASeqClass'' object
 }
 \description{
     Show the information of a \code{\link{hlaAlleleClass}} or
-\code{\link{hlaSeqClass}} object.
+\code{\link{hlaAASeqClass}} object.
 }
 \usage{
 \method{summary}{hlaAlleleClass}(object, verbose=TRUE, ...)
-\method{summary}{hlaSeqClass}(object, head=0L, verbose=TRUE, ...)
+\method{summary}{hlaAASeqClass}(object, head=0L, verbose=TRUE, ...)
 }
 \arguments{
     \item{object}{an object of \code{\link{hlaAlleleClass}} or
-        \code{\link{hlaSeqClass}}}
+        \code{\link{hlaAASeqClass}}}
     \item{head}{show the first \code{head} rows of cross tabulation, or
         \code{0L} for all rows}
     \item{verbose}{if TRUE, show information}
@@ -23,7 +23,7 @@
 \value{
     Return a \code{data.frame} of count and frequency for each HLA allele, if
 \code{object} is \code{hlaAlleleClass}; a matrix of cross tabulation of amino
-acids at each position, if \code{object} is \code{hlaSeqClass}.
+acids at each position, if \code{object} is \code{hlaAASeqClass}.
 }
 \author{Xiuwen Zheng}
 \seealso{

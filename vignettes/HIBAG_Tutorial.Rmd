@@ -341,7 +341,7 @@ dat <- data.frame(case = c(rep(0, n/2), rep(1, n/2)), trait = rnorm(n), pc1 = rn
 options(width=110)
 ```
 
-`h` in the formula is used for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
+`h` in the formula is denoted for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
 
 ```{r}
 hlaAssocTest(hla, case ~ h, data=dat)  # 95% confidence interval (h.25%, h.75%)
