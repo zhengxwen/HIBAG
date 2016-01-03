@@ -328,31 +328,47 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 | recessive | [-/-,-/h] vs. [h/h] |
 | genotype  | three categories: [-/-], [-/h], [h/h] |
 
-```{r}
-# prepare data
-hla.id <- "A"
-hla <- hlaAllele(HLA_Type_Table$sample.id,
-    H1 = HLA_Type_Table[, paste0(hla.id, ".1")], H2 = HLA_Type_Table[, paste0(hla.id, ".2")],
-    locus = hla.id, assembly = "hg19")
-
-set.seed(1000)
-n <- nrow(hla$value)
-dat <- data.frame(case = c(rep(0, n/2), rep(1, n/2)), trait = rnorm(n), pc1 = rnorm(n))
+```{r echo=FALSE}
 options(width=110)
 ```
+
+```{r}
+# prepare data
+fn <- system.file("extdata", "case_control.txt.xz", package="HIBAG")
+# or fn <- "/your_folder/file.txt"
+
+dat <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
+head(dat)
+
+hla <- hlaAllele(dat$sample.id, H1=dat$A, H2=dat$A.1, locus="A", assembly="hg19")
+```
+
+### Allele Association
 
 `h` in the formula is denoted for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
 
 ```{r}
-hlaAssocTest(hla, case ~ h, data=dat)  # 95% confidence interval (h.25%, h.75%)
+hlaAssocTest(hla, disease ~ h, data=dat)  # 95% confidence interval (h.25%, h.75%)
 
-hlaAssocTest(hla, case ~ h, data=dat, showOR=TRUE)  # report odd ratio instead of log odd ratio
+hlaAssocTest(hla, disease ~ h, data=dat, showOR=TRUE)  # report odd ratio instead of log odd ratio
 
-hlaAssocTest(hla, case ~ h + pc1, data=dat)  # confounding variable pc1
+hlaAssocTest(hla, disease ~ h + pc1, data=dat)  # confounding variable pc1
 
-hlaAssocTest(hla, case ~ h, data=dat, model="additive")  # use an additive model
+hlaAssocTest(hla, disease ~ h, data=dat, model="additive")  # use an additive model
 
 hlaAssocTest(hla, trait ~ h, data=dat)  # continuous outcome
+```
+
+
+### Amino Acid Association
+
+```{r}
+aa <- hlaConvSequence(hla, code="P.code.merge")
+head(c(aa$value$allele1, aa$value$allele2))
+summary(aa, head=16)
+
+hlaAssocTest(aa, disease ~ h, data=dat)
+hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")
 ```
 
 

@@ -40,13 +40,13 @@ hlaAssocTest <- function(hla, ...)
 {
     v <- mat
     p <- as.matrix(v[, pval.idx])
-    x <- sprintf("%.3f", p); dim(x) <- dim(p)
-    x[p < 0.001] <- "< 0.001"
+    x <- sprintf("%.3f ", p); dim(x) <- dim(p)
+    x[p < 0.001] <- "<0.001*"
 
     flag <- (p >= 0.001) & (p <= 0.05)
     flag[is.na(flag)] <- FALSE
     if (any(flag, na.rm=TRUE))
-        x[flag] <- paste(x[flag], "*")
+        x[flag] <- gsub(" ", "*", x[flag], fixed=TRUE)
     flag <- !is.finite(p)
     if (any(flag, na.rm=TRUE))
         x[flag] <- "."
@@ -503,35 +503,151 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
 
     if (is.factor(y))
     {
+        if (length(vars) > 0L)
+        {
+            param <- list(...)
+            if (verbose)
+            {
+                if (is.null(param$family))
+                    cat("Logistic regression")
+                else
+                    cat("Regression [", format(param$family)[1L], "]", sep="")
+               cat(" (", model, " model):\n", sep="")
+            }
+        }
+
         y2 <- rep(y, 2L)
         matseq <- .matrix_sequence(c(hla$value$allele1, hla$value$allele2))
         pos <- 1L - hla$start.position + 1L
 
-
         z <- apply(matseq, 1L, FUN=function(x)
         {
             x[x == 42] <- NA  # *
-            x <- as.factor(x)
-            s <- rawToChar(as.raw(as.integer(levels(x))))
-            a <- try(v <- fisher.test(x, y2), silent=TRUE)
+            xx <- as.factor(x)
+            xl <- as.integer(levels(xx))
+            s <- rawToChar(as.raw(xl))
+            a <- try(v <- fisher.test(xx, y2), silent=TRUE)
             pos <<- pos + 1L
-            data.frame(
+
+            rv <- data.frame(
                 pos = pos - 1L,
                 num = sum(!is.na(x)),
                 poly = paste(unlist(strsplit(s, "", fixed=TRUE)), collapse=","),
                 fisher.p = ifelse(inherits(a, "try-error"), NaN, a$p.value),
                 stringsAsFactors=FALSE)
+
+            if (length(vars) > 0L)
+            {
+                if (length(xl) == 2L) xl <- xl[1L]
+                a1 <- x[seq.int(1L, length(x)/2)]
+                a2 <- x[seq.int(length(x)/2 + 1L, length(x))]
+
+                tv <- NULL
+                for (k in xl)
+                {
+                    data$h <- switch(model,
+                        dominant  = as.integer((a1==k) | (a2==k)),
+                        additive  = (a1==k) + (a2==k),
+                        recessive = as.integer((a1==k) & (a2==k)),
+                        genotype = as.factor((a1==k) + (a2==k))
+                    )
+
+                    a <- try({
+                        if (!isTRUE(use.prob))
+                        {
+                            m <- glm(formula, data=data, family=binomial, ...)
+                        } else {
+                            prob <- hla$value$prob
+                            m <- glm(formula, data=data, family=binomial,
+                                weights=prob, ...)
+                        }
+                        NULL
+                    }, silent=TRUE)
+
+                    if (!inherits(a, "try-error"))
+                    {
+                        summ <- summary(m)
+                        z <- summ$coefficients
+                        if (nrow(z) > 1L)
+                        {
+                            ci <- confint.default(m)
+                            v <- cbind(z[-1L,1L], ci[-1L,1L], ci[-1L,2L],
+                                z[-1L,4L])
+                            v <- c(t(v))
+                            nm <- rownames(z)[-1L]
+                            names(v) <- c(rbind(paste0(nm, ".est"),
+                                paste0(nm, ".25%"), paste0(nm, ".75%"),
+                                paste0(nm, ".pval")))
+                            if (isTRUE(showOR))
+                            {
+                                if (model != "genotype")
+                                    nm <- c("h.est", "h.25%", "h.75%")
+                                else
+                                    nm <- c("h1.est", "h1.25%", "h1.75%",
+                                        "h2.est", "h2.25%", "h2.75%")
+                                j <- match(nm, names(v))
+                                nm <- names(v)
+                                nm[j] <- paste0(nm[j], "_OR")
+                                v[j] <- exp(v[j])
+                                names(v) <- nm
+                            }
+
+                            tv <- rbind(tv, v)
+                        }
+                    }
+                }
+                if (!is.null(tv))
+                {
+                    if (!is.data.frame(tv))
+                    {
+                        rownames(tv) <- NULL
+                        tv <- as.data.frame(tv)
+                    }
+                    tv <- cbind(
+                        AminoAcid = sapply(xl, function(x)
+                            paste0(rawToChar(as.raw(x)), " vs . ")),
+                        tv, stringsAsFactors=FALSE)
+                }
+
+                n <- 0L
+                if (!is.null(tv)) n <- nrow(tv)
+                if (n > 0L)
+                {
+                    if (n > 1L)
+                    {
+                        rv <- as.data.frame(sapply(rv, function(x) rep(x, n),
+                            simplify=FALSE), stringsAsFactors=FALSE)
+                    }
+                    rv <- cbind(rv, tv)
+                }
+            }
+
+            rv
         })
 
         ans <- data.frame(
-            position = sapply(z, function(x) x$pos),
-            num = sapply(z, function(x) x$num),
-            poly = sapply(z, function(x) x$poly),
-            fisher.p = sapply(z, function(x) x$fisher.p),
+            pos = unlist(sapply(z, function(x) x$pos)),
+            num = unlist(sapply(z, function(x) x$num)),
+            poly = unlist(sapply(z, function(x) x$poly)),
+            fisher.p = unlist(sapply(z, function(x) x$fisher.p)),
             stringsAsFactors=FALSE)
 
+        n <- max(lengths(z))
+        pidx <- c(4L)
+        if (n > 4L)
+        {
+            for (i in 5L:n)
+            {
+                ans <- cbind(ans, unlist(sapply(z, function(x)
+                    if (i <= ncol(x)) x[,i] else NA
+                )))
+            }
+            names(ans) <- names(z[[match(n, lengths(z))]])
+            pidx <- c(pidx, seq.int(6L, n, 4L) + 3L)
+        }
+
         if (verbose)
-            .assoc_show(ans, 4L, show.all)
+            .assoc_show(ans, pidx, show.all)
 
     } else {
         stop(sprintf("Dependent variable '%s' should be factor.", yv))
