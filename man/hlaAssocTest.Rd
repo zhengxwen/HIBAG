@@ -40,12 +40,20 @@ Fisher's exact test and logistic regressions.
 \details{
 \tabular{ll}{
     \bold{model} \tab \bold{description (given a specific HLA allele h)} \cr
-    dominant  \tab [-/-] vs. [-/h,h/h] \cr
+    dominant  \tab [-/-] vs. [-/h,h/h] (0 vs. 1 in design matrix) \cr
     additive  \tab [-] vs. [h] in Chi-squared and Fisher's exact test,
         the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h) \cr
-    recessive \tab [-/-,-/h] vs. [h/h] \cr
-    genotype  \tab [-/-], [-/h], [h/h] \cr
+    recessive \tab [-/-,-/h] vs. [h/h] (0 vs. 1 in design matrix) \cr
+    genotype  \tab [-/-], [-/h], [h/h] (0 vs. 1 in design matrix) \cr
 }
+
+    In allelic associations, Chi-squared and Fisher exact tests are preformed
+on the cross tabulation, which is constructed according to the specified
+model (dominant, additive, recessive and gneotype).
+
+    In amino acid associations, Fisher exact test is performed on a cross
+tabulation with the numbers of each amino acid stratified by response variable
+(e.g., disease status).
 
     In linear and logistic regressions, 95\% confidence intervals are
 calculated based on asymptotic normality. The option \code{use.prob=TRUE} might
@@ -77,7 +85,7 @@ be useful in the sensitivity analysis.
 }
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{summary.hlaAttrBagClass}}
+    \code{\link{hlaConvSequence}}, \code{\link{summary.hlaAASeqClass}}
 }
 
 \examples{

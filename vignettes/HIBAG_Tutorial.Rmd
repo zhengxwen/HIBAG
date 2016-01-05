@@ -380,6 +380,7 @@ summary(aa)
 
 # association tests
 hlaAssocTest(aa, disease ~ h, data=dat, model="dominant")
+
 hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")
 ```
 

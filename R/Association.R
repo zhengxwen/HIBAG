@@ -53,6 +53,7 @@ hlaAssocTest <- function(hla, ...)
 
     v[, pval.idx] <- x
     s <- format(v, digits=4L)
+    s[is.na(v)] <- "."
     for (i in pval.idx)
         s[, i] <- as.character(s[, i])
 
@@ -528,10 +529,12 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
             s <- rawToChar(as.raw(xl))
             a <- try(v <- fisher.test(xx, y2), silent=TRUE)
             pos <<- pos + 1L
+            i <- pos + hla$start.position - 2L
 
             rv <- data.frame(
                 pos = pos - 1L,
                 num = sum(!is.na(x)),
+                ref = substr(hla$reference, i, i),
                 poly = paste(unlist(strsplit(s, "", fixed=TRUE)), collapse=","),
                 fisher.p = ifelse(inherits(a, "try-error"), NaN, a$p.value),
                 stringsAsFactors=FALSE)
@@ -545,12 +548,22 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
                 tv <- NULL
                 for (k in xl)
                 {
-                    data$h <- switch(model,
-                        dominant  = as.integer((a1==k) | (a2==k)),
-                        additive  = (a1==k) + (a2==k),
-                        recessive = as.integer((a1==k) & (a2==k)),
-                        genotype = as.factor((a1==k) + (a2==k))
-                    )
+                    if (k == 45L)
+                    {   # -, reference, - vs. others
+                        data$h <- switch(model,
+                            dominant  = as.integer((a1!=k) | (a2!=k)),
+                            additive  = (a1!=k) + (a2!=k),
+                            recessive = as.integer((a1!=k) & (a2!=k)),
+                            genotype = as.factor((a1!=k) + (a2!=k))
+                        )
+                    } else {
+                        data$h <- switch(model,
+                            dominant  = as.integer((a1==k) | (a2==k)),
+                            additive  = (a1==k) + (a2==k),
+                            recessive = as.integer((a1==k) & (a2==k)),
+                            genotype = as.factor((a1==k) + (a2==k))
+                        )
+                    }
 
                     a <- try({
                         if (!isTRUE(use.prob))
@@ -603,9 +616,15 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
                         rownames(tv) <- NULL
                         tv <- as.data.frame(tv)
                     }
+                    xl <- sapply(as.integer(levels(xx)), function(x)
+                        rawToChar(as.raw(x)))
                     tv <- cbind(
-                        amino.acid = sapply(xl, function(x)
-                            paste0(rawToChar(as.raw(x)), " vs . ")),
+                        amino.acid = sapply(seq_along(xl), function(i)
+                            if (xl[i] == "-")
+                                paste(xl[i], "vs", paste(xl[-i], collapse=","))
+                            else
+                                paste(paste(xl[-i], collapse=","), "vs", xl[i])
+                            ),
                         tv, stringsAsFactors=FALSE)
                 }
 
@@ -628,22 +647,23 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
         ans <- data.frame(
             pos = unlist(sapply(z, function(x) x$pos)),
             num = unlist(sapply(z, function(x) x$num)),
+            ref = unlist(sapply(z, function(x) x$ref)),
             poly = unlist(sapply(z, function(x) x$poly)),
             fisher.p = unlist(sapply(z, function(x) x$fisher.p)),
             stringsAsFactors=FALSE)
 
         n <- max(lengths(z))
-        pidx <- c(4L)
-        if (n > 4L)
+        pidx <- c(5L)
+        if (n > 5L)
         {
-            for (i in 5L:n)
+            for (i in 6L:n)
             {
                 ans <- cbind(ans, unlist(sapply(z, function(x)
                     if (i <= ncol(x)) x[,i] else NA
                 )))
             }
             names(ans) <- names(z[[match(n, lengths(z))]])
-            pidx <- c(pidx, seq.int(6L, n, 4L) + 3L)
+            pidx <- c(pidx, seq.int(7L, n, 4L) + 3L)
         }
 
         if (verbose)

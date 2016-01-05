@@ -353,7 +353,9 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
             if (sum(len == 0L) > 0L)
             {
                 warning("No matching: ",
-                    paste(unihla[len == 0L], collapse=", "), immediate.=TRUE)
+                    paste(unihla[len == 0L], collapse=", "),
+                    "\n  See: http://hla.alleles.org/alleles/text_index.html",
+                    immediate.=TRUE)
             }
 
             # region
