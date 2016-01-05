@@ -48,17 +48,15 @@ protein sequences as encoded by exon 2. P codes and G codes encode the same
 protein sequence for the peptide binding domains (exon 2 and 3 for HLA class
 I and exon 2 only for HLA class II alleles).
 
-    1. Where identity to the reference sequence is present the base will be
-displayed as a hyphen (-).
+    1. the sequence is displayed as a hyphen "-" where it is identical to the
+reference.
 
-    2. Where an insertion or deletion has occurred this will be represented by
-a period (.).
+    2. an insertion or deletion is represented by a period ".".
 
-    3. If the sequence is unknown or ambiguous at any point in the alignment,
-this will be represented by an asterisk (*).
+    3. an unknown or ambiguous position in the alignment is represented by
+an asterisk "*".
 
-    4. In protein alignments for null alleles, the 'Stop' codons will be
-represented by a capital X.
+    4. a capital X is used for the 'stop' codons in protein alignments.
 
     \url{http://hla.alleles.org/alleles/formats.html}
 

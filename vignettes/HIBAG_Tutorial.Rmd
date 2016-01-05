@@ -1,7 +1,7 @@
 ---
 title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging"
 author: "Xiuwen Zheng"
-date: "Dec 11, 2015"
+date: "Jan 3, 2016"
 output:
   html_document:
     theme: default
@@ -323,9 +323,9 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 
 | Model     | Description (given a specific HLA allele h) |
 |:----------|:--------------------------------------------|
-| dominant  | [-/-] vs. [-/h,h/h] |
-| additive  | [-] vs. [h] in Chi-squared and Fisher's exact test, the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h) |
-| recessive | [-/-,-/h] vs. [h/h] |
+| dominant  | [-/-] vs. [-/h,h/h] (0 vs. 1 in design matrix) |
+| additive  | [-] vs. [h] in Chi-squared and Fisher's exact test, the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h in design matrix) |
+| recessive | [-/-,-/h] vs. [h/h] (0 vs. 1 in design matrix) |
 | genotype  | three categories: [-/-], [-/h], [h/h] |
 
 ```{r echo=FALSE}
@@ -343,7 +343,7 @@ head(dat)
 hla <- hlaAllele(dat$sample.id, H1=dat$A, H2=dat$A.1, locus="A", assembly="hg19")
 ```
 
-### Allele Association
+### Allelic Association
 
 `h` in the formula is denoted for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
 
@@ -362,12 +362,24 @@ hlaAssocTest(hla, trait ~ h, data=dat)  # continuous outcome
 
 ### Amino Acid Association
 
+We convert [P-coded](http://hla.alleles.org/alleles/p_groups.html) alleles to amino acid  sequences. `hlaConvSequence(..., code="P.code.merge")` returns the protein sequence in the 'antigen binding domains' (exons 2 and 3 for HLA Class I genes, exon 2 for HLA Class II genes).
 ```{r}
 aa <- hlaConvSequence(hla, code="P.code.merge")
-head(c(aa$value$allele1, aa$value$allele2))
-summary(aa, head=16)
+```
 
-hlaAssocTest(aa, disease ~ h, data=dat)
+1. the sequence is displayed as a hyphen (-) where it is identical to the reference.
+2. an insertion or deletion is represented by a period (.).
+3. an unknown or ambiguous position in the alignment is represented by an asterisk (*).
+4. a capital X is used for the 'stop' codons in protein alignments.
+
+```{r}
+head(c(aa$value$allele1, aa$value$allele2))
+
+# show cross tabulation at each amino acid position
+summary(aa)
+
+# association tests
+hlaAssocTest(aa, disease ~ h, data=dat, model="dominant")
 hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")
 ```
 

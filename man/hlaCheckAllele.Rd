@@ -10,8 +10,10 @@
 hlaCheckAllele(allele1, allele2)
 }
 \arguments{
-    \item{allele1}{two alleles for the first individual, like c("A/G", "C/G")}
-    \item{allele2}{two alleles for the second individual, like c("A/G", "C/G")}
+    \item{allele1}{two alleles for the first individual, like
+        \code{c("A/G", "C/G")}}
+    \item{allele2}{two alleles for the second individual, like
+        \code{c("A/G", "C/G")}}
 }
 \value{
     Return a logical vector, where \code{TRUE} indicates the alleles are

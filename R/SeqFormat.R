@@ -399,10 +399,13 @@ hlaConvSequence <- function(hla=character(), locus=NULL,
     matrix(unlist(lt), nrow=n)
 }
 
-summary.hlaAASeqClass <- function(object, head=0L, verbose=TRUE, ...)
+summary.hlaAASeqClass <- function(object, poly.only=TRUE, head=0L,
+    verbose=TRUE, ...)
 {
     # check
     stopifnot(inherits(object, "hlaAASeqClass"))
+    stopifnot(is.logical(poly.only), length(poly.only)==1L)
+    stopifnot(is.numeric(head), length(head)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
 
     m <- .matrix_sequence(c(object$value$allele1, object$value$allele2))
@@ -416,14 +419,22 @@ summary.hlaAASeqClass <- function(object, head=0L, verbose=TRUE, ...)
         sapply(level, function(y) sum(x==y, na.rm=TRUE))))
     mt <- t(matrix(unlist(mt), nrow=length(level)+1L))
     colnames(mt) <- c("Num", levelstr)
+    mt <- cbind(Pos=seq_len(nrow(mt))-object$start.position+1L, mt)
+
+    if (isTRUE(poly.only))
+    {
+        i1 <- match("Num", colnames(mt))
+        i2 <- match("-", colnames(mt))
+        if (!is.na(i1) & !is.na(i2))
+            mt <- mt[mt[,i1] != mt[,i2], ]
+    }
 
     if (verbose)
     {
         z <- mt
         storage.mode(z) <- "character"
         z[z == "0"] <- "."
-        z <- rbind(c("Num", levelstr), z)
-        z <- cbind(c("Pos", seq_len(nrow(z)-1L)-object$start.position+1L), z)
+        z <- rbind(c("Pos", "Num", levelstr), z)
         z <- format(z, justify="right")
         if (head < 1L) head <- .Machine$integer.max - 1L
         head <- head + 1L

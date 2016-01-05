@@ -10,11 +10,14 @@
 }
 \usage{
 \method{summary}{hlaAlleleClass}(object, verbose=TRUE, ...)
-\method{summary}{hlaAASeqClass}(object, head=0L, verbose=TRUE, ...)
+\method{summary}{hlaAASeqClass}(object, poly.only=TRUE, head=0L,
+    verbose=TRUE, ...)
 }
 \arguments{
     \item{object}{an object of \code{\link{hlaAlleleClass}} or
         \code{\link{hlaAASeqClass}}}
+    \item{poly.only}{if TRUE, only show the amino acid positions with
+        polymorphism; otherwise, show all sequences}
     \item{head}{show the first \code{head} rows of cross tabulation, or
         \code{0L} for all rows}
     \item{verbose}{if TRUE, show information}

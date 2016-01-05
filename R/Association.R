@@ -604,7 +604,7 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
                         tv <- as.data.frame(tv)
                     }
                     tv <- cbind(
-                        AminoAcid = sapply(xl, function(x)
+                        amino.acid = sapply(xl, function(x)
                             paste0(rawToChar(as.raw(x)), " vs . ")),
                         tv, stringsAsFactors=FALSE)
                 }

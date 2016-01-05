@@ -6,7 +6,7 @@
     Statistical Association Tests
 }
 \description{
-    To perform statistical association tests via Pearson's Chi-squared test,
+    Perform statistical association tests via Pearson's Chi-squared test,
 Fisher's exact test and logistic regressions.
 }
 \usage{
