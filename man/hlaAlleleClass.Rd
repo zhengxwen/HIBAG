@@ -14,6 +14,8 @@
     \item{assembly}{the human genome reference, such like "hg19"}
     \item{postprob}{if applicable, a matrix of all posterior probabilities}
 
+~
+
     The component \code{value} includes:
     \item{sample.id}{sample ID}
     \item{allele1}{HLA allele}

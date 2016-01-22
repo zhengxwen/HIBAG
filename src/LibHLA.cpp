@@ -650,9 +650,16 @@ inline int TGenotype::_HamDist(size_t Length,
 
 	#ifdef HIBAG_SSE_HARDWARE_POPCNT
 
-		uint64_t r_ary[2] __attribute__((aligned(16)));
-		*((__m128i*)r_ary) = val;
-		ans += _mm_popcnt_u64(r_ary[0]) + _mm_popcnt_u64(r_ary[1]);
+    #   ifdef HIBAG_REG_BIT64
+			uint64_t r_ary[2] __attribute__((aligned(16)));
+			*((__m128i*)r_ary) = val;
+			ans += _mm_popcnt_u64(r_ary[0]) + _mm_popcnt_u64(r_ary[1]);
+	#   else
+			uint32_t r_ary[4] __attribute__((aligned(16)));
+			*((__m128i*)r_ary) = val;
+			ans += _mm_popcnt_u32(r_ary[0]) + _mm_popcnt_u32(r_ary[1]) +
+				_mm_popcnt_u32(r_ary[2]) + _mm_popcnt_u32(r_ary[3]);
+	#   endif
 
 	#else
 

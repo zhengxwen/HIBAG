@@ -1552,7 +1552,7 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
     H <- HLA
     while (dim(H$value)[1L] > 0L)
     {
-        v <- summary(H, show=FALSE)
+        v <- summary(H, verbose=FALSE)
         if (dim(v)[1L] > 1L)
         {
             v <- v[order(v[, "count"]), ]
