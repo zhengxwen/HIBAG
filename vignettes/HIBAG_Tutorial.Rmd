@@ -330,17 +330,25 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 
 ```{r echo=FALSE}
 options(width=110)
+fn <- system.file("doc", "case_control.txt", package="HIBAG")
 ```
 
-```{r}
+```R
 # prepare data
-fn <- system.file("extdata", "case_control.txt.xz", package="HIBAG")
-# or fn <- "/your_folder/file.txt"
-
+fn <- "case_control.txt"
+```
+The example text file: [case_control.txt](case_control.txt).
+```{r}
 dat <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
 head(dat)
 
-hla <- hlaAllele(dat$sample.id, H1=dat$A, H2=dat$A.1, locus="A", assembly="hg19")
+# make an object for hlaAssocTest
+hla <- hlaAllele(dat$sample.id, H1=dat$A, H2=dat$A.1, locus="A", assembly="hg19", prob=dat$prob)
+summary(hla)
+```
+Or the best-guess HLA genotypes from `predict()` or `hlaPredict()`:
+```R
+hla <- predict(model, yourgeno)
 ```
 
 ### Allelic Association
@@ -348,7 +356,9 @@ hla <- hlaAllele(dat$sample.id, H1=dat$A, H2=dat$A.1, locus="A", assembly="hg19"
 `h` in the formula is denoted for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
 
 ```{r}
-hlaAssocTest(hla, disease ~ h, data=dat)  # 95% confidence interval (h.25%, h.75%)
+hlaAssocTest(hla, disease ~ h, data=dat)  # 95% confidence interval (h.2.5%, h.97.5%)
+
+hlaAssocTest(hla, disease ~ h, data=dat, prob.threshold=0.5)  # regression with a threshold
 
 hlaAssocTest(hla, disease ~ h, data=dat, showOR=TRUE)  # report odd ratio instead of log odd ratio
 
@@ -379,9 +389,11 @@ head(c(aa$value$allele1, aa$value$allele2))
 summary(aa)
 
 # association tests
-hlaAssocTest(aa, disease ~ h, data=dat, model="dominant")
+hlaAssocTest(aa, disease ~ h, data=dat, model="dominant")  # try dominant models
 
-hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")
+hlaAssocTest(aa, disease ~ h, data=dat, model="dominant", prob.threshold=0.5)  # try dominant models
+
+hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")  # try recessive models
 ```
 
 

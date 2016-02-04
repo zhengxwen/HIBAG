@@ -12,11 +12,12 @@ Fisher's exact test and logistic regressions.
 \usage{
 \method{hlaAssocTest}{hlaAlleleClass}(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, verbose=TRUE, ...)
+    model.fit=c("glm"), prob.threshold=NaN, use.prob=FALSE, showOR=FALSE,
+    verbose=TRUE, ...)
 \method{hlaAssocTest}{hlaAASeqClass}(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, show.all=FALSE,
-    verbose=TRUE, ...)
+    model.fit=c("glm"), prob.threshold=NaN, use.prob=FALSE, showOR=FALSE,
+    show.all=FALSE, verbose=TRUE, ...)
 }
 \arguments{
     \item{hla}{an object of \code{\link{hlaAlleleClass}}}
@@ -29,6 +30,8 @@ Fisher's exact test and logistic regressions.
     \item{model}{dominant, additive, recessive or genotype models:
         \code{"dominant"} is default}
     \item{model.fit}{"glm" -- generalized linear regression}
+    \item{prob.threshold}{the probability threshold to exclude individuals
+        with low confidence scores}
     \item{use.prob}{if \code{TRUE}, use the posterior probabilities as weights
         in \code{glm} models}
     \item{showOR}{show odd ratio (OR) instead of log OR if \code{TRUE}}

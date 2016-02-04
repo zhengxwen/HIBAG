@@ -1,8 +1,8 @@
 Package: HIBAG
 Type: Package
 Title: HLA Genotype Imputation with Attribute Bagging
-Version: 1.7.5
-Date: 2016-01-01
+Version: 1.7.6
+Date: 2016-02-03
 Depends: R (>= 3.2.0)
 Imports: methods
 Suggests: parallel, knitr, gdsfmt (>= 1.2.2), SNPRelate (>= 1.1.6)
@@ -21,6 +21,7 @@ Description: It is a software package for imputing HLA types using SNP data,
 License: GPL-3
 LazyData: yes
 VignetteBuilder: knitr
+ByteCompile: TRUE
 biocViews: Genetics, StatisticalMethod
 URL: http://www.biostat.washington.edu/~bsweir/HIBAG/,
     http://github.com/zhengxwen/HIBAG

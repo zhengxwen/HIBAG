@@ -81,7 +81,8 @@ hlaAssocTest <- function(hla, ...)
 # Association tests are applied to HLA classical alleles
 hlaAssocTest.hlaAlleleClass <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, verbose=TRUE, ...)
+    model.fit=c("glm"), prob.threshold=NaN, use.prob=FALSE, showOR=FALSE,
+    verbose=TRUE, ...)
 {
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(formula, "formula"))
@@ -97,6 +98,28 @@ hlaAssocTest.hlaAlleleClass <- function(hla, formula, data,
         if (nrow(data) != nrow(hla$value))
             stop("'hla' and 'data' must have the same length.")
     }
+
+    stopifnot(is.numeric(prob.threshold), length(prob.threshold)==1L)
+    if (is.finite(prob.threshold))
+    {
+        if (!is.data.frame(data))
+            stop("'data' should be a data.frame, if 'prob.threshold' is used.")
+        p <- hla$value$prob
+        if (is.null(p))
+            stop("No posterior probability in 'hla' ('hla$value$prob' should be available).")
+        flag <- (p >= prob.threshold)
+        flag[is.na(flag)] <- FALSE
+        hla <- hlaAlleleSubset(hla, flag)
+        data <- data[flag, ]
+        if (verbose)
+        {
+            m <- sum(!flag)
+            cat("Exclude ", m, " individual", .plural(m),
+                " from the study due to the call threshold (",
+                prob.threshold, ")\n", sep="")
+        }
+    }
+
 
     # formula
     fa <- format(formula)
@@ -312,7 +335,8 @@ hlaAssocTest.hlaAlleleClass <- function(hla, formula, data,
                     cat("Linear regression")
             } else
                 cat("Regression [", format(param$family)[1L], "]", sep="")
-            cat(" (", model, " model):\n", sep="")
+            cat(" (", model, " model) with ", length(y), " individual",
+                .plural(length(y)), ":\n", sep="")
         }
 
         mat <- vector("list", length(allele))
@@ -362,14 +386,14 @@ hlaAssocTest.hlaAlleleClass <- function(hla, formula, data,
                     v <- cbind(z[-1L,1L], ci[-1L,1L], ci[-1L,2L], z[-1L,4L])
                     v <- c(t(v))
                     nm <- rownames(z)[-1L]
-                    names(v) <- c(rbind(paste0(nm, ".est"), paste0(nm, ".25%"),
-                        paste0(nm, ".75%"), paste0(nm, ".pval")))
+                    names(v) <- c(rbind(paste0(nm, ".est"), paste0(nm, ".2.5%"),
+                        paste0(nm, ".97.5%"), paste0(nm, ".pval")))
                     if (is.factor(y) & isTRUE(showOR))
                     {
                         if (model != "genotype")
-                            nm <- c("h.est", "h.25%", "h.75%")
+                            nm <- c("h.est", "h.2.5%", "h.97.5%")
                         else
-                            nm <- c("h1.est", "h1.25%", "h1.75%", "h2.est", "h2.25%", "h2.75%")
+                            nm <- c("h1.est", "h1.2.5%", "h1.97.5%", "h2.est", "h2.2.5%", "h2.97.5%")
                         j <- match(nm, names(v))
                         nm <- names(v)
                         nm[j] <- paste0(nm[j], "_OR")
@@ -432,8 +456,8 @@ hlaAssocTest.hlaAlleleClass <- function(hla, formula, data,
 # Association tests are applied to HLA protein sequences
 hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
     model=c("dominant", "additive", "recessive", "genotype"),
-    model.fit=c("glm"), use.prob=FALSE, showOR=FALSE, show.all=FALSE,
-    verbose=TRUE, ...)
+    model.fit=c("glm"), prob.threshold=NaN, use.prob=FALSE, showOR=FALSE,
+    show.all=FALSE, verbose=TRUE, ...)
 {
     stopifnot(inherits(hla, "hlaAASeqClass"))
     stopifnot(inherits(formula, "formula"))
@@ -450,6 +474,28 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
         if (nrow(data) != nrow(hla$value))
             stop("'hla' and 'data' must have the same length.")
     }
+
+    stopifnot(is.numeric(prob.threshold), length(prob.threshold)==1L)
+    if (is.finite(prob.threshold))
+    {
+        if (!is.data.frame(data))
+            stop("'data' should be a data.frame, if 'prob.threshold' is used.")
+        p <- hla$value$prob
+        if (is.null(p))
+            stop("No posterior probability in 'hla' ('hla$value$prob' should be available).")
+        flag <- (p >= prob.threshold)
+        flag[is.na(flag)] <- FALSE
+        hla <- hlaAlleleSubset(hla, flag)
+        data <- data[flag, ]
+        if (verbose)
+        {
+            m <- sum(!flag)
+            cat("Exclude ", m, " individual", .plural(m),
+                " from the study due to the call threshold (",
+                prob.threshold, ")\n", sep="")
+        }
+    }
+
 
     # formula
     fa <- format(formula)
@@ -513,7 +559,8 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
                     cat("Logistic regression")
                 else
                     cat("Regression [", format(param$family)[1L], "]", sep="")
-               cat(" (", model, " model):\n", sep="")
+                cat(" (", model, " model) with ", length(y), " individual",
+                    .plural(length(y)), ":\n", sep="")
             }
         }
 
@@ -523,7 +570,7 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
 
         z <- apply(matseq, 1L, FUN=function(x)
         {
-            x[x == 42] <- NA  # *
+            x[x == 42] <- NA  # 42 = '*'
             xx <- as.factor(x)
             xl <- as.integer(levels(xx))
             s <- rawToChar(as.raw(xl))
@@ -589,15 +636,15 @@ hlaAssocTest.hlaAASeqClass <- function(hla, formula, data,
                             v <- c(t(v))
                             nm <- rownames(z)[-1L]
                             names(v) <- c(rbind(paste0(nm, ".est"),
-                                paste0(nm, ".25%"), paste0(nm, ".75%"),
+                                paste0(nm, ".2.5%"), paste0(nm, ".97.5%"),
                                 paste0(nm, ".pval")))
                             if (isTRUE(showOR))
                             {
                                 if (model != "genotype")
-                                    nm <- c("h.est", "h.25%", "h.75%")
+                                    nm <- c("h.est", "h.2.5%", "h.97.5%")
                                 else
-                                    nm <- c("h1.est", "h1.25%", "h1.75%",
-                                        "h2.est", "h2.25%", "h2.75%")
+                                    nm <- c("h1.est", "h1.2.5%", "h1.97.5%",
+                                        "h2.est", "h2.2.5%", "h2.97.5%")
                                 j <- match(nm, names(v))
                                 nm <- names(v)
                                 nm[j] <- paste0(nm[j], "_OR")

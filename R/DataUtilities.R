@@ -1149,6 +1149,11 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
         assembly = hla$assembly
     )
 
+    if (!is.null(hla$start.position))
+        rv$start.position <- hla$start.position
+    if (!is.null(hla$reference))
+        rv$reference <- hla$reference
+
     if (!is.null(hla$postprob))
     {
         rv$postprob <- hla$postprob[, samp.sel]
