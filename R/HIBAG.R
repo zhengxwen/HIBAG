@@ -1375,7 +1375,7 @@ hlaErrMsg <- function()
     else
         s <- ""
     if ((Version[4L] > 0L) & (s != ""))
-        s <- paste(s, " [", Version[4L], "-bit]", sep="")
+        s <- paste0(s, " [", Version[4L], "-bit]")
     if (s != "") packageStartupMessage(s)
 
     TRUE

@@ -38,7 +38,7 @@
     if (is.na(bp) | !is.finite(bp))
         "unknown"
     else
-        paste(bp, "bp", sep="")
+        paste0(bp, "bp")
 }
 
 #######################################################################
@@ -57,7 +57,7 @@
             # HLA Classic III genes
             "LTA", "TNF", "LTB", "HSPA1L", "HSPA1A", "HSPA1B",
             "C2", "BF", "C4A", "C4B"),
-        "\\b", sep="", collapse="|"),
+        "\\b", collapse="|"),
         geno.name)
     geno.name[i] <- paste("HLA -", geno.name[i])
     geno.name
@@ -497,7 +497,7 @@ hlaGeno2PED <- function(geno, out.fn)
     rv <- data.frame(chr=rep(6, length(geno$snp.id)), rs=geno$snp.id,
         morgan=rep(0, length(geno$snp.id)), bp=geno$snp.position,
         stringsAsFactors=FALSE)
-    write.table(rv, file=paste(out.fn, ".map", sep=""),
+    write.table(rv, file=paste0(out.fn, ".map"),
         row.names=FALSE, col.names=FALSE, quote=FALSE)
 
     # PED file
@@ -513,7 +513,7 @@ hlaGeno2PED <- function(geno, out.fn)
     rv <- cbind(Family=geno$sample.id, Ind=geno$sample.id,
         Paternal=rep(0L, n), Maternal=rep(0L, n),
         Sex=rep(0L, n), Pheno=rep(-9L, n), m)
-    write.table(rv, file=paste(out.fn, ".ped", sep=""),
+    write.table(rv, file=paste0(out.fn, ".ped"),
         row.names=FALSE, col.names=FALSE, quote=FALSE)
 
     # return
@@ -2193,10 +2193,10 @@ hlaReport <- function(object, export.fn="",
         cat(
     "<table id=\"TB-Acc\" class=\"tabular\" border=\"1\"  CELLSPACING=\"1\">",
             "<tr>", 
-            paste(paste("<th>", L1, " ", L2, "</th>", sep=""), collapse=" "),
+            paste(paste0("<th>", L1, " ", L2, "</th>"), collapse=" "),
             "</tr>",
             "<tr>",
-            paste("<td colspan=\"", length(L1), "\">", sep=""),
+            paste0("<td colspan=\"", length(L1), "\">"),
             sprintf("<i> Overall accuracy: %0.1f%%, Call rate: %0.1f%% </i>",
                 object$overall$acc.haplo*100, object$overall$call.rate*100),
             "</td>",
@@ -2206,7 +2206,7 @@ hlaReport <- function(object, export.fn="",
         for (i in 1L:nrow(d))
         {
             cat("<tr>", 
-                paste(paste("<td>", d[i, ], "</td>", sep=""), collapse=" "),
+                paste(paste0("<td>", d[i, ], "</td>"), collapse=" "),
                 "</tr>",
                 file=f, append=TRUE, sep="\n")
         }
@@ -2229,7 +2229,7 @@ hlaReport <- function(object, export.fn="",
         cat(rep("|--:", length(L1)-2), file=f, sep="", append=TRUE)
         cat("|:--|\n", file=f, append=TRUE)
         d <- as.matrix(d)
-        dm <- paste(" ", d, " ", sep="")
+        dm <- paste0(" ", d, " ")
         dim(dm) <- dim(d)
         dm <- cbind(rep("", dim(dm)[1L]), dm)
         write.table(dm, file=f, append=TRUE, quote=FALSE, sep="|",
