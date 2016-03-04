@@ -358,6 +358,9 @@ hla <- predict(model, yourgeno)
 ```{r}
 hlaAssocTest(hla, disease ~ h, data=dat)  # 95% confidence interval (h.2.5%, h.97.5%)
 
+# show details
+print(hlaAssocTest(hla, disease ~ h, data=dat, verbose=FALSE))
+
 hlaAssocTest(hla, disease ~ h, data=dat, prob.threshold=0.5)  # regression with a threshold
 
 hlaAssocTest(hla, disease ~ h, data=dat, showOR=TRUE)  # report odd ratio instead of log odd ratio
