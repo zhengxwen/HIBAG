@@ -7,23 +7,26 @@
     To select SNPs in the flanking region of a specified HLA locus.
 }
 \usage{
-hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000, assembly="auto")
+hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000, assembly="auto",
+    pos.start=NA_integer_, pos.end=NA_integer_)
 }
 \arguments{
     \item{snp.id}{a vector of SNP IDs}
     \item{position}{a vector of positions}
-    \item{hla.id}{the name of HLA locus}
+    \item{hla.id}{the name of HLA locus, or "any" for other genes}
     \item{flank.bp}{the size of flanking region on each side in basepair}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
+    \item{pos.start}{the start position of the gene}
+    \item{pos.end}{the end position of the gene}
 }
 \details{
     \code{hla.id} is "A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1" or
         "any".
 }
 \value{
-    Return allele frequecies.
+    Return selected SNP IDs from \code{snp.id}.
 }
 \author{Xiuwen Zheng}
 \seealso{
@@ -47,6 +50,11 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
     snp.sel  = match(snpid, HapMap_CEU_Geno$snp.id),
     samp.sel = match(hla$training$value$sample.id, HapMap_CEU_Geno$sample.id))
 summary(train.geno)
+
+
+## customize positions
+snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
+    "any", 500*1000, pos.start=29457816, pos.end=30450205)
 }
 
 \keyword{SNP}

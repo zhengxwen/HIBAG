@@ -1,7 +1,9 @@
-CHANGES IN VERSION 1.8.0
+CHANGES IN VERSION 1.8.0-1.8.3
 -------------------------
 
     o the version number was bumped for the Bioconductor release version 3.3
+
+    o new arguments 'pos.start' and 'pos.end' in `hlaFlankingSNP()`
 
 
 CHANGES IN VERSION 1.7.0-1.7.7

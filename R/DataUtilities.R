@@ -1593,23 +1593,30 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 #
 
 hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
-    assembly="auto")
+    assembly="auto", pos.start=NA_integer_, pos.end=NA_integer_)
 {
     # check
     stopifnot(length(snp.id) == length(position))
-    stopifnot(is.character(hla.id))
+    stopifnot(is.character(hla.id), length(hla.id)==1L)
 
     # init
-    assembly <- .hla_assembly(assembly)
-    HLAInfo <- hlaLociInfo(assembly)
-    ID <- rownames(HLAInfo)
+    if (hla.id != "any")
+    {
+        assembly <- .hla_assembly(assembly)
+        HLAInfo <- hlaLociInfo(assembly)
+        ID <- rownames(HLAInfo)
 
-    stopifnot(length(hla.id) == 1L)
-    if (!(hla.id %in% ID))
-        stop(paste("`hla.id' should be one of", paste(ID, collapse=", ")))
+        if (!(hla.id %in% ID))
+            stop(paste("`hla.id' should be one of", paste(ID, collapse=", ")))
+    } else {
+        if (!is.finite(pos.start) | !is.finite(pos.end))
+            stop("'pos.start' and 'pos.end' should be specified.")
+    }
 
-    pos.start <- HLAInfo[hla.id, "start"] - flank.bp
-    pos.end <- HLAInfo[hla.id, "end"] + flank.bp
+    if (!is.finite(pos.start))
+        pos.start <- HLAInfo[hla.id, "start"] - flank.bp
+    if (!is.finite(pos.end))
+        pos.end <- HLAInfo[hla.id, "end"] + flank.bp
 
     if (is.finite(pos.start) & is.finite(pos.end))
     {
