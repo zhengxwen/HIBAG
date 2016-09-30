@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>HIBAG by zhengxwen</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>HIBAG</h1>
+        <h2>R package -- HLA Genotype Imputation with Attribute Bagging</h2>
+        <a href="https://github.com/zhengxwen/HIBAG" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>
+<a id="hla-genotype-imputation-with-attribute-bagging" class="anchor" href="#hla-genotype-imputation-with-attribute-bagging" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>HLA Genotype Imputation with Attribute Bagging</h1>
+
+<p>Kernel Version: v1.3</p>
+
+<p><img src="http://www.gnu.org/graphics/gplv3-88x31.png" alt="GPLv3">
+<a href="http://www.gnu.org/copyleft/gpl.html">GNU General Public License, GPLv3</a></p>
+
+<p><a href="http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html"><img src="http://www.bioconductor.org/shields/availability/release/HIBAG.svg" alt="Availability"></a>
+<a href="http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html"><img src="http://www.bioconductor.org/shields/years-in-bioc/HIBAG.svg" alt="Years-in-BioC"></a>
+<a href="https://travis-ci.org/zhengxwen/HIBAG"><img src="https://travis-ci.org/zhengxwen/HIBAG.png" alt="Build Status"></a>
+<a href="https://ci.appveyor.com/project/zhengxwen/hibag"><img src="https://ci.appveyor.com/api/projects/status/v650qe8ap4bojxuf?svg=true" alt="Build status"></a>
+<a href="https://codecov.io/github/zhengxwen/HIBAG?branch=master"><img src="https://codecov.io/github/zhengxwen/HIBAG/coverage.svg?branch=master" alt="codecov.io"></a></p>
+
+<h2>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Features</h2>
+
+<p>HIBAG is a state of the art software package for imputing HLA types using SNP data, and it relies on a training set of HLA and SNP genotypes. HIBAG can be used by researchers with published parameter estimates instead of requiring access to large training sample datasets. It combines the concepts of attribute bagging, an ensemble classifier method, with haplotype inference for SNPs and HLA types. Attribute bagging is a technique which improves the accuracy and stability of classifier ensembles using bootstrap aggregating and random variable selection.</p>
+
+<h2>
+<a id="bioconductor-package" class="anchor" href="#bioconductor-package" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Bioconductor Package</h2>
+
+<p>Release Version: <a href="http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html">http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html</a></p>
+
+<p>Development Version: <a href="http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html">http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html</a></p>
+
+<h3>
+<a id="changes-in-bioconductor-version-since-v130" class="anchor" href="#changes-in-bioconductor-version-since-v130" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Changes in Bioconductor Version (since v1.3.0):</h3>
+
+<ul>
+<li>optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available</li>
+<li>hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4</li>
+<li>SSE2 popcount implementation without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4</li>
+</ul>
+
+<h2>
+<a id="package-maintainer" class="anchor" href="#package-maintainer" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Package Maintainer</h2>
+
+<p>Dr. Xiuwen Zheng (<a href="zhengx@u.washington.edu">zhengx@u.washington.edu</a>)</p>
+
+<h2>
+<a id="pre-fit-model-download" class="anchor" href="#pre-fit-model-download" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Pre-fit Model Download</h2>
+
+<p><a href="http://www.biostat.washington.edu/%7Ebsweir/HIBAG/">http://www.biostat.washington.edu/~bsweir/HIBAG/</a></p>
+
+<h2>
+<a id="citation" class="anchor" href="#citation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Citation</h2>
+
+<p>Zheng, X. <em>et al</em>. HIBAG-HLA genotype imputation with attribute bagging. <em>Pharmacogenomics Journal</em> 14, 192–200 (2014).
+<a href="http://dx.doi.org/10.1038/tpj.2013.18">http://dx.doi.org/10.1038/tpj.2013.18</a></p>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/zhengxwen/HIBAG/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/zhengxwen/HIBAG/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/zhengxwen/HIBAG"></a> is maintained by <a href="https://github.com/zhengxwen">zhengxwen</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>
