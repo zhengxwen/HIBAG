@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org./TR/xhtml1/DTD/hxtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<title>HIBAG – HLA Genotype Imputation with Attribute Bagging</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content="HIBAG – HLA Genotype Imputation with Attribute Bagging">
+<meta name="keywords" content="HLA, MHC, GWAS, Genetics">
+
+<script language="javascript" type="text/javascript">
+  function resizeIframe(obj) {
+    obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
+  }
+</script>
+
+</head>
+
+
+
+<body>
+<h1>HIBAG – HLA Genotype Imputation with Attribute Bagging</h1>
+
+<p><font size="4">
+	R/Bioconductor Package: <a href="http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html">HIBAG</a>
+<br>Email: <a href="mailto:zhengx@u.washington.edu">Xiuwen Zheng</a> or <a href="mailto:bsweir@u.washington.edu">Bruce S. Weir</a>
+<br>This page was last updated on <b>Feb 5, 2016</b>
+</font></p>
+
+<h2 id="contents">Contents</h2>
+<font size="4"><ul>
+	<li><a href="#intro">Introduction</a></li>
+	<li><a href="#announce">Features</a></li>
+	<li><a href="#citation">Citation</a></li>
+	<li><a href="#download">Download HIBAG</a></li>
+	<li><a href="#estimates">Download Published Parameter Estimates</a></li>
+	<li><a href="#example">Examples</a></li>
+	<li><a href="#history">Version History</a></li>
+	<li><a href="#link">Resources</a></li>
+</ul></font>
+<p>&nbsp;</p>
+<hr>
+<span style="FONT-FAMILY: 'Times New Roman','serif'; FONT-SIZE: 13.5pt">
+
+
+<h2 id="intro">Introduction</h2>
+<p><font size="4">
+	HIBAG is a state of the art software package for imputing HLA types using SNP data,
+and it uses the <a href="http://www.r-project.org">R statistical programming language</a>.
+HIBAG is highly accurate, computationally tractable, and can be used by researchers with
+published parameter estimates (provided for subjects of European, Asian, Hispanic and
+African ancestries) instead of requiring access to large training sample datasets.
+It combines the concepts of attribute bagging, an ensemble classifier method, with haplotype
+inference for SNPs and HLA types. Attribute bagging is a technique which improves the accuracy
+and stability of classifier ensembles deduced using bootstrap aggregating and random variable
+selection.
+</font>
+</p><a href="#contents">back to contents</a><p>&nbsp;</p>
+<hr>
+
+
+<h2 id="announce">Features</h2>
+<ul>
+<li><div>
+	HIBAG can be used by researchers with published parameter estimates (provided for subjects
+of European, Asian, Hispanic and African ancestries) instead of requiring access to large training
+sample datasets.
+</div></li>
+<li><div>
+	A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets
+rather than individual training genotypes.
+</div></li>
+<li><div>
+	SNPs within the xMHC region (chromosome 6) are used for imputation.
+</div></li>
+<li><div>
+	HIBAG employs unphased genotypes of unrelated individuals as a training set.
+</div></li>
+<li><div>
+	HIBAG supports parallel computing with R.
+</div></li>
+</ul> 
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+<h2 id="citation">Citation</h2>
+	If you use HIBAG in a published analysis, please report the HIBAG version used and cite
+the appropriate publication or publications listed below:
+<ul>
+<li><div>
+	Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS.
+	HIBAG – HLA Genotype Imputation with Attribute Bagging.
+	Pharmacogenomics Journal (2014).
+	<a href="http://dx.doi.org/10.1038/tpj.2013.18">doi: 10.1038/tpj.2013.18.</a>
+</div></li>
+</ul> 
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+<h2 id="download">Download HIBAG</h2>
+<p><font size="4">
+R/Bioconductor: <a href="http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html">
+	http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html</a>
+</font>
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+<h2 id="estimates">Download Published Parameter Estimates</h2>
+<p>
+	The published parameters were estimated from HLA and SNP genotypes of multiple GlaxoSmithKline clinical
+trials (referred to as “HLARES”) and HapMap Phase 2. The HIBAG models were built from SNP markers common to the
+Illumina 1M Duo, OmniQuad, OmniExpress, 660K and 550K platforms. The training data consist of <b>1)</b> HLARES
+data of European ancestry, <b>2)</b> HLARES data of Asian ancestry (East & South Asia) and HapMap CHB+JPT,
+<b>3)</b> HLARES data of Hispanic ancestry, and <b>4)</b> African American HLARES data and 60 African parents
+of HapMap YRI.
+</p>
+<p>
+	<a href="http://hla.alleles.org/nomenclature/nomenc_updates.html">HLA Nomenclature Updates</a>
+	(important update: <a href="http://hla.alleles.org/nomenclature/naming_2010.html">April 2010</a>) 
+</p>
+<p>Summary of training data set:</p>
+<ul>
+<li><div><img src="images/train-size-4-digit.jpg" alt="training sample size" align="top"/></div></li>
+</ul>
+<p>Ethnic-specific models of four-digit resolution (high resolution), presented in Zheng <i>et al</i>. (2014):</p>
+<ul>
+<li><div>
+	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.html">European ancestry</a>,
+		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-Quality-HLA4.pdf">Quality</a>,
+		<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Validation-WTCCC-HLA4.pdf">Validation</a> using HLA data of the British 1958 cohort study
+		(Wellcome Trust Case Control Consortium)
+</div></li>
+<li><div>
+	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Asian-HLA4.html">Asian ancestry</a>,
+		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Asian-Quality-HLA4.pdf">Quality</a>
+</div></li>
+<li><div>
+	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Hispanic-HLA4.html">Hispanic ancestry</a>,
+		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Hispanic-Quality-HLA4.pdf">Quality</a>
+</div></li>
+<li><div>
+	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/African-HLA4.html">African ancestry</a>,
+		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/African-Quality-HLA4.pdf">Quality</a>
+</div></li>
+</ul> 
+
+<!--
+<p>&nbsp;</p>
+<b>Two-digit resolution (intermediate resolution):</b>
+<p>Summary of training data set:</p>
+<ul>
+<li><div><img src="images/train-size-2-digit.jpg" alt="training sample size" align="top"/></div>
+</ul> 
+<p>Ethnic-specific models:</p>
+-->
+
+<iframe src="platforms.html" style="width:100%; height:560px; border:medium double rgb(196,196,196)" scrolling="yes" id="iframe" onload='javascript:resizeIframe(this);'></iframe>
+
+
+<br><br>
+<p><font size="3"><b>Prediction accuracy</b> was used to assess overall model performance,
+	defined as "the number of chromosomes with HLA alleles predicted correctly"
+	over "the total number of chromosomes". The standard statistical quantities of
+	prediction quality for a specific HLA allele <i>H</i>:</font>
+	<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<img src="images/standard_quantity.jpg" alt="training sample size" align="top"/>
+</p>
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+<h2 id="example">Examples</h2>
+
+<ul>
+<li id="prefitmodel"><div>The pre-fit HIBAG models for HLA genotype imputation:
+	<table style="text-align: left; width: 800px; background-color: rgb(226, 255, 255); line-height: 80%;"
+	border="0" cellpadding="2" cellspacing="2">
+	<tbody><tr>
+	<td style="vertical-align: top;"> <span style="font-family: Courier New,Courier,monospace; font-size: 10pt;">
+		library(<b>HIBAG</b>)<br>
+		&nbsp;<br>
+		<i># Load the published parameter estimates from <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.RData">European ancestry</a></i><br>
+		model.list &lt;- get(load("European-HLA4.RData"))<br>
+		&nbsp;<br>
+		<i>#########################################################################</i><br>
+		<i># Import your PLINK BED file</i><br>
+		<i>#</i><br>
+		yourgeno &lt;- <b>hlaBED2Geno</b>(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")<br>
+		summary(yourgeno)<br>
+		&nbsp;<br>
+		<i># HLA imputation at HLA-A</i><br>
+		hla.id &lt;- "A"<br>
+		model &lt;- <b>hlaModelFromObj</b>(model.list[[hla.id]])<br>
+		summary(model)<br>
+		<i># HLA allele frequencies</i><br>
+		cbind(frequency = model$hla.freq)<br>
+		&nbsp;<br>
+		<i># SNPs in the model</i><br>
+		head(model$snp.id)<br>
+		<i># "rs2523442" "rs9257863" "rs2107191" "rs4713226" "rs1362076" "rs7751705"</i><br>
+		head(model$snp.position)<br>
+		<i># 29525796 29533563 29542274 29542393 29549148 29549597</i><br>
+		&nbsp;<br>
+		<i># best-guess genotypes and all posterior probabilities</i><br>
+		pred.guess &lt;- <b>predict</b>(model, yourgeno, type="response+prob")<br>
+		summary(pred.guess)<br>
+		pred.guess$value<br>
+		pred.guess$postprob<br>
+	</span></td>
+	</tr></tbody>
+	</table>
+	&nbsp;
+</div></li>
+
+<li id="buildmodel"><div>Build a HIBAG model for HLA genotype imputation:
+	<table style="text-align: left; width: 800px; background-color: rgb(226, 255, 255); line-height: 80%;"
+	border="0" cellpadding="2" cellspacing="2">
+	<tbody><tr>
+	<td style="vertical-align: top;"> <span style="font-family: Courier New,Courier,monospace; font-size: 10pt;">
+		library(<b>HIBAG</b>)<br>
+		&nbsp;<br>
+		<i># Import your PLINK BED file</i><br>
+		geno &lt;- <b>hlaBED2Geno</b>(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")<br>
+		summary(geno)<br>
+		&nbsp;<br>
+		<i># The HLA type of the first individual is 01:02/02:01, the second is 05:01/03:01, ...</i><br>
+		train.HLA &lt;- <b>hlaAllele</b>(geno$sample.id, H1=c("01:02", "05:01", ...),<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;H2=c("02:01", "03:01", ...), locus="A")<br>
+		<br>
+		<i># Or the HLA types are saved in a text file "YourHLATypes.txt":</i><br>
+		<i># &nbsp; SampleID  Allele1  Allele2</i><br>
+		<i># &nbsp; NA001101  01:02    02:01</i><br>
+		<i># &nbsp; NA001201  05:01    03:01</i><br>
+		<i># &nbsp; ...</i><br>
+		D &lt;- read.table(<i>"YourHLATypes.txt"</i>, header=TRUE, stringsAsFactors=FALSE)<br>
+		train.HLA &lt;- <b>hlaAllele</b>(D$SampleID, H1=D$Allele1, H2=D$Allele2, locus="A")<br>
+		<br>
+		summary(train.HLA)<br>
+		&nbsp;<br>
+		<i># Selected SNPs, two options:</i><br>
+		<i># 1) the flanking region of 500kb on each side,</i><br>
+		<i>#&nbsp;&nbsp;&nbsp;&nbsp;or an appropriate flanking size without sacrificing predictive accuracy</i><br>
+		&nbsp;&nbsp;snpid &lt;- <b>hlaFlankingSNP</b>(geno$snp.id, geno$snp.position, "A", 500*1000)<br>
+		<i># 2) the SNPs in our pre-fit models</i><br>
+		&nbsp;&nbsp;model.list &lt;- get(load("<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.RData">European-HLA4.RData</a>"))<br>
+		&nbsp;&nbsp;snpid &lt;- model.list[["A"]]$snp.id<br>
+		<i># Subset training SNP genotypes</i><br>
+		train.geno &lt;- <b>hlaGenoSubset</b>(geno, snp.sel=match(snpid, geno$snp.id))<br>
+		&nbsp;<br>
+		<i># Building ...</i><br>
+		set.seed(1000)<br>
+		model &lt;- <b>hlaAttrBagging</b>(train.HLA, train.geno, nclassifier=100, verbose.detail=TRUE)<br>
+		summary(model)<br>
+		&nbsp;<br>
+		<i># Save your model</i><br>
+		model.obj &lt;- <b>hlaModelToObj</b>(model)<br>
+		save(model.obj, file="<i>your_model.RData</i>")<br>
+		&nbsp;<br>
+		<i># Predict ...</i><br>
+		model.obj &lt;- get(load("<i>your_model.RData</i>"))<br>
+		model &lt;- <b>hlaModelFromObj</b>(model.obj)<br>
+		summary(model)<br>
+		<i># best-guess genotypes and all posterior probabilities</i><br>
+		pred.guess &lt;- <b>predict</b>(model, newgeno, type="response+prob")<br>
+		summary(pred.guess)<br>
+		pred.guess$value<br>
+		pred.guess$postprob<br>
+	</span></td>
+	</tr></tbody>
+	</table>
+	&nbsp;
+</div></li>
+
+<li id="buildmodelinparallel"><div>Build and predict in parallel:
+	<table style="text-align: left; width: 800px; background-color: rgb(226, 255, 255); line-height: 80%;"
+	border="0" cellpadding="2" cellspacing="2">
+	<tbody><tr>
+	<td style="vertical-align: top;"> <span style="font-family: Courier New,Courier,monospace; font-size: 10pt;">
+		library(<a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/html/parallel-package.html"><b>parallel</b></a>)<br>
+		library(<b>HIBAG</b>)<br>
+		&nbsp;<br>
+		<i># Import your PLINK BED file</i><br>
+		geno &lt;- <b>hlaBED2Geno</b>(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")<br>
+		summary(geno)<br>
+		&nbsp;<br>
+		<i># The HLA type of the first individual is 01:02/02:01, the second is 05:01/03:01, ...</i><br>
+		train.HLA &lt;- <b>hlaAllele</b>(geno$sample.id, H1=c("01:02", "05:01", ...),<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;H2=c("02:01", "03:01", ...), locus="A")<br>
+		<br>
+		<i># Or the HLA types are saved in a text file "YourHLATypes.txt":</i><br>
+		<i># &nbsp; SampleID  Allele1  Allele2</i><br>
+		<i># &nbsp; NA001101  01:02    02:01</i><br>
+		<i># &nbsp; NA001201  05:01    03:01</i><br>
+		<i># &nbsp; ...</i><br>
+		D &lt;- read.table(<i>"YourHLATypes.txt"</i>, header=TRUE, stringsAsFactors=FALSE)<br>
+		train.HLA &lt;- <b>hlaAllele</b>(D$SampleID, H1=D$Allele1, H2=D$Allele2, locus="A")<br>
+		<br>
+		summary(train.HLA)<br>
+		&nbsp;<br>
+		<i># Create an environment with an appropriate cluster size</i><br>
+		cl <- <a href="http://stat.ethz.ch/R-manual/R-devel/library/parallel/html/makeCluster.html"><b>makeCluster</b></a>(8)<br>
+		&nbsp;<br>
+		<i># Building ...</i><br>
+		set.seed(1000)<br>
+		<b>hlaParallelAttrBagging</b>(cl, train.HLA, geno, nclassifier=100, auto.save="<i>AutoSaveModel.RData</i>")<br>
+		model.obj &lt;- get(load("<i>AutoSaveModel.RData</i>"))<br>
+		model &lt;- <b>hlaModelFromObj</b>(model.obj)<br>
+		summary(model)<br>
+		&nbsp;<br>
+		<i># best-guess genotypes and all posterior probabilities</i><br>
+		pred.guess &lt;- <b>predict</b>(model, yourgeno, type="response+prob", cl=cl)<br>
+		summary(pred.guess)<br>
+		pred.guess$value<br>
+		pred.guess$postprob<br>
+	</span></td>
+	</tr></tbody>
+	</table>
+</div></li>
+</ul> 
+
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+
+<h2 id="history">Version History</h2>
+<ul>
+	<li><font size="4">Version 1.4.0 (Apr 2015): Bioconductor release version</font>
+	<li><font size="4">Version 1.2.0 (Jul 2013): Add genome assembly information (e.g., hg19)</font>
+	<li><font size="4">Version 1.0.0 (Mar 2013): Minor bug fixes</font>
+	<li><font size="4">Version 0.9.1 (Jun 2012): First public release of HIBAG</font>
+</ul>
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+<h2 id="link">Resources</h2>
+<ul>
+	<li>Allele Frequency Net Database (AFND): <a href="http://www.allelefrequencies.net">http://www.allelefrequencies.net</a>
+	<li>IMGT/HLA Database: <a href="http://www.ebi.ac.uk/imgt/hla">http://www.ebi.ac.uk/imgt/hla</a>
+	<li>HLA Nomenclature: <a href="http://hla.alleles.org/alleles/g_groups.html">G Codes</a> and <a href="http://hla.alleles.org/alleles/p_groups.html">P Codes</a> for reporting of ambiguous allele typings
+	<li>GlaxoSmithKline (GSK): <a href="http://www.gsk.com">http://www.gsk.com</a>
+</ul>
+<p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
+<hr>
+
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+	var sc_project=8185875; 
+	var sc_invisible=0; 
+	var sc_security="c902b96b"; 
+</script>
+<script type="text/javascript" src="http://www.statcounter.com/counter/counter.js"></script>
+<noscript><div class="statcounter">
+<a title="visit tracker on tumblr" href="http://statcounter.com/tumblr/" target="_blank">
+	<img class="statcounter" src="http://c.statcounter.com/8185875/0/c902b96b/0/" alt="visit tracker on tumblr">
+</a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+
+</body>
+</html>
