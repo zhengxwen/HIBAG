@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2015   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2016   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -93,7 +93,7 @@ namespace HLA_LIB
 
 
 	/** The max number of SNP markers in an individual classifier.
-    	Don't modify this value since the code is optimize for this value.
+		Don't modify this value since the code is optimized for this value!!!
 	**/
 	const size_t HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 256;
 

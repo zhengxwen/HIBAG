@@ -20,11 +20,11 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor Package
 
-Release Version: 1.8.0
+Release Version: 1.10.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 
-Development Version: 1.9.0
+Development Version: 1.11.0
 
 [http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
 
@@ -43,6 +43,8 @@ Dr. Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
 ## Pre-fit Model Download
 
 [http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)
+
+[http://zhengxwen.github.io/HIBAG/](http://zhengxwen.github.io/HIBAG/)
 
 
 ## Citation
