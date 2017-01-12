@@ -1,5 +1,5 @@
 HIBAG R package (HLA Genotype Imputation)
-Copyright (C) 2011-2015   Xiuwen Zheng
+Copyright (C) 2011-2017   Xiuwen Zheng
 All rights reserved.
 
 This program is free software: you can redistribute it and/or modify

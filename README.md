@@ -24,9 +24,6 @@ Release Version: 1.10.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 
-Development Version: 1.11.0
-
-[http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html)
 
 ### Changes in Bioconductor Version (since v1.3.0):
 
@@ -35,7 +32,7 @@ Development Version: 1.11.0
 * SSE2 popcount implementation without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
 
 
-## Package Maintainer
+## Package Author & Maintainer
 
 Dr. Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
 
