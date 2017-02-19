@@ -1,8 +1,10 @@
 CHANGES IN VERSION 1.11.1
 -------------------------
 
-    o changes "hg20" to "hg38" according to the UCSC Genome Browser datasets
+    o change "hg20" to "hg38" according to the UCSC Genome Browser datasets
       and documentation
+
+    o add "DRB3" and "DRB4" to the HLA gene list
 
 
 CHANGES IN VERSION 1.10.0

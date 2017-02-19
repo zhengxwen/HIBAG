@@ -590,15 +590,29 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         {
             info <- hlaLociInfo(assembly)
             info <- info[info$chrom == 6L, ]
-            st <- min(info$start) - 1000000L
-            ed <- max(info$end)   + 1000000L
+            st <- info$start[1L] - 1000000L    # MHC region
+            ed <- info$end[1L]   + 1000000L    # MHC region
+            v <- (st <= info$start) & (info$end <= ed)
+            inmhc <- which(v)
+            outmhc <- which(!v)
+
+            st <- min(info$start[inmhc]) - 1000000L
+            ed <- max(info$end[inmhc])   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
+            for (i in outmhc)
+            {
+                st <- info$start[i] - 1000000L
+                ed <- info$end[i]   + 1000000L
+                snp.flag <- snp.flag |
+                    ((chr==6L) & (st<=snp.pos) & (snp.pos<=ed))
+            }
+
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNP%s within the xMHC region [%d, %d] on chromosome 6.\n",
-                    n.snp, .plural(n.snp), st, ed))
+                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
+                    n.snp, .plural(n.snp)))
             }
             import.chr <- NULL
         } else if (import.chr == "")
@@ -737,15 +751,29 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
         {
             info <- hlaLociInfo(assembly)
             info <- info[info$chrom == 6L, ]
-            st <- min(info$start) - 1000000L
-            ed <- max(info$end)   + 1000000L
+            st <- info$start[1L] - 1000000L    # MHC region
+            ed <- info$end[1L]   + 1000000L    # MHC region
+            v <- (st <= info$start) & (info$end <= ed)
+            inmhc <- which(v)
+            outmhc <- which(!v)
+
+            st <- min(info$start[inmhc]) - 1000000L
+            ed <- max(info$end[inmhc])   + 1000000L
             snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
+            for (i in outmhc)
+            {
+                st <- info$start[i] - 1000000L
+                ed <- info$end[i]   + 1000000L
+                snp.flag <- snp.flag |
+                    ((chr==6L) & (st<=snp.pos) & (snp.pos<=ed))
+            }
+
             n.snp <- as.integer(sum(snp.flag))
             if (verbose)
             {
                 cat(sprintf(
-                    "Import %d SNP%s within the xMHC region [%d, %d] on chromosome 6.\n",
-                    n.snp, .plural(n.snp), st, ed))
+                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
+                    n.snp, .plural(n.snp)))
             }
             import.chr <- NULL
         } else if (import.chr == "")
