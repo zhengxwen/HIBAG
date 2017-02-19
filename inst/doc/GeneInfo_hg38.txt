@@ -1,4 +1,4 @@
-## Genome: hg20
+## Genome: hg38
 name	chrom	start	end
 MHC	6	29751784	32915731
 A	6	29942470	29945884

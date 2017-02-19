@@ -16,7 +16,7 @@ hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000, assembly="auto",
     \item{hla.id}{the name of HLA locus, or "any" for other genes}
     \item{flank.bp}{the size of flanking region on each side in basepair}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
-        "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
+        "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
     \item{pos.start}{the start position of the gene}
     \item{pos.end}{the end position of the gene}

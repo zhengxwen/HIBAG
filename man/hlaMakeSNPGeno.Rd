@@ -19,7 +19,7 @@ hlaMakeSNPGeno(genotype, sample.id, snp.id, snp.position,
     \item{A.allele}{a vector of A alleles in the SNP list}
     \item{B.allele}{a vector of B alleles in the SNP list}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
-        "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
+        "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
 }
 \details{

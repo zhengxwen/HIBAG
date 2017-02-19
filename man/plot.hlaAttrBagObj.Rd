@@ -21,7 +21,7 @@ positions.
     \item{locus.lty}{the type of line for HLA locus}
     \item{locus.cex}{the font size of HLA locus}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
-        "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
+        "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
     \item{...}{further arguments passed to or from other methods}
 }

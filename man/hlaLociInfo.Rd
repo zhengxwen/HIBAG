@@ -7,12 +7,12 @@
     To get the starting and ending positions in basepair of HLA loci.
 }
 \usage{
-hlaLociInfo(assembly=c("auto", "auto-silent", "hg18", "hg19", "hg20",
+hlaLociInfo(assembly=c("auto", "auto-silent", "hg18", "hg19", "hg38",
     "unknown"))
 }
 \arguments{
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
-        "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
+        "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
 }
 \value{

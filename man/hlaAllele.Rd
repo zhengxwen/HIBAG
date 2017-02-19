@@ -21,7 +21,7 @@ hlaAllele(sample.id, H1, H2, max.resolution="", locus="any", assembly="auto",
         "DQA1", "DQB1", "DPB1", or "any", where "any" indicates any other
         multiallelic locus}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
-        "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
+        "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
     \item{locus.pos.start}{the starting position in basepair}
     \item{locus.pos.end}{the end position in basepair}

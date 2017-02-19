@@ -19,7 +19,7 @@ hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         "xMHC", or "", where "xMHC" implies the extended MHC on chromosome 6,
         and "" for all SNPs}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
-        "hg20"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
+        "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
     \item{verbose}{if TRUE, show information}
 }

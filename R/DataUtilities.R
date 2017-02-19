@@ -69,7 +69,7 @@
 #
 
 .hla_assembly <- function(assembly =
-    c("auto", "auto-silent", "hg18", "hg19", "hg20", "unknown"))
+    c("auto", "auto-silent", "hg18", "hg19", "hg38", "unknown"))
 {
     assembly <- match.arg(assembly)
     if (assembly %in% c("auto", "auto-silent"))
@@ -947,7 +947,7 @@ hlaGenoMRate_Samp <- function(obj)
 #
 
 hlaLociInfo <- function(assembly =
-    c("auto", "auto-silent", "hg18", "hg19", "hg20", "unknown"))
+    c("auto", "auto-silent", "hg18", "hg19", "hg38", "unknown"))
 {
     # check
     assembly <- .hla_assembly(assembly)
