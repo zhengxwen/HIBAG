@@ -593,12 +593,11 @@ int TGenotype::HammingDistance(size_t Length,
 
 	// signed integer for initializing XMM
 	typedef int64_t UTYPE;
-
-	static const __m128i ZFF = { -1LL, -1LL };
+	static const __m128i ZFF = _mm_set1_epi8(-1);
 	#ifndef HIBAG_SSE_HARDWARE_POPCNT
-	static const __m128i Z05 = { 0x5555555555555555LL, 0x5555555555555555LL };
-	static const __m128i Z03 = { 0x3333333333333333LL, 0x3333333333333333LL };
-	static const __m128i Z0F = { 0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
+	static const __m128i Z05 = _mm_set1_epi8(0x55);
+	static const __m128i Z03 = _mm_set1_epi8(0x33);
+	static const __m128i Z0F = _mm_set1_epi8(0x0F);
 	#endif
 
 #else
@@ -627,15 +626,15 @@ inline int TGenotype::_HamDist(size_t Length,
 	// for-loop
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
-		__m128i H  = {*h1++, *h2++};
-		__m128i S1 = {*s1++, *s2++};   // {*s1, *s2}
-		__m128i S2 = _mm_shuffle_epi32(S1, _MM_SHUFFLE(1,0,3,2)); // {*s2, *s1}
+		__m128i H  = _mm_set_epi64x(*h2++, *h1++);  // *h1, *h2
+		__m128i S1 = _mm_set_epi64x(*s2++, *s1++);  // *s1, *s2
+		__m128i S2 = _mm_shuffle_epi32(S1, _MM_SHUFFLE(1,0,3,2)); // *s2, *s1
 
 		__m128i mask1 = _mm_xor_si128(H, S2);
 		__m128i mask2 = _mm_shuffle_epi32(mask1, _MM_SHUFFLE(1,0,3,2));
 
-		__m128i M  = {*sM, *sM}; sM++;
-		__m128i MASK  = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
+		__m128i M = _mm_set1_epi64x(*sM++);
+		__m128i MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
 
 		if (n < UTYPE_BIT_NUM)
 		{
@@ -651,9 +650,8 @@ inline int TGenotype::_HamDist(size_t Length,
 	#ifdef HIBAG_SSE_HARDWARE_POPCNT
 
     #   ifdef HIBAG_REG_BIT64
-			uint64_t r_ary[2] __attribute__((aligned(16)));
-			*((__m128i*)r_ary) = val;
-			ans += _mm_popcnt_u64(r_ary[0]) + _mm_popcnt_u64(r_ary[1]);
+			ans += _mm_popcnt_u64(_mm_cvtsi128_si64(val)) +
+				_mm_popcnt_u64(_mm_cvtsi128_si64(_mm_unpackhi_epi64(val, val)));
 	#   else
 			uint32_t r_ary[4] __attribute__((aligned(16)));
 			*((__m128i*)r_ary) = val;
@@ -676,10 +674,12 @@ inline int TGenotype::_HamDist(size_t Length,
 		val = _mm_and_si128(_mm_add_epi64(val, _mm_srli_epi64(val, 4)), Z0F);
 
 		// ans += (val * 0x0101010101010101LLU) >> 56;
-		uint64_t r_ary[2] __attribute__((aligned(16)));
-		*((__m128i*)r_ary) = val;
-		ans += ((r_ary[0] * 0x0101010101010101LLU) >> 56) +
-			((r_ary[1] * 0x0101010101010101LLU) >> 56);
+		uint64_t r0 = _mm_cvtsi128_si64(val);
+		uint64_t r1 = _mm_cvtsi128_si64(_mm_unpackhi_epi64(val, val));
+		ans += ((r0 * 0x0101010101010101LLU) >> 56) +
+			((r1 * 0x0101010101010101LLU) >> 56);
+
+// _mm_mullo_epi16
 
 	#endif
 	}
@@ -913,6 +913,8 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	_SampHaploPair.reserve(GenoList.nSamp());
 	CurHaplo.DoubleHaplos(NextHaplo);
 
+	vector<int> DiffList(GenoList.nSamp()*(2*GenoList.nSamp() + 1));
+
 	// get haplotype pairs for each sample
 	for (int iSamp=0; iSamp < GenoList.nSamp(); iSamp++)
 	{
@@ -933,11 +935,15 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 			if (pHLA.Allele1 != pHLA.Allele2)
 			{
+				const size_t m = pH1.size() * pH2.size();
+				if (m > DiffList.size()) DiffList.resize(m);
+				int *pD = &DiffList[0];
+
 				for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
 				{
 					for (p2 = pH2.begin(); p2 != pH2.end(); p2++)
 					{
-						int d = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
+						int d = *pD++ = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
@@ -946,21 +952,27 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 				if (MinDiff > 0)
 				{
+					int *pD = &DiffList[0];
 					for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
 					{
 						for (p2 = pH2.begin(); p2 != pH2.end(); p2++)
 						{
-							if (pG._HamDist(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
+							if (*pD++ == MinDiff)
 								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 						}
 					}
 				}
+
 			} else {
+				const size_t m = pH1.size() * (pH1.size() + 1) / 2;
+				if (m > DiffList.size()) DiffList.resize(m);
+				int *pD = &DiffList[0];
+
 				for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
 				{
 					for (p2 = p1; p2 != pH1.end(); p2++)
 					{
-						int d = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
+						int d = *pD++ = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
@@ -969,11 +981,12 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 				if (MinDiff > 0)
 				{
+					int *pD = &DiffList[0];
 					for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
 					{
 						for (p2 = p1; p2 != pH1.end(); p2++)
 						{
-							if (pG._HamDist(CurHaplo.Num_SNP, *p1, *p2) == MinDiff)
+							if (*pD++ == MinDiff)
 								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
 						}
 					}
@@ -1597,7 +1610,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			// show ...
 			if (verbose_detail)
 			{
-				Rprintf("\t%-3d, added snp: %d, loss: %g, out-of-bag acc: %0.2f%%, # of haplo: %d\n",
+				Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
 					OutSNPIndex.size(), OutSNPIndex.back()+1,
 					Global_Min_Loss, Global_Max_OutOfBagAcc*100, OutHaplo.TotalNumOfHaplo());
 			}
