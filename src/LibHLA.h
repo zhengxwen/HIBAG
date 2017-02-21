@@ -246,7 +246,11 @@ namespace HLA_LIB
 		/// set SNP genotype (0, 1, 2) without checking
 		void _SetSNP(size_t idx, int val);
 		/// compute the Hamming distance between SNPs and H1+H2 without checking
-		inline int _HamDist(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
+		inline int _HamDist(size_t Length, const THaplotype &H1,
+			const THaplotype &H2) const;
+		/// compute the Hamming distance between SNPs and H1+H2[0],..., H1+H2[7] without checking
+		inline void _HamDistArray8(size_t Length, const THaplotype &H1,
+			const THaplotype *pH2, int out_dist[]) const;
 	};
 
 

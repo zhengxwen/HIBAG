@@ -90,7 +90,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
         {
             a <- sum(!snpsel)
             if (a > 0L)
-                cat(sprintf("Remove %d monomorphic SNP%s\n", a, .plural(a)))
+                cat(sprintf("Exclude %d monomorphic SNP%s\n", a, .plural(a)))
         }
         tmp.snp.id <- tmp.snp.id[snpsel]
         tmp.snp.position <- tmp.snp.position[snpsel]
@@ -278,7 +278,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                     z <- summary(obj, show=FALSE)
                     eval(parse(text="total <<- total + 1L"))
                     cat(date(), sprintf(
-    ", %4d, job %3d, # of SNPs: %g, # of haplotypes: %g, accuracy: %0.1f%%\n",
+        ", %4d, job %3d, # of SNPs: %g, # of haplo: %g, accuracy: %0.1f%%\n",
                         total, as.integer(job), z$info["num.snp", "Mean"],
                         z$info["num.haplo", "Mean"],
                         z$info["accuracy", "Mean"]), sep="")
@@ -988,7 +988,7 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
         cat("Gene: ", .hla_gene_name_string(obj$hla.locus), "\n", sep="")
         cat("Training dataset:", obj$n.samp, "samples X",
             length(obj$snp.id), "SNPs\n")
-        cat("\t# of HLA alleles: ", length(obj$hla.allele), "\n", sep="")
+        cat("    # of HLA alleles: ", length(obj$hla.allele), "\n", sep="")
     }
 
     # summarize ...
@@ -1019,19 +1019,21 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 
     if (show)
     {
-        cat("\t# of individual classifiers: ", length(obj$classifiers),
+        cat("    # of individual classifiers: ", length(obj$classifiers),
             "\n", sep="")
-        cat("\ttotal # of SNPs used: ", length(snpset), "\n", sep="")
-        cat("\taverage # of SNPs in an individual classifier:",
-            sprintf("%0.2f, sd: %0.2f, min: %d, max: %d\n",
-            mean(numsnp), sd(numsnp), min(numsnp), max(numsnp)))
-        cat("\taverage # of haplotypes in an individual classifier:",
-            sprintf("%0.2f, sd: %0.2f, min: %d, max: %d\n",
-            mean(numhaplo), sd(numhaplo), min(numhaplo), max(numhaplo)))
-        cat("\taverage out-of-bag accuracy:",
-            sprintf("%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
+        cat("    total # of SNPs used: ", length(snpset), "\n", sep="")
+        cat("    avg. # of SNPs in an individual classifier:",
+            sprintf("%0.2f\n        (sd: %0.2f, min: %d, max: %d, median: %0.2f)\n",
+            mean(numsnp), sd(numsnp), min(numsnp), max(numsnp),
+            median(numsnp)))
+        cat("    avg. # of haplotypes in an individual classifier:",
+            sprintf("%0.2f\n        (sd: %0.2f, min: %d, max: %d, median: %0.2f)\n",
+            mean(numhaplo), sd(numhaplo), min(numhaplo), max(numhaplo),
+            median(numhaplo)))
+        cat("    avg. out-of-bag accuracy:",
+            sprintf("%0.2f%%\n        (sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%, median: %0.2f%%)\n",
             mean(outofbag.acc), sd(outofbag.acc), min(outofbag.acc),
-            max(outofbag.acc)))
+            max(outofbag.acc), median(outofbag.acc)))
 
         if (is.null(obj$assembly))
             cat("Genome assembly: unknown\n")

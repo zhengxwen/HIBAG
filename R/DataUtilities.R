@@ -876,9 +876,9 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
     if (show)
     {
         cat("SNP genotypes: \n")
-        cat(sprintf("\t%d samples X %d SNPs\n",
+        cat(sprintf("    %d samples X %d SNPs\n",
             length(geno$sample.id), length(geno$snp.id)))
-        cat(sprintf("\tSNPs range from %dbp to %dbp",
+        cat(sprintf("    SNPs range from %dbp to %dbp",
             min(geno$snp.position, na.rm=TRUE),
             max(geno$snp.position, na.rm=TRUE)))
         if (!is.null(geno$assembly))
@@ -887,12 +887,12 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
             cat("\n")
 
         # missing rate for SNP
-        cat(sprintf("Missing rate per SNP:\n\t%s\n", fn(rv$mr.snp)))
+        cat(sprintf("Missing rate per SNP:\n    %s\n", fn(rv$mr.snp)))
         # missing rate for sample
-        cat(sprintf("Missing rate per sample:\n\t%s\n", fn(rv$mr.samp)))
+        cat(sprintf("Missing rate per sample:\n    %s\n", fn(rv$mr.samp)))
 
         # minor allele frequency
-        cat(sprintf("Minor allele frequency:\n\t%s\n", fn(rv$maf)))
+        cat(sprintf("Minor allele frequency:\n    %s\n", fn(rv$maf)))
 
         # allele information
         cat("Allelic information:")

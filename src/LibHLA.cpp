@@ -588,12 +588,12 @@ int TGenotype::HammingDistance(size_t Length,
 }
 
 
+// compute the Hamming distance between SNPs and H1+H2 without checking
 
 #ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
 
 	// signed integer for initializing XMM
 	typedef int64_t UTYPE;
-	static const __m128i ZFF = _mm_set1_epi8(-1);
 	#ifndef HIBAG_SSE_HARDWARE_POPCNT
 	static const __m128i Z05 = _mm_set1_epi8(0x55);
 	static const __m128i Z03 = _mm_set1_epi8(0x33);
@@ -639,6 +639,7 @@ inline int TGenotype::_HamDist(size_t Length,
 		if (n < UTYPE_BIT_NUM)
 		{
 			// MASK &= (~(UTYPE(-1) << n));
+			__m128i ZFF = _mm_cmpeq_epi8(MASK, MASK);  // all ones
 			MASK = _mm_andnot_si128(_mm_slli_epi64(ZFF, n), MASK);
 		}
 
@@ -678,8 +679,6 @@ inline int TGenotype::_HamDist(size_t Length,
 		uint64_t r1 = _mm_cvtsi128_si64(_mm_unpackhi_epi64(val, val));
 		ans += ((r0 * 0x0101010101010101LLU) >> 56) +
 			((r1 * 0x0101010101010101LLU) >> 56);
-
-// _mm_mullo_epi16
 
 	#endif
 	}
@@ -745,6 +744,20 @@ inline int TGenotype::_HamDist(size_t Length,
 
 	return ans;
 }
+
+
+// compute the Hamming distance between SNPs and H1+H2[0],..., H1+H2[7] without checking
+
+inline void TGenotype::_HamDistArray8(size_t Length, const THaplotype &H1,
+	const THaplotype *pH2, int out_dist[]) const
+{
+#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#else
+	for (size_t i=0; i < 8; i++)
+		*out_dist++ = _HamDist(Length, H1, *pH2++);
+#endif
+}
+
 
 
 
@@ -1779,8 +1792,8 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 			string s(ctime(&tm));
 			s.erase(s.size()-1, 1);
 			Rprintf(
-				"%s, %3d individual classifier, out-of-bag acc: %0.2f%%, # of SNPs: %d, # of haplo: %d\n",
-				s.c_str(), k+1, I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
+				"[%d] %s, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
+				k+1, s.c_str(), I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
 		}
 	}
 
