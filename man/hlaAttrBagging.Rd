@@ -71,7 +71,7 @@ on non-informative SNP markers.
 \seealso{
     \code{\link{hlaClose}}, \code{\link{hlaParallelAttrBagging}},
     \code{\link{summary.hlaAttrBagClass}},
-    \code{\link{predict.hlaAttrBagClass}}
+    \code{\link{predict.hlaAttrBagClass}}, \code{\link{hlaPredict}}
 }
 
 \examples{

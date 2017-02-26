@@ -52,16 +52,16 @@
 #   include <emmintrin.h>  // SSE2
 
 #   if defined(__SSE4_2__) || defined(__POPCNT__)
-#       define HIBAG_SSE_HARDWARE_POPCNT
+#       define HIBAG_HARDWARE_POPCNT
 #       include <nmmintrin.h>  // SSE4_2, for POPCNT
 #   endif
 
-#   define HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#   define HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
 
 #else
 
-#   ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
-#       undef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#   ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+#       undef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
 #   endif
 
 #endif
@@ -80,10 +80,8 @@
 
 namespace HLA_LIB
 {
-	/// Kernel Version, major number
-	#define HIBAG_KERNEL_VERSION_MAJOR    0x01
-	/// Kernel Version, minor number
-	#define HIBAG_KERNEL_VERSION_MINOR    0x03
+	/// Kernel Version, Major Number (0x01) / Minor Number (0x03)
+	#define HIBAG_KERNEL_VERSION    0x0103
 
 
 	using namespace std;

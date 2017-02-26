@@ -590,11 +590,11 @@ int TGenotype::HammingDistance(size_t Length,
 
 // compute the Hamming distance between SNPs and H1+H2 without checking
 
-#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
 
 	// signed integer for initializing XMM
 	typedef int64_t UTYPE;
-	#ifndef HIBAG_SSE_HARDWARE_POPCNT
+	#ifndef HIBAG_HARDWARE_POPCNT
 	static const __m128i Z05 = _mm_set1_epi8(0x55);
 	static const __m128i Z03 = _mm_set1_epi8(0x33);
 	static const __m128i Z0F = _mm_set1_epi8(0x0F);
@@ -621,7 +621,7 @@ inline int TGenotype::_HamDist(size_t Length,
 	const UTYPE *s2 = (const UTYPE*)&PackedSNP2[0];
 	const UTYPE *sM = (const UTYPE*)&PackedMissing[0];
 
-#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
+#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
 
 	// for-loop
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
@@ -648,7 +648,7 @@ inline int TGenotype::_HamDist(size_t Length,
 
 		// popcount for val
 
-	#ifdef HIBAG_SSE_HARDWARE_POPCNT
+	#ifdef HIBAG_HARDWARE_POPCNT
 
     #   ifdef HIBAG_REG_BIT64
 			ans += _mm_popcnt_u64(_mm_cvtsi128_si64(val)) +
@@ -751,11 +751,11 @@ inline int TGenotype::_HamDist(size_t Length,
 inline void TGenotype::_HamDistArray8(size_t Length, const THaplotype &H1,
 	const THaplotype *pH2, int out_dist[]) const
 {
-#ifdef HIBAG_SSE2_OPTIMIZE_HAMMING_DISTANCE
-#else
-	for (size_t i=0; i < 8; i++)
+// #ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+// #else
+	for (size_t n=8; n > 0; n--)
 		*out_dist++ = _HamDist(Length, H1, *pH2++);
-#endif
+// #endif
 }
 
 
@@ -948,18 +948,34 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 			if (pHLA.Allele1 != pHLA.Allele2)
 			{
-				const size_t m = pH1.size() * pH2.size();
+				const size_t n2 = pH2.size();
+				const size_t m = pH1.size() * n2;
 				if (m > DiffList.size()) DiffList.resize(m);
 				int *pD = &DiffList[0];
 
 				for (p1 = pH1.begin(); p1 != pH1.end(); p1++)
 				{
-					for (p2 = pH2.begin(); p2 != pH2.end(); p2++)
+					p2 = pH2.begin();
+					for (size_t n=n2; n > 0; )
 					{
-						int d = *pD++ = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
-						if (d < MinDiff) MinDiff = d;
-						if (d == 0)
-							HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
+						if (n >= 8)
+						{
+							pG._HamDistArray8(CurHaplo.Num_SNP, *p1, &(*p2), pD);
+							for (size_t k=8; k > 0; k--, p2++)
+							{
+								int d = *pD++;
+								if (d < MinDiff) MinDiff = d;
+								if (d == 0)
+									HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
+							}
+							n -= 8;
+						} else {
+							int d = *pD++ = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
+							if (d < MinDiff) MinDiff = d;
+							if (d == 0)
+								HP.PairList.push_back(THaploPair(&(*p1), &(*p2)));
+							p2++; n--;
+						}
 					}
 				}
 
@@ -1285,13 +1301,32 @@ THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
 		for (int h2=h1+1; h2 < _nHLA; h2++)
 		{
 			const vector<THaplotype> &L2 = Haplo.List[h2];
+			const size_t n2 = L2.size();
 			prob = 0;
 			for (i1=L1.begin(); i1 != L1.end(); i1++)
 			{
-				for (i2=L2.begin(); i2 != L2.end(); i2++)
+				i2 = L2.begin();
+				for (size_t n=n2; n > 0; )
 				{
-					prob += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
-						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+					if (n >= 8)
+					{
+						int d[8];
+						Geno._HamDistArray8(Haplo.Num_SNP, *i1, &(*i2), d);
+						const double ss = 2 * i1->Frequency;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[0]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[1]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[2]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[3]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[4]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[5]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[6]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[7]); i2++;
+						n -= 8;
+					} else {
+						prob += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
+							Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+						i2 ++; n --;
+					}
 				}
 			}
 			if (max < prob)
