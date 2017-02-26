@@ -1374,13 +1374,32 @@ TFLOAT CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
 		for (int h2=h1+1; h2 < _nHLA; h2++)
 		{
 			const vector<THaplotype> &L2 = Haplo.List[h2];
+			const size_t n2 = L2.size();
 			prob = 0;
 			for (i1=L1.begin(); i1 != L1.end(); i1++)
 			{
-				for (i2=L2.begin(); i2 != L2.end(); i2++)
+				i2 = L2.begin();
+				for (size_t n=n2; n > 0; )
 				{
-					prob += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
-						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+					if (n >= 8)
+					{
+						int d[8];
+						Geno._HamDistArray8(Haplo.Num_SNP, *i1, &(*i2), d);
+						const double ss = 2 * i1->Frequency;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[0]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[1]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[2]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[3]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[4]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[5]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[6]); i2++;
+						prob += FREQ_MUTANT(ss * i2->Frequency, d[7]); i2++;
+						n -= 8;
+					} else {
+						prob += FREQ_MUTANT(2 * i1->Frequency * i2->Frequency,
+							Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+						i2 ++; n --;
+					}
 				}
 			}
 			if (IxHLA == idx) hlaProb = prob;
