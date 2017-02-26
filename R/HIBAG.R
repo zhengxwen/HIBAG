@@ -1373,7 +1373,7 @@ hlaErrMsg <- function()
     if (Version[3L] == 1L)
         s <- "Supported by Streaming SIMD Extensions (SSE2)"
     else if (Version[3L] == 2L)
-        s <- "Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)"
+        s <- "Supported by Streaming SIMD Extensions (SSE2 + hardware POPCNT)"
     else
         s <- ""
     if ((Version[4L] > 0L) & (s != ""))

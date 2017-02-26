@@ -89,16 +89,16 @@ CXXFLAGS=-g -O3 -march=native -mtune=native
 Or force to create hardware POPCNT code:
 ```sh
 ## for C code
-CFLAGS=-g -O3 -msse4.2 -mpopcnt
+CFLAGS=-g -O3 -mpopcnt
 ## for C++ code
-CXXFLAGS=-g -O3 -msse4.2 -mpopcnt
+CXXFLAGS=-g -O3 -mpopcnt
 ```
 
 If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message after loading the package:
 ```
 HIBAG (HLA Genotype Imputation with Attribute Bagging)
 Kernel Version: v1.3
-Supported by Streaming SIMD Extensions (SSE4.2 + hardware POPCNT)
+Supported by Streaming SIMD Extensions (SSE2 + hardware POPCNT)
 ```
 
 
