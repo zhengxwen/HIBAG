@@ -58,6 +58,13 @@
 
 #   define HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
 
+#   define M128_I32_0(x)    _mm_cvtsi128_si32(x)
+#   define M128_I32_1(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 4))
+#   define M128_I32_2(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 8))
+#   define M128_I32_3(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 12))
+#   define M128_I64_0(x)    _mm_cvtsi128_si64(x) 
+#   define M128_I64_1(x)    _mm_cvtsi128_si64(_mm_unpackhi_epi64(x, x))
+
 #else
 
 #   ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
@@ -99,12 +106,6 @@ namespace HLA_LIB
 	const size_t HIBAG_PACKED_UTYPE_MAXNUM =
 		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(UINT8));
 
-
-	/// Define the numeric type
-	#define TFLOAT           double
-	#define FLOAT_LOG        log
-	#define FLOAT_EXP        exp
-	#define FLOAT_EPSILON    DBL_EPSILON
 
 
 	// ===================================================================== //
@@ -151,13 +152,13 @@ namespace HLA_LIB
 		/// packed SNP alleles
 		UINT8 PackedHaplo[HIBAG_PACKED_UTYPE_MAXNUM];
 		/// haplotype frequency
-		TFLOAT Frequency;
+		double Frequency;
 		/// old haplotype frequency
-		TFLOAT OldFreq;
+		double OldFreq;
 
 		THaplotype();
-		THaplotype(const TFLOAT _freq);
-		THaplotype(const char *str, const TFLOAT _freq);
+		THaplotype(const double _freq);
+		THaplotype(const char *str, const double _freq);
 
 		/// get SNP allele, idx starts from ZERO
 		UINT8 GetAllele(size_t idx) const;
@@ -183,15 +184,15 @@ namespace HLA_LIB
 		/// initialize haplotypes for EM algorithm
 		void DoubleHaplos(CHaplotypeList &OutHaplos) const;
 		/// initialize haplotypes for EM algorithm with the allele frequency of the new SNP
-		void DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const TFLOAT AFreq) const;
+		void DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const double AFreq) const;
 		/// merge rare haplotypes
-		void MergeDoubleHaplos(const TFLOAT RareProb, CHaplotypeList &OutHaplos) const;
+		void MergeDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const;
 		/// remove rare haplotypes
-		void EraseDoubleHaplos(const TFLOAT RareProb, CHaplotypeList &OutHaplos) const;
+		void EraseDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const;
 		/// save frequency to old.frequency, and set current freq. to be 0
 		void SaveClearFrequency();
 		/// scale the haplotype frequencies by a factor
-		void ScaleFrequency(const TFLOAT scale);
+		void ScaleFrequency(const double scale);
 		/// the total number of haplotypes
 		size_t TotalNumOfHaplo() const;
 		/// the total number of unique HLA alleles
@@ -334,7 +335,7 @@ namespace HLA_LIB
 	extern int EM_MaxNum_Iterations;  // = 500
 
 	/// The reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
-	extern TFLOAT EM_FuncRelTol;  // = sqrt(DBL_EPSILON)
+	extern double EM_FuncRelTol;  // = sqrt(DBL_EPSILON)
 
 
 	/// variable sampling
@@ -415,7 +416,7 @@ namespace HLA_LIB
 			bool Flag;       //< if true, the haplotype pair exists in the sample
 			THaplotype *H1;  //< the first haplotype
 			THaplotype *H2;  //< the second haplotype
-			TFLOAT Freq;     //< genotype frequency
+			double Freq;     //< genotype frequency
 
 			THaploPair() { Flag = true; H1 = H2 = NULL; }
 			THaploPair(THaplotype *i1, THaplotype *i2) { Flag = true; H1 = i1; H2 = i2; }
@@ -451,14 +452,14 @@ namespace HLA_LIB
 		/// initialize the sums of posterior probabilities by setting ZERO
 		void InitSumPostProbBuffer();
 		/// add the posterior probabilities of a classifier with a weight to the variable for summing up
-		void AddProbToSum(const TFLOAT weight);
+		void AddProbToSum(const double weight);
 		/// average over all classifiers
 		void NormalizeSumPostProb();
 
 		/// 
-		TFLOAT &IndexPostProb(int H1, int H2);
+		double &IndexPostProb(int H1, int H2);
 		/// 
-		TFLOAT &IndexSumPostProb(int H1, int H2);
+		double &IndexSumPostProb(int H1, int H2);
 
 		/// predict based on SNP profiles and haplotype list,
 		//    and save posterior probabilities in '_PostProb'
@@ -472,28 +473,28 @@ namespace HLA_LIB
 		inline const int nHLA() const
 			{ return _nHLA; }
 		/// the posterior probabilities for the current classifier
-		inline const vector<TFLOAT> &PostProb() const
+		inline const vector<double> &PostProb() const
 			{ return _PostProb; }
 		/// the average posterior probabilities for all classifiers
-		inline const vector<TFLOAT> &SumPostProb() const
+		inline const vector<double> &SumPostProb() const
 			{ return _SumPostProb; }
 
 	protected:
 		/// the number of different HLA alleles
 		int _nHLA;
 		/// plus weight after calling AddProbToSum()
-		TFLOAT _Sum_Weight;
+		double _Sum_Weight;
 		/// a vector of posterior probabilities
-		vector<TFLOAT> _PostProb;
+		vector<double> _PostProb;
 		/// a vector of posterior probabilities for summing up
-		vector<TFLOAT> _SumPostProb;
+		vector<double> _SumPostProb;
 
 		/// the best-guess HLA type based on SNP profiles and haplotype list
 		//    without saving posterior probabilities in '_PostProb'
 		THLAType _PredBestGuess(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		/// the prob of the given HLA type based on SNP profiles and haplotype list
 		//    without saving posterior probabilities in '_PostProb'
-		TFLOAT _PredPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		double _PredPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 	};
 
@@ -509,7 +510,7 @@ namespace HLA_LIB
 			const int _BootstrapCnt[]);
 		/// searching algorithm
 		void Search(CBaseSampling &VarSampling, CHaplotypeList &OutHaplo,
-			vector<int> &OutSNPIndex, TFLOAT &Out_Global_Max_OutOfBagAcc,
+			vector<int> &OutSNPIndex, double &Out_Global_Max_OutOfBagAcc,
 			int mtry, bool prune, bool verbose, bool verbose_detail);
 
 		/// the number of samples
@@ -535,9 +536,9 @@ namespace HLA_LIB
 		/// initialize the haplotype list
 		void _InitHaplotype(CHaplotypeList &Haplo);
 		/// compute the out-of-bag accuracy using the haplotypes 'Haplo'
-		TFLOAT _OutOfBagAccuracy(CHaplotypeList &Haplo);
+		double _OutOfBagAccuracy(CHaplotypeList &Haplo);
 		/// compute the in-bag log likelihood using the haplotypes 'Haplo'
-		TFLOAT _InBagLogLik(CHaplotypeList &Haplo);
+		double _InBagLogLik(CHaplotypeList &Haplo);
 	};
 
 
@@ -560,8 +561,8 @@ namespace HLA_LIB
 		void InitBootstrapCount(int SampCnt[]);
 		/// assign the haplotype frequencies
 		void Assign(int n_snp, const int snpidx[], const int samp_num[],
-			int n_haplo, const TFLOAT *freq, const int *hla,
-			const char * haplo[], TFLOAT *_acc=NULL);
+			int n_haplo, const double *freq, const int *hla,
+			const char * haplo[], double *_acc=NULL);
 		/// grow this classifier by adding SNPs
 		void Grow(CBaseSampling &VarSampling, int mtry, bool prune,
 			bool verbose, bool verbose_detail);
@@ -573,7 +574,7 @@ namespace HLA_LIB
 		/// the number of haplotyeps
 		inline const int nHaplo() const { return _Haplo.TotalNumOfHaplo(); }
 		/// the out-of-bag accuracy
-		inline const TFLOAT OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
+		inline const double OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
 		/// the SNP selection
 		inline const vector<int> &SNPIndex() const { return _SNPIndex; }
 		/// the bootstrapped individuals
@@ -591,7 +592,7 @@ namespace HLA_LIB
 		/// the SNP selection
 		vector<int> _SNPIndex;
 		/// the out-of-bag accuracy
-		TFLOAT _OutOfBag_Accuracy;
+		double _OutOfBag_Accuracy;
 	};
 
 
@@ -627,8 +628,8 @@ namespace HLA_LIB
 		 *  \param ShowInfo
 		**/
 		void PredictHLA(const int *genomat, int n_samp, int vote_method,
-			int OutH1[], int OutH2[], TFLOAT OutMaxProb[],
-			TFLOAT OutProbArray[], bool ShowInfo);
+			int OutH1[], int OutH2[], double OutMaxProb[],
+			double OutProbArray[], bool ShowInfo);
 
 		/** get the posterior probabilities of HLA type
 		 *  \param genomat
@@ -638,7 +639,7 @@ namespace HLA_LIB
 		 *  \param ShowInfo
 		**/
 		void PredictHLA_Prob(const int *genomat, int n_samp, int vote_method,
-			TFLOAT OutProb[], bool ShowInfo);
+			double OutProb[], bool ShowInfo);
 
 		/// the number of samples
 		inline int nSamp() const { return _SNPMat.Num_Total_Samp; }

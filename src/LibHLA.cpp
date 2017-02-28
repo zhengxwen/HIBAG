@@ -52,25 +52,25 @@ using namespace HLA_LIB;
 /// the max number of iterations
 int HLA_LIB::EM_MaxNum_Iterations = 500;
 /// the initial value of EM algorithm
-static const TFLOAT EM_INIT_VAL_FRAC = 0.001;
+static const double EM_INIT_VAL_FRAC = 0.001;
 /// the reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
-TFLOAT HLA_LIB::EM_FuncRelTol = sqrt(FLOAT_EPSILON);
+double HLA_LIB::EM_FuncRelTol = sqrt(DBL_EPSILON);
 
 
 // Parameters -- reduce the number of possible haplotypes
 
 /// The minimum rare frequency to store haplotypes
-static const TFLOAT MIN_RARE_FREQ = 1e-5;
+static const double MIN_RARE_FREQ = 1e-5;
 /// The fraction of one haplotype that can be ignored
-static const TFLOAT FRACTION_HAPLO = 1.0/10;
+static const double FRACTION_HAPLO = 1.0/10;
 
 
 // Parameters -- search SNP markers
 
 /// the reltol for the stopping rule of adding a new SNP marker
-static const TFLOAT STOP_RELTOL_LOGLIK_ADDSNP = 0.001;
+static const double STOP_RELTOL_LOGLIK_ADDSNP = 0.001;
 /// the reltol for erasing the SNP marker is prune = TRUE
-static const TFLOAT PRUNE_RELTOL_LOGLIK = 0.1;
+static const double PRUNE_RELTOL_LOGLIK = 0.1;
 
 
 /// Random number: return an integer from 0 to n-1 with equal probability
@@ -90,7 +90,7 @@ static inline int RandomNum(int n)
 #define FREQ_MUTANT(p, cnt)    ((p) * EXP_LOG_MIN_RARE_FREQ[cnt]);
 
 /// exp(cnt * log(MIN_RARE_FREQ)), cnt is the hamming distance
-static TFLOAT EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
+static double EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
 
 class CInit
 {
@@ -99,7 +99,7 @@ public:
 	{
 		const int n = 2 * HIBAG_MAXNUM_SNP_IN_CLASSIFIER;
 		for (int i=0; i < n; i++)
-			EXP_LOG_MIN_RARE_FREQ[i] = FLOAT_EXP(i * FLOAT_LOG(MIN_RARE_FREQ));
+			EXP_LOG_MIN_RARE_FREQ[i] = exp(i * log(MIN_RARE_FREQ));
 		EXP_LOG_MIN_RARE_FREQ[0] = 1;
 		for (int i=0; i < n; i++)
 		{
@@ -159,7 +159,7 @@ void CdProgression::Init(long TotalCnt, bool ShowInit)
 bool CdProgression::Forward(long step, bool Show)
 {
 	fCurrent += step;
-	int p = int(TFLOAT(TotalPercent)*fCurrent / fTotal);
+	int p = int(double(TotalPercent)*fCurrent / fTotal);
 	if ((p != fPercent) || (p == TotalPercent))
 	{
 		clock_t Now = clock();
@@ -200,13 +200,13 @@ THaplotype::THaplotype()
 	Frequency = OldFreq = 0;
 }
 
-THaplotype::THaplotype(const TFLOAT _freq)
+THaplotype::THaplotype(const double _freq)
 {
 	Frequency = _freq;
 	OldFreq = 0;
 }
 
-THaplotype::THaplotype(const char *str, const TFLOAT _freq)
+THaplotype::THaplotype(const char *str, const double _freq)
 {
 	Frequency = _freq;
 	OldFreq = 0;
@@ -301,13 +301,13 @@ void CHaplotypeList::DoubleHaplos(CHaplotypeList &OutHaplos) const
 }
 
 void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos,
-	const TFLOAT AFreq) const
+	const double AFreq) const
 {
 	static const char *msg =
 		"CHaplotypeList::DoubleHaplosInitFreq, the total number of haplotypes is not correct.";
 	HIBAG_CHECKING(List.size() != OutHaplos.List.size(), msg);
 
-	const TFLOAT p0 = 1-AFreq, p1 = AFreq;
+	const double p0 = 1-AFreq, p1 = AFreq;
 	const size_t i_n = List.size();
 	for (size_t i=0; i < i_n; i++)
 	{
@@ -324,7 +324,7 @@ void CHaplotypeList::DoubleHaplosInitFreq(CHaplotypeList &OutHaplos,
 	}
 }
 
-void CHaplotypeList::MergeDoubleHaplos(const TFLOAT RareProb,
+void CHaplotypeList::MergeDoubleHaplos(const double RareProb,
 	CHaplotypeList &OutHaplos) const
 {
 	OutHaplos.Num_SNP = Num_SNP;
@@ -358,12 +358,12 @@ void CHaplotypeList::MergeDoubleHaplos(const TFLOAT RareProb,
 	}
 }
 
-void CHaplotypeList::EraseDoubleHaplos(const TFLOAT RareProb,
+void CHaplotypeList::EraseDoubleHaplos(const double RareProb,
 	CHaplotypeList &OutHaplos) const
 {
 	OutHaplos.Num_SNP = Num_SNP;
 	OutHaplos.List.resize(List.size());
-	TFLOAT sum = 0;
+	double sum = 0;
 
 	const size_t i_n = List.size();
 	for (size_t i=0; i < i_n; i++)
@@ -378,7 +378,7 @@ void CHaplotypeList::EraseDoubleHaplos(const TFLOAT RareProb,
 		{
 			const THaplotype &p0 = src[j+0];
 			const THaplotype &p1 = src[j+1];
-			TFLOAT sumfreq = p0.Frequency + p1.Frequency;
+			double sumfreq = p0.Frequency + p1.Frequency;
 
 			if ((p0.Frequency < RareProb) || (p1.Frequency < RareProb))
 			{
@@ -415,7 +415,7 @@ void CHaplotypeList::SaveClearFrequency()
 	}
 }
 
-void CHaplotypeList::ScaleFrequency(const TFLOAT scale)
+void CHaplotypeList::ScaleFrequency(const double scale)
 {
 	vector< vector<THaplotype> >::iterator it;
 	for (it = List.begin(); it != List.end(); it++)
@@ -651,13 +651,10 @@ inline int TGenotype::_HamDist(size_t Length,
 	#ifdef HIBAG_HARDWARE_POPCNT
 
     #   ifdef HIBAG_REG_BIT64
-			ans += _mm_popcnt_u64(_mm_cvtsi128_si64(val)) +
-				_mm_popcnt_u64(_mm_cvtsi128_si64(_mm_unpackhi_epi64(val, val)));
+			ans += _mm_popcnt_u64(M128_I64_0(val)) + _mm_popcnt_u64(M128_I64_1(val));
 	#   else
-			uint32_t r_ary[4] __attribute__((aligned(16)));
-			*((__m128i*)r_ary) = val;
-			ans += _mm_popcnt_u32(r_ary[0]) + _mm_popcnt_u32(r_ary[1]) +
-				_mm_popcnt_u32(r_ary[2]) + _mm_popcnt_u32(r_ary[3]);
+			ans += _mm_popcnt_u32(M128_I32_0(val)) + _mm_popcnt_u32(M128_I32_1(val)) +
+				_mm_popcnt_u32(M128_I32_2(val)) + _mm_popcnt_u32(M128_I32_3(val));
 	#   endif
 
 	#else
@@ -751,11 +748,96 @@ inline int TGenotype::_HamDist(size_t Length,
 inline void TGenotype::_HamDistArray8(size_t Length, const THaplotype &H1,
 	const THaplotype *pH2, int out_dist[]) const
 {
-// #ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-// #else
+#ifdef XXX_HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+
+	// initialize out_dist (zero fill)
+	__m128i zero = _mm_setzero_si128();
+	_mm_storeu_si128((__m128i*)&out_dist[0], zero);
+	_mm_storeu_si128((__m128i*)&out_dist[4], zero);
+
+	const uint32_t *s1 = (const uint32_t*)&PackedSNP1[0];
+	const uint32_t *s2 = (const uint32_t*)&PackedSNP2[0];
+	const uint32_t *sM = (const uint32_t*)&PackedMissing[0];
+	const uint32_t *h1 = (const uint32_t*)&H1.PackedHaplo[0];
+
+	const uint32_t *h2_0 = (const uint32_t*)&(pH2[0].PackedHaplo[0]);
+	const uint32_t *h2_1 = (const uint32_t*)&(pH2[1].PackedHaplo[0]);
+	const uint32_t *h2_2 = (const uint32_t*)&(pH2[2].PackedHaplo[0]);
+	const uint32_t *h2_3 = (const uint32_t*)&(pH2[3].PackedHaplo[0]);
+	const uint32_t *h2_4 = (const uint32_t*)&(pH2[4].PackedHaplo[0]);
+	const uint32_t *h2_5 = (const uint32_t*)&(pH2[5].PackedHaplo[0]);
+	const uint32_t *h2_6 = (const uint32_t*)&(pH2[6].PackedHaplo[0]);
+	const uint32_t *h2_7 = (const uint32_t*)&(pH2[7].PackedHaplo[0]);
+	const int sim8 = _MM_SHUFFLE(2,3,0,1);
+
+	for (ssize_t n=Length; n > 0; n -= 32)
+	{
+		__m128i H1_0 = _mm_set1_epi32(*h1++);
+		__m128i S1 = _mm_set1_epi32(*s1++);
+		__m128i S2 = _mm_set1_epi32(*s2++);
+		__m128i M = _mm_set1_epi32((n >= 32) ? (*sM++) : (*sM++ & ~(-1 << n)));
+
+		// first four haplotypes
+		__m128i H2_0 = _mm_set_epi32(*h2_3++, *h2_2++, *h2_1++, *h2_0++);
+		__m128i mask1 = _mm_xor_si128(H1_0, S2);
+		__m128i mask2 = _mm_xor_si128(H2_0, S1);
+		__m128i MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
+
+		// '(H1 ^ S1) & MASK', '(H2 ^ S2) & MASK'
+		__m128i val1 = _mm_and_si128(_mm_xor_si128(H1_0, S1), MASK);
+		__m128i val2 = _mm_and_si128(_mm_xor_si128(H2_0, S2), MASK);
+
+	#ifdef HIBAG_HARDWARE_POPCNT
+    #   ifdef HIBAG_REG_BIT64
+			__m128i v1 = _mm_unpacklo_epi32(val1, val2);
+			__m128i v2 = _mm_unpackhi_epi32(val1, val2);
+			out_dist[0] += _mm_popcnt_u64(M128_I64_0(v1));
+			out_dist[1] += _mm_popcnt_u64(M128_I64_1(v1));
+			out_dist[2] += _mm_popcnt_u64(M128_I64_0(v2));
+			out_dist[3] += _mm_popcnt_u64(M128_I64_1(v2));
+	#   else
+			out_dist[0] += _mm_popcnt_u32(M128_I32_0(val1)) + _mm_popcnt_u32(M128_I32_0(val2));
+			out_dist[1] += _mm_popcnt_u32(M128_I32_1(val1)) + _mm_popcnt_u32(M128_I32_1(val2));
+			out_dist[2] += _mm_popcnt_u32(M128_I32_2(val1)) + _mm_popcnt_u32(M128_I32_2(val2));
+			out_dist[3] += _mm_popcnt_u32(M128_I32_3(val1)) + _mm_popcnt_u32(M128_I32_3(val2));
+	#   endif
+	#else
+		error "sdfjs"
+	#endif
+
+		// second four haplotypes
+		__m128i H2_4 = _mm_set_epi32(*h2_7++, *h2_6++, *h2_5++, *h2_4++);
+		mask1 = _mm_xor_si128(H1_0, S2);
+		mask2 = _mm_xor_si128(H2_4, S1);
+		MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
+
+		// '(H1 ^ S1) & MASK', '(H2 ^ S2) & MASK'
+		val1 = _mm_and_si128(_mm_xor_si128(H1_0, S1), MASK);
+		val2 = _mm_and_si128(_mm_xor_si128(H2_4, S2), MASK);
+
+	#ifdef HIBAG_HARDWARE_POPCNT
+    #   ifdef HIBAG_REG_BIT64
+			v1 = _mm_unpacklo_epi32(val1, val2);
+			v2 = _mm_unpackhi_epi32(val1, val2);
+			out_dist[4] += _mm_popcnt_u64(M128_I64_0(v1));
+			out_dist[5] += _mm_popcnt_u64(M128_I64_1(v1));
+			out_dist[6] += _mm_popcnt_u64(M128_I64_0(v2));
+			out_dist[7] += _mm_popcnt_u64(M128_I64_1(v2));
+	#   else
+			out_dist[4] += _mm_popcnt_u32(M128_I32_0(val1)) + _mm_popcnt_u32(M128_I32_0(val2));
+			out_dist[5] += _mm_popcnt_u32(M128_I32_1(val1)) + _mm_popcnt_u32(M128_I32_1(val2));
+			out_dist[6] += _mm_popcnt_u32(M128_I32_2(val1)) + _mm_popcnt_u32(M128_I32_2(val2));
+			out_dist[7] += _mm_popcnt_u32(M128_I32_3(val1)) + _mm_popcnt_u32(M128_I32_3(val2));
+	#   endif
+	#else
+		error "sdfjs"
+	#endif
+	}
+
+#else
 	for (size_t n=8; n > 0; n--)
 		*out_dist++ = _HamDist(Length, H1, *pH2++);
-// #endif
+#endif
 }
 
 
@@ -1053,7 +1135,7 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 	if ((allele_cnt==0) || (allele_cnt==valid_cnt)) return false;
 
 	// initialize the haplotype frequencies
-	CurHaplo.DoubleHaplosInitFreq(NextHaplo, TFLOAT(allele_cnt)/valid_cnt);
+	CurHaplo.DoubleHaplosInitFreq(NextHaplo, double(allele_cnt)/valid_cnt);
 
 	// update haplotype pair
 	const int IdxNewSNP = NextHaplo.Num_SNP - 1;
@@ -1089,14 +1171,14 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 #endif
 
 	// the converage tolerance
-	TFLOAT ConvTol = 0, LogLik = -1e+30;
+	double ConvTol = 0, LogLik = -1e+30;
 
 	// iterate ...
 	for (int iter=0; iter <= EM_MaxNum_Iterations; iter++)
 	{
 		// save old values
 		// old log likelihood
-		TFLOAT Old_LogLik = LogLik;
+		double Old_LogLik = LogLik;
 		// old haplotype frequencies
 		NextHaplo.SaveClearFrequency();
 
@@ -1111,7 +1193,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 			// always "s->BootstrapCount > 0"
 			TotalNumSamp += s->BootstrapCount;
 
-			TFLOAT psum = 0;
+			double psum = 0;
 			for (p = s->PairList.begin(); p != s->PairList.end(); p++)
 			{
 				if (p->Flag)
@@ -1121,15 +1203,15 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 					psum += p->Freq;
 				}
 			}
-			LogLik += s->BootstrapCount * FLOAT_LOG(psum);
-			psum = TFLOAT(s->BootstrapCount) / psum;
+			LogLik += s->BootstrapCount * log(psum);
+			psum = double(s->BootstrapCount) / psum;
 
 			// update
 			for (p = s->PairList.begin(); p != s->PairList.end(); p++)
 			{
 				if (p->Flag)
 				{
-					TFLOAT r = p->Freq * psum;
+					double r = p->Freq * psum;
 					p->H1->Frequency += r; p->H2->Frequency += r;
 				}
 			}
@@ -1172,21 +1254,21 @@ void CAlg_Prediction::InitPrediction(int n_hla)
 
 void CAlg_Prediction::InitPostProbBuffer()
 {
-	memset(&_PostProb[0], 0, _PostProb.size()*sizeof(TFLOAT));
+	memset(&_PostProb[0], 0, _PostProb.size()*sizeof(double));
 }
 
 void CAlg_Prediction::InitSumPostProbBuffer()
 {
-	memset(&_SumPostProb[0], 0, _SumPostProb.size()*sizeof(TFLOAT));
+	memset(&_SumPostProb[0], 0, _SumPostProb.size()*sizeof(double));
 	_Sum_Weight = 0;
 }
 
-void CAlg_Prediction::AddProbToSum(const TFLOAT weight)
+void CAlg_Prediction::AddProbToSum(const double weight)
 {
 	if (weight > 0)
 	{
-		TFLOAT *p = &_PostProb[0];
-		TFLOAT *s = &_SumPostProb[0];
+		double *p = &_PostProb[0];
+		double *s = &_SumPostProb[0];
 		for (size_t n = _SumPostProb.size(); n > 0; n--, s++, p++)
 			*s += (*p) * weight;
 		_Sum_Weight += weight;
@@ -1197,20 +1279,20 @@ void CAlg_Prediction::NormalizeSumPostProb()
 {
 	if (_Sum_Weight > 0)
 	{
-		const TFLOAT scale = 1.0 / _Sum_Weight;
-		TFLOAT *s = &_SumPostProb[0];
+		const double scale = 1.0 / _Sum_Weight;
+		double *s = &_SumPostProb[0];
 		for (size_t n = _SumPostProb.size(); n > 0; n--)
 			*s++ *= scale;
 	}
 }
 
-TFLOAT &CAlg_Prediction::IndexPostProb(int H1, int H2)
+double &CAlg_Prediction::IndexPostProb(int H1, int H2)
 {
 	if (H1 > H2) std::swap(H1, H2);
 	return _PostProb[H2 + H1*(2*_nHLA-H1-1)/2];
 }
 
-TFLOAT &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
+double &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
 {
 	if (H1 > H2) std::swap(H1, H2);
 	return _SumPostProb[H2 + H1*(2*_nHLA-H1-1)/2];
@@ -1221,7 +1303,7 @@ void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 {
 	vector<THaplotype>::const_iterator i1;
 	vector<THaplotype>::const_iterator i2;
-	TFLOAT *pProb = &_PostProb[0];
+	double *pProb = &_PostProb[0];
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
@@ -1258,8 +1340,8 @@ void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 	}
 
 	// normalize
-	TFLOAT sum = 0;
-	TFLOAT *p = &_PostProb[0];
+	double sum = 0;
+	double *p = &_PostProb[0];
 	for (size_t n = _PostProb.size(); n > 0; n--) sum += *p++;
 	sum = 1.0 / sum;
 	p = &_PostProb[0];
@@ -1271,7 +1353,7 @@ THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
 {
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
-	TFLOAT max=0, prob;
+	double max=0, prob;
 
 	vector<THaplotype>::const_iterator i1;
 	vector<THaplotype>::const_iterator i2;
@@ -1340,7 +1422,7 @@ THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
 	return rv;
 }
 
-TFLOAT CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
+double CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
 {
 	int H1=HLA.Allele1, H2=HLA.Allele2;
@@ -1348,7 +1430,7 @@ TFLOAT CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
 	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
 	int idx = 0;
 
-	TFLOAT sum=0, hlaProb=0, prob;
+	double sum=0, hlaProb=0, prob;
 	vector<THaplotype>::const_iterator i1;
 	vector<THaplotype>::const_iterator i2;
 
@@ -1415,8 +1497,8 @@ THLAType CAlg_Prediction::BestGuess()
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 
-	TFLOAT *p = &_PostProb[0];
-	TFLOAT max = 0;
+	double *p = &_PostProb[0];
+	double max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
 		for (int h2=h1; h2 < _nHLA; h2++, p++)
@@ -1437,8 +1519,8 @@ THLAType CAlg_Prediction::BestGuessEnsemble()
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 
-	TFLOAT *p = &_SumPostProb[0];
-	TFLOAT max = 0;
+	double *p = &_SumPostProb[0];
+	double max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
 		for (int h2=h1; h2 < _nHLA; h2++, p++)
@@ -1495,7 +1577,7 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 		SumCnt += cnt;
 	}
 
-	const TFLOAT scale = 0.5 / SumCnt;
+	const double scale = 0.5 / SumCnt;
 	Haplo.Num_SNP = 0;
 	Haplo.List.clear();
 	Haplo.List.resize(_HLAList->Num_HLA_Allele());
@@ -1506,7 +1588,7 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 	}
 }
 
-TFLOAT CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
+double CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
 #if (HIBAG_TIMING == 1)
 	_put_timing();
@@ -1533,10 +1615,10 @@ TFLOAT CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 	_inc_timing();
 #endif
 
-	return (TotalCnt>0) ? TFLOAT(CorrectCnt)/TotalCnt : 1;
+	return (TotalCnt>0) ? double(CorrectCnt)/TotalCnt : 1;
 }
 
-TFLOAT CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
+double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 {
 #if (HIBAG_TIMING == 1)
 	_put_timing();
@@ -1547,14 +1629,14 @@ TFLOAT CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 
 	vector<TGenotype>::const_iterator it   = _GenoList.List.begin();
 	vector<THLAType>::const_iterator  pHLA = _HLAList->List.begin();
-	TFLOAT LogLik = 0;
+	double LogLik = 0;
 
 	for (; it != _GenoList.List.end(); it++, pHLA++)
 	{
 		if (it->BootstrapCount > 0)
 		{
 			LogLik += it->BootstrapCount *
-				FLOAT_LOG(_Predict._PredPostProb(Haplo, *it, *pHLA));
+				log(_Predict._PredPostProb(Haplo, *it, *pHLA));
 		}
 	}
 
@@ -1566,19 +1648,19 @@ TFLOAT CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 
 void CVariableSelection::Search(CBaseSampling &VarSampling,
 	CHaplotypeList &OutHaplo, vector<int> &OutSNPIndex,
-	TFLOAT &Out_Global_Max_OutOfBagAcc, int mtry, bool prune,
+	double &Out_Global_Max_OutOfBagAcc, int mtry, bool prune,
 	bool verbose, bool verbose_detail)
 {
 	// rare probability
-	const TFLOAT RARE_PROB = std::max(FRACTION_HAPLO/(2*nSamp()), MIN_RARE_FREQ);
+	const double RARE_PROB = std::max(FRACTION_HAPLO/(2*nSamp()), MIN_RARE_FREQ);
 
 	// initialize output
 	_InitHaplotype(OutHaplo);
 	OutSNPIndex.clear();
 
 	// initialize internal variables
-	TFLOAT Global_Max_OutOfBagAcc = 0;
-	TFLOAT Global_Min_Loss = 1e+30;
+	double Global_Max_OutOfBagAcc = 0;
+	double Global_Min_Loss = 1e+30;
 
 	CHaplotypeList NextHaplo, NextReducedHaplo, MinHaplo;
 
@@ -1588,8 +1670,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 		// prepare for growing the individual classifier
 		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);
 
-		TFLOAT max_OutOfBagAcc = Global_Max_OutOfBagAcc;
-		TFLOAT min_loss = Global_Min_Loss;
+		double max_OutOfBagAcc = Global_Max_OutOfBagAcc;
+		double min_loss = Global_Min_Loss;
 		int min_i = -1;
 
 		// sample mtry from all candidate SNP markers
@@ -1606,8 +1688,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 
 				// evaluate losses
 				_GenoList.AddSNP(VarSampling[i], *_SNPMat);
-				TFLOAT loss = 0;
-				TFLOAT acc = _OutOfBagAccuracy(NextReducedHaplo);
+				double loss = 0;
+				double acc = _OutOfBagAccuracy(NextReducedHaplo);
 				if (acc >= max_OutOfBagAcc)
 					loss = _InBagLogLik(NextReducedHaplo);
 				_GenoList.ReduceSNP();
@@ -1710,8 +1792,8 @@ void CAttrBag_Classifier::InitBootstrapCount(int SampCnt[])
 }
 
 void CAttrBag_Classifier::Assign(int n_snp, const int snpidx[],
-	const int samp_num[], int n_haplo, const TFLOAT *freq, const int *hla,
-	const char * haplo[], TFLOAT *_acc)
+	const int samp_num[], int n_haplo, const double *freq, const int *hla,
+	const char * haplo[], double *_acc)
 {
 	// SNP markers
 	_SNPIndex.assign(&snpidx[0], &snpidx[n_snp]);
@@ -1853,14 +1935,14 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 
 #if (HIBAG_TIMING > 0)
 	Rprintf("It took %0.2f seconds, in %0.2f%%.\n",
-		((TFLOAT)_timing_)/CLOCKS_PER_SEC,
-		((TFLOAT)_timing_) / (clock() - _start_time) * 100.0);
+		((double)_timing_)/CLOCKS_PER_SEC,
+		((double)_timing_) / (clock() - _start_time) * 100.0);
 #endif
 }
 
 void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
-	int OutH1[], int OutH2[], TFLOAT OutMaxProb[],
-	TFLOAT OutProbArray[], bool ShowInfo)
+	int OutH1[], int OutH2[], double OutMaxProb[],
+	double OutProbArray[], bool ShowInfo)
 {
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
@@ -1897,7 +1979,7 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 }
 
 void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
-	int vote_method, TFLOAT OutProb[], bool ShowInfo)
+	int vote_method, double OutProb[], bool ShowInfo)
 {
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
@@ -1948,7 +2030,7 @@ void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[],
 			if (vote_method == 1)
 			{
 				// predicting based on the averaged posterior probabilities
-				_Predict.AddProbToSum(TFLOAT(nWeight) / SumWeight);
+				_Predict.AddProbToSum(double(nWeight) / SumWeight);
 			} else if (vote_method == 2)
 			{
 				// predicting by class majority voting
@@ -1958,7 +2040,7 @@ void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[],
 					_Predict.InitPostProbBuffer();  // fill by ZERO
 					_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
 
-					// _Predict.AddProbToSum(TFLOAT(nWeight) / SumWeight);
+					// _Predict.AddProbToSum(double(nWeight) / SumWeight);
 					_Predict.AddProbToSum(1.0);
 				}
 			}
