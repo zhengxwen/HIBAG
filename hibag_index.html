@@ -27,7 +27,7 @@
 <p><font size="4">
 	R/Bioconductor Package: <a href="http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html">HIBAG</a>
 <br>Email: <a href="mailto:zhengx@u.washington.edu">Xiuwen Zheng</a> or <a href="mailto:bsweir@u.washington.edu">Bruce S. Weir</a>
-<br>This page was last updated on <b>Feb 5, 2016</b>
+<br>This page was last updated on <b>Mar 1, 2017</b>
 </font></p>
 
 <h2 id="contents">Contents</h2>
@@ -128,25 +128,25 @@ of HapMap YRI.
 <ul>
 <li><div><img src="images/train-size-4-digit.jpg" alt="training sample size" align="top"/></div></li>
 </ul>
-<p>Ethnic-specific models of four-digit resolution (high resolution), presented in Zheng <i>et al</i>. (2014):</p>
+<p>Ethnic-specific models of two-field (4-digit) resolution, presented in Zheng <i>et al</i>. (2014):</p>
 <ul>
 <li><div>
-	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.html">European ancestry</a>,
-		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-Quality-HLA4.pdf">Quality</a>,
-		<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Validation-WTCCC-HLA4.pdf">Validation</a> using HLA data of the British 1958 cohort study
+	<a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.html">European ancestry</a>,
+		Prediction <a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/European-Quality-HLA4.pdf">Quality</a>,
+		<a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/Validation-WTCCC-HLA4.pdf">Validation</a> using HLA data of the British 1958 cohort study
 		(Wellcome Trust Case Control Consortium)
 </div></li>
 <li><div>
-	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Asian-HLA4.html">Asian ancestry</a>,
-		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Asian-Quality-HLA4.pdf">Quality</a>
+	<a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/Asian-HLA4.html">Asian ancestry</a>,
+		Prediction <a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/Asian-Quality-HLA4.pdf">Quality</a>
 </div></li>
 <li><div>
-	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Hispanic-HLA4.html">Hispanic ancestry</a>,
-		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/Hispanic-Quality-HLA4.pdf">Quality</a>
+	<a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/Hispanic-HLA4.html">Hispanic ancestry</a>,
+		Prediction <a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/Hispanic-Quality-HLA4.pdf">Quality</a>
 </div></li>
 <li><div>
-	<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/African-HLA4.html">African ancestry</a>,
-		Prediction <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/African-Quality-HLA4.pdf">Quality</a>
+	<a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/African-HLA4.html">African ancestry</a>,
+		Prediction <a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/African-Quality-HLA4.pdf">Quality</a>
 </div></li>
 </ul> 
 
@@ -185,7 +185,7 @@ of HapMap YRI.
 	<td style="vertical-align: top;"> <span style="font-family: Courier New,Courier,monospace; font-size: 10pt;">
 		library(<b>HIBAG</b>)<br>
 		&nbsp;<br>
-		<i># Load the published parameter estimates from <a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.RData">European ancestry</a></i><br>
+		<i># Load the published parameter estimates from <a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.RData">European ancestry</a></i><br>
 		model.list &lt;- get(load("European-HLA4.RData"))<br>
 		&nbsp;<br>
 		<i>#########################################################################</i><br>
@@ -248,7 +248,7 @@ of HapMap YRI.
 		<i>#&nbsp;&nbsp;&nbsp;&nbsp;or an appropriate flanking size without sacrificing predictive accuracy</i><br>
 		&nbsp;&nbsp;snpid &lt;- <b>hlaFlankingSNP</b>(geno$snp.id, geno$snp.position, "A", 500*1000)<br>
 		<i># 2) the SNPs in our pre-fit models</i><br>
-		&nbsp;&nbsp;model.list &lt;- get(load("<a href="http://www.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.RData">European-HLA4.RData</a>"))<br>
+		&nbsp;&nbsp;model.list &lt;- get(load("<a href="http://public-html.biostat.washington.edu/~bsweir/HIBAG/param/European-HLA4.RData">European-HLA4.RData</a>"))<br>
 		&nbsp;&nbsp;snpid &lt;- model.list[["A"]]$snp.id<br>
 		<i># Subset training SNP genotypes</i><br>
 		train.geno &lt;- <b>hlaGenoSubset</b>(geno, snp.sel=match(snpid, geno$snp.id))<br>
@@ -346,6 +346,7 @@ of HapMap YRI.
 	<li>IMGT/HLA Database: <a href="http://www.ebi.ac.uk/imgt/hla">http://www.ebi.ac.uk/imgt/hla</a>
 	<li>HLA Nomenclature: <a href="http://hla.alleles.org/alleles/g_groups.html">G Codes</a> and <a href="http://hla.alleles.org/alleles/p_groups.html">P Codes</a> for reporting of ambiguous allele typings
 	<li>GlaxoSmithKline (GSK): <a href="http://www.gsk.com">http://www.gsk.com</a>
+	<li>International HLA and Immunogenetics Workshop (IHIWS): <a href="http://ihiws.org">http://ihiws.org</a>
 </ul>
 <p><a href="#contents">back to contents</a></p><p>&nbsp;</p>
 <hr>
