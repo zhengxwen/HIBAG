@@ -39,9 +39,13 @@ Dr. Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
 
 ## Pre-fit Model Download
 
-[http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)
-
 [http://zhengxwen.github.io/HIBAG/](http://zhengxwen.github.io/HIBAG/)
+
+[http://zhengxwen.github.io/HIBAG/hibag_index.html](http://zhengxwen.github.io/HIBAG/hibag_index.html)
+
+Platform-specific models: [http://zhengxwen.github.io/HIBAG/platforms.html](http://zhengxwen.github.io/HIBAG/platforms.html)
+
+or [http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)
 
 
 ## Citation

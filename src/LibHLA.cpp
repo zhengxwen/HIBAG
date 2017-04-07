@@ -1665,7 +1665,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	CHaplotypeList NextHaplo, NextReducedHaplo, MinHaplo;
 
 	while ((VarSampling.TotalNum()>0) &&
-		(OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER))
+		(OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER-1))  // reserve the last bit
 	{
 		// prepare for growing the individual classifier
 		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);
