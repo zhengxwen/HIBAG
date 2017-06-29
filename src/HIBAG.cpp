@@ -670,8 +670,8 @@ SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 		CAttrBag_Model *AB = _HIBAG_MODELS_[midx];
 
 		const CAttrBag_Classifier &Voter = AB->ClassifierList()[cidx - 1];
-		const int nHaplo = Voter.nHaplo();
-		const vector< vector<THaplotype> > &List = Voter.Haplotype().List;
+		const size_t nHaplo = Voter.nHaplo();
+		const CHaplotypeList &Haplo = Voter.Haplotype();
 		const vector<int> &Num = Voter.BootstrapCount();
 
 		rv_ans = PROTECT(NEW_LIST(6));
@@ -682,18 +682,17 @@ SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 		SEXP out_Haplo = PROTECT(NEW_CHARACTER(nHaplo));
 		SET_ELEMENT(rv_ans, 2, out_Haplo);
 
-		size_t idx = 0;
-		for (size_t i=0; i < List.size(); i++)
+		for (size_t i=0; i < nHaplo; i++)
 		{
-			vector<THaplotype>::const_iterator it;
-			for (it=List[i].begin(); it != List[i].end(); it++)
-			{
-				REAL(out_Freq)[idx] = it->Frequency;
-				INTEGER(out_HLA)[idx] = i + 1;
-				SET_STRING_ELT(out_Haplo, idx,
-					mkChar(it->HaploToStr(Voter.nSNP()).c_str()));
-				idx ++;
-			}
+			REAL(out_Freq)[i] = Haplo.List[i].Freq;
+			SET_STRING_ELT(out_Haplo, i,
+				mkChar(Haplo.List[i].HaploToStr(Voter.nSNP()).c_str()));
+		}
+		size_t idx = 0;
+		for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
+		{
+			for (size_t k=Haplo.LenPerHLA[i]; k > 0; k--)
+				INTEGER(out_HLA)[idx++] = i + 1;
 		}
 
 		SEXP out_SNPIdx = PROTECT(NEW_INTEGER(Voter.SNPIndex().size()));

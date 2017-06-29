@@ -20,7 +20,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Kernel Version : 1.3
+// Kernel Version : 1.4
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Description    : HLA imputation C++ library
 // ===============================================================
@@ -87,28 +87,23 @@
 
 namespace HLA_LIB
 {
-	/// Kernel Version, Major Number (0x01) / Minor Number (0x03)
-	#define HIBAG_KERNEL_VERSION    0x0103
-
-
 	using namespace std;
+
+	/// Kernel Version, Major Number (0x01) / Minor Number (0x04)
+	#define HIBAG_KERNEL_VERSION    0x0104
 
 	/// Define unsigned integers
 	typedef uint8_t     UINT8;
 
+	/// The max number of SNP markers in an individual classifier.
+	//  Don't modify this value since the code is optimized for this value!!!
+	const size_t HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128;
 
-	/** The max number of SNP markers in an individual classifier.
-		Don't modify this value since the code is optimized for this value!!!
-	**/
-	const size_t HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 256;
-
-	/** The max number of UTYPE for packed SNP genotypes. **/
+	/// The max number of UTYPE for packed SNP genotypes.
 	const size_t HIBAG_PACKED_UTYPE_MAXNUM =
 		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(UINT8));
 
 
-
-	// ===================================================================== //
 	// ===================================================================== //
 
 	/// macro for checking error
@@ -143,7 +138,7 @@ namespace HLA_LIB
 	// ========                                                     ========
 	// ===================================================================== //
 
-	/// Packed SNP haplotype structure: 8 alleles in a byte
+	/// Packed bi-allelic SNP haplotype structure: 8 alleles in a byte
 	struct THaplotype
 	{
 	public:
@@ -152,13 +147,13 @@ namespace HLA_LIB
 		/// packed SNP alleles
 		UINT8 PackedHaplo[HIBAG_PACKED_UTYPE_MAXNUM];
 		/// haplotype frequency
-		double Frequency;
+		double Freq;
 		/// old haplotype frequency
 		double OldFreq;
 
 		THaplotype();
-		THaplotype(const double _freq);
-		THaplotype(const char *str, const double _freq);
+		THaplotype(double _freq);
+		THaplotype(const char *str, double _freq);
 
 		/// get SNP allele, idx starts from ZERO
 		UINT8 GetAllele(size_t idx) const;
@@ -175,37 +170,51 @@ namespace HLA_LIB
 	};
 
 
-	/// A list of haplotypes
+	/// Haplotype list with an HLA gene and SNP alleles
 	class CHaplotypeList
 	{
 	public:	
 		CHaplotypeList();
+		CHaplotypeList(const CHaplotypeList &src);
+		~CHaplotypeList();
+
+		// assign operator
+		CHaplotypeList& operator= (const CHaplotypeList &src);
+
+		/// resize the number of haplotypes, no initialization
+		void ResizeHaplo(size_t num);
 
 		/// initialize haplotypes for EM algorithm
 		void DoubleHaplos(CHaplotypeList &OutHaplos) const;
 		/// initialize haplotypes for EM algorithm with the allele frequency of the new SNP
-		void DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, const double AFreq) const;
-		/// merge rare haplotypes
-		void MergeDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const;
+		void DoubleHaplosInitFreq(CHaplotypeList &OutHaplos, double AFreq) const;
 		/// remove rare haplotypes
-		void EraseDoubleHaplos(const double RareProb, CHaplotypeList &OutHaplos) const;
+		void EraseDoubleHaplos(double RareProb, CHaplotypeList &OutHaplos) const;
 		/// save frequency to old.frequency, and set current freq. to be 0
 		void SaveClearFrequency();
 		/// scale the haplotype frequencies by a factor
-		void ScaleFrequency(const double scale);
-		/// the total number of haplotypes
-		size_t TotalNumOfHaplo() const;
-		/// the total number of unique HLA alleles
-		inline size_t nHLA() const { return List.size(); }
+		void ScaleFrequency(double scale);
 
-		/// haplotype list with HLA allele index
-		vector< vector<THaplotype> > List;
+		/// the number of haplotypes
+		size_t Num_Haplo;
 		/// the number of SNP markers
 		size_t Num_SNP;
+		/// SNP haplotype list
+		THaplotype *List;
+		/// the number of SNP  haplotypes per HLA allele
+		vector<size_t> LenPerHLA;
+
+		/// the start index of an HLA allele
+		size_t StartHaploHLA(int hla) const;
+		/// the total number of unique HLA alleles
+		inline size_t nHLA() const { return LenPerHLA.size(); }
+
+	private:
+		void *base_ptr;
 	};
 
 
-	/// Packed SNP genotype structure: 8 SNPs in a byte
+	/// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte
 	class TGenotype
 	{
 	public:
@@ -247,9 +256,6 @@ namespace HLA_LIB
 		/// compute the Hamming distance between SNPs and H1+H2 without checking
 		inline int _HamDist(size_t Length, const THaplotype &H1,
 			const THaplotype &H2) const;
-		/// compute the Hamming distance between SNPs and H1+H2[0],..., H1+H2[7] without checking
-		inline void _HamDistArray8(size_t Length, const THaplotype &H1,
-			const THaplotype *pH2, int out_dist[]) const;
 	};
 
 
@@ -404,7 +410,8 @@ namespace HLA_LIB
 
 		/// , return true if the new SNP is not monomorphic
 		bool PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
-			const CSNPGenoMatrix &SNPMat, CGenotypeList &GenoList, CHaplotypeList &NextHaplo);
+			const CSNPGenoMatrix &SNPMat, CGenotypeList &GenoList,
+			CHaplotypeList &NextHaplo);
 
 		/// call EM algorithm to estimate haplotype frequencies
 		void ExpectationMaximization(CHaplotypeList &NextHaplo);
@@ -416,7 +423,7 @@ namespace HLA_LIB
 			bool Flag;       //< if true, the haplotype pair exists in the sample
 			THaplotype *H1;  //< the first haplotype
 			THaplotype *H2;  //< the second haplotype
-			double Freq;     //< genotype frequency
+			double GenoFreq;     //< genotype frequency
 
 			THaploPair() { Flag = true; H1 = H2 = NULL; }
 			THaploPair(THaplotype *i1, THaplotype *i2) { Flag = true; H1 = i1; H2 = i2; }
@@ -572,7 +579,7 @@ namespace HLA_LIB
 		/// the number of SNPs
 		inline const int nSNP() const { return _SNPIndex.size(); }
 		/// the number of haplotyeps
-		inline const int nHaplo() const { return _Haplo.TotalNumOfHaplo(); }
+		inline const int nHaplo() const { return _Haplo.Num_Haplo; }
 		/// the out-of-bag accuracy
 		inline const double OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
 		/// the SNP selection
