@@ -1,7 +1,7 @@
 HLA Genotype Imputation with Attribute Bagging
 ======
 
-Kernel Version: v1.3
+Kernel Version: v1.4
 
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
 [GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
@@ -23,6 +23,11 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 Release Version: 1.12.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
+
+
+### Changes in Bioconductor Version (since v1.14.0):
+
+* 
 
 
 ### Changes in Bioconductor Version (since v1.3.0):
@@ -50,7 +55,7 @@ or [http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washing
 
 ## Citation
 
-Zheng, X. *et al*. HIBAG-HLA genotype imputation with attribute bagging. *Pharmacogenomics Journal* 14, 192–200 (2014).
+Zheng, X. *et al*. HIBAG-HLA genotype imputation with attribute bagging. *Pharmacogenomics Journal* 14, 192-200 (2014).
 [http://dx.doi.org/10.1038/tpj.2013.18](http://dx.doi.org/10.1038/tpj.2013.18)
 
 
@@ -101,7 +106,7 @@ CXXFLAGS=-g -O3 -mpopcnt
 If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message after loading the package:
 ```
 HIBAG (HLA Genotype Imputation with Attribute Bagging)
-Kernel Version: v1.3
+Kernel Version: v1.4
 Supported by Streaming SIMD Extensions (SSE2 + hardware POPCNT)
 ```
 

@@ -176,6 +176,7 @@ namespace HLA_LIB
 	public:	
 		CHaplotypeList();
 		CHaplotypeList(const CHaplotypeList &src);
+		CHaplotypeList(size_t reserve_num);  // reserve memory for haplotypes
 		~CHaplotypeList();
 
 		// assign operator
@@ -210,7 +211,10 @@ namespace HLA_LIB
 		inline size_t nHLA() const { return LenPerHLA.size(); }
 
 	private:
+		size_t reserve_size;
 		void *base_ptr;
+
+		inline void alloc_mem(size_t num);
 	};
 
 

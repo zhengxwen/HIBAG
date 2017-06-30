@@ -266,23 +266,46 @@ inline void THaplotype::_SetAllele(size_t idx, UINT8 val)
 CHaplotypeList::CHaplotypeList()
 {
 	Num_Haplo = Num_SNP = 0;
+	reserve_size = 0;
 	base_ptr = NULL;
 	List = NULL;
-	ResizeHaplo(0);
 }
 
 CHaplotypeList::CHaplotypeList(const CHaplotypeList &src)
 {
 	Num_Haplo = Num_SNP = 0;
+	reserve_size = 0;
 	base_ptr = NULL;
 	List = NULL;
 	*this = src;
+}
+
+CHaplotypeList::CHaplotypeList(size_t reserve_num)
+{
+	Num_Haplo = Num_SNP = 0;
+	reserve_size = 0;
+	base_ptr = NULL;
+	List = NULL;
+	if (reserve_num > 0)
+		alloc_mem(reserve_size = reserve_num);
 }
 
 CHaplotypeList::~CHaplotypeList()
 {
 	if (base_ptr) free(base_ptr);
 	base_ptr = NULL;
+}
+
+void CHaplotypeList::alloc_mem(size_t num)
+{
+	const size_t size = sizeof(THaplotype) * num + 32;
+	base_ptr = realloc(base_ptr, size);
+	if (base_ptr == NULL)
+		throw ErrHLA("Fails to allocate memory.");
+	UINT8 *p = (UINT8 *)base_ptr;
+	size_t r = (size_t)p & 0x1F;
+	if (r > 0) p += 32 - r;
+	List = (THaplotype *)p;
 }
 
 CHaplotypeList& CHaplotypeList::operator= (const CHaplotypeList &src)
@@ -299,14 +322,8 @@ void CHaplotypeList::ResizeHaplo(size_t num)
 	if (Num_Haplo != num)
 	{
 		Num_Haplo = num;
-		const size_t size = sizeof(THaplotype) * num + 32;
-		base_ptr = realloc(base_ptr, size);
-		if (base_ptr == NULL)
-			throw ErrHLA("Fails to allocate memory.");
-		UINT8 *p = (UINT8 *)base_ptr;
-		size_t r = (size_t)p & 0x1F;
-		if (r > 0) p += 32 - r;
-		List = (THaplotype *)p;
+		if (num > reserve_size)
+			alloc_mem(reserve_size = num);
 	}
 }
 
@@ -1566,7 +1583,11 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	double Global_Max_OutOfBagAcc = 0;
 	double Global_Min_Loss = 1e+30;
 
-	CHaplotypeList NextHaplo, NextReducedHaplo, MinHaplo;
+	// reserve memory for haplotype lists
+	const size_t reserve_num_haplo = nSamp() * 2;
+	CHaplotypeList NextHaplo(reserve_num_haplo);
+	CHaplotypeList NextReducedHaplo(reserve_num_haplo);
+	CHaplotypeList MinHaplo(reserve_num_haplo);
 
 	while (VarSampling.TotalNum() > 0 &&
 		OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER)
