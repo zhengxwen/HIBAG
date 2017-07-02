@@ -474,7 +474,7 @@ namespace HLA_LIB
 		/// initialize the sums of posterior probabilities by setting ZERO
 		void InitSumPostProbBuffer();
 		/// add the posterior probabilities of a classifier with a weight to the variable for summing up
-		void AddProbToSum(const double weight);
+		void AddProbToSum(double weight);
 		/// average over all classifiers
 		void NormalizeSumPostProb();
 
@@ -557,6 +557,11 @@ namespace HLA_LIB
 
 		/// initialize the haplotype list
 		void _InitHaplotype(CHaplotypeList &Haplo);
+
+		/// initialize the evaluation of in-bag and out-of-bag accuracy
+		void _Init_EvalAcc(CHaplotypeList &Haplo, CGenotypeList& Geno);
+		/// finalize the evaluation of in-bag and out-of-bag accuracy
+		void _Done_EvalAcc();
 		/// compute the out-of-bag accuracy (the number of correct alleles)
 		int _OutOfBagAccuracy(CHaplotypeList &Haplo);
 		/// compute the in-bag log likelihood using the haplotypes 'Haplo'
@@ -690,9 +695,12 @@ namespace HLA_LIB
 		CAlg_Prediction _Predict;
 
 		/// prediction HLA types internally
-		void _PredictHLA(const int *geno, const int weights[], int vote_method);
-		/// get weight with respect to missing SNPs
-		void _GetSNPWeights(int OutWeight[]);
+		void _PredictHLA(const int geno[], const int snp_weight[], int vote_method);
+		/// get weight with respect to the SNP frequencies in the model for missing SNPs
+		void _GetSNPWeights(int OutSNPWeight[]);
+
+		void _Init_PredictHLA();
+		void _Done_PredictHLA();
 	};
 
 
@@ -763,6 +771,35 @@ namespace HLA_LIB
 		std::string fMessage;
 	};
 
+
+
+	// ===================================================================== //
+
+	/// Pointer to the structure of functions using GPU
+	struct TypeGPUExtProc
+	{
+		/// initialize the internal structure for building a model
+		void (*build_acc_init)(int nHLA, THaplotype pHaplo[], int nHaplo,
+			TGenotype pGeno[], int nGeno);
+		/// finalize the structure for building a model
+		void (*build_acc_done)();
+		/// calculate the out-of-bag accuracy (the number of correct alleles)
+		int (*build_acc_oob)();
+		/// calculate the in-bag log likelihood
+		double (*build_acc_ib)();
+
+		/// initialize the internal structure for predicting
+		void (*predict_init)(int nHLA, THaplotype *pHaplo[], int nHaplo[],
+			int nClassifier);
+		/// finalize the structure for predicting
+		void (*predict_done)();
+		/// average the posterior probabilities among classifiers for predicting
+		void (*predict_avg_prob)(TGenotype *pGeno, const double weight[],
+			double out_prob[]);
+	};
+
+	/// 
+	extern TypeGPUExtProc *GPUExtProcPtr;
 }
 
 #endif /* LIBHLA_H_ */

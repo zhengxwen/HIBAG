@@ -111,6 +111,11 @@ public:
 static CInit _Init;
 
 
+// GPU extensible component
+TypeGPUExtProc *HLA_LIB::GPUExtProcPtr = NULL;;
+
+
+
 // ========================================================================= //
 
 #if (HIBAG_TIMING > 0)
@@ -1189,7 +1194,7 @@ void CAlg_Prediction::InitSumPostProbBuffer()
 	_Sum_Weight = 0;
 }
 
-void CAlg_Prediction::AddProbToSum(const double weight)
+void CAlg_Prediction::AddProbToSum(double weight)
 {
 	if (weight > 0)
 	{
@@ -1514,6 +1519,17 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 	}
 }
 
+void CVariableSelection::_Init_EvalAcc(CHaplotypeList &Haplo,
+	CGenotypeList &Geno)
+{
+
+}
+
+void CVariableSelection::_Done_EvalAcc()
+{
+
+}
+
 int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
 #if (HIBAG_TIMING == 1)
@@ -1620,14 +1636,20 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			{
 				// run EM algorithm
 				_EM.ExpectationMaximization(NextHaplo);
+				// remove rare haplotypes
 				NextHaplo.EraseDoubleHaplos(RARE_PROB, NextReducedHaplo);
+				// add a SNP to the SNP genotype list
+				_GenoList.AddSNP(VarSampling[i], *_SNPMat);
 
 				// evaluate losses
-				_GenoList.AddSNP(VarSampling[i], *_SNPMat);
+				_Init_EvalAcc(NextReducedHaplo, _GenoList);
 				double loss = 0;
 				int acc = _OutOfBagAccuracy(NextReducedHaplo);
 				if (acc >= max_OutOfBagAcc)
 					loss = _InBagLogLik(NextReducedHaplo);
+				_Done_EvalAcc();
+
+				// remove the last SNP in the SNP genotype list
 				_GenoList.ReduceSNP();
 
 				// compare
@@ -1886,18 +1908,18 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
 
-	const int nPairHLA = nHLA()*(nHLA()+1)/2;
-
 	_Predict.InitPrediction(nHLA());
 	Progress.Info = "Predicting:";
 	Progress.Init(n_samp, ShowInfo);
 
-	vector<int> Weight(nSNP());
-	_GetSNPWeights(&Weight[0]);
+	vector<int> snp_weight(nSNP());
+	_GetSNPWeights(&snp_weight[0]);
+	const size_t nn = nHLA()*(nHLA()+1)/2;
 
+	_Init_PredictHLA();
 	for (int i=0; i < n_samp; i++, genomat+=nSNP())
 	{
-		_PredictHLA(genomat, &Weight[0], vote_method);
+		_PredictHLA(genomat, &snp_weight[0], vote_method);
 
 		THLAType HLA = _Predict.BestGuessEnsemble();
 		OutH1[i] = HLA.Allele1; OutH2[i] = HLA.Allele2;
@@ -1909,12 +1931,13 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 
 		if (OutProbArray)
 		{
-			for (int j=0; j < nPairHLA; j++)
-				*OutProbArray++ = _Predict.SumPostProb()[j];
+			memcpy(OutProbArray, &_Predict.SumPostProb()[0], sizeof(double)*nn);
+			OutProbArray += nn;
 		}
 
 		Progress.Forward(1, ShowInfo);
 	}
+	_Done_PredictHLA();
 }
 
 void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
@@ -1923,82 +1946,98 @@ void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
 
-	const int n = nHLA()*(nHLA()+1)/2;
+	const size_t n = nHLA()*(nHLA()+1)/2;
 	_Predict.InitPrediction(nHLA());
 	Progress.Info = "Predicting:";
 	Progress.Init(n_samp, ShowInfo);
 
-	vector<int> Weight(nSNP());
-	_GetSNPWeights(&Weight[0]);
+	vector<int> snp_weight(nSNP());
+	_GetSNPWeights(&snp_weight[0]);
 
+	_Init_PredictHLA();
 	for (int i=0; i < n_samp; i++, genomat+=nSNP())
 	{
-		_PredictHLA(genomat, &Weight[0], vote_method);
-		for (int j=0; j < n; j++)
-			*OutProb++ = _Predict.SumPostProb()[j];
+		_PredictHLA(genomat, &snp_weight[0], vote_method);
+		memcpy(OutProb, &_Predict.SumPostProb()[0], sizeof(double)*n);
+		OutProb += n;
 		Progress.Forward(1, ShowInfo);
 	}
+	_Done_PredictHLA();
 }
 
-void CAttrBag_Model::_PredictHLA(const int *geno, const int weights[],
+void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 	int vote_method)
 {
 	TGenotype Geno;
-	_Predict.InitSumPostProbBuffer();
+	vector<CAttrBag_Classifier>::const_iterator p;
 
-	// missing proportion
-	vector<CAttrBag_Classifier>::const_iterator it;
-	for (it = _ClassifierList.begin(); it != _ClassifierList.end(); it++)
+	// weight for each classifier, based on missing proportion
+	double weight[_ClassifierList.size()];
+	p = _ClassifierList.begin();
+	for (size_t w_i=0; p != _ClassifierList.end(); p++)
 	{
-		const int n = it->nSNP();
-		int nWeight=0, SumWeight=0;
+		const int n = p->nSNP();
+		int nw=0, sum=0;
 		for (int i=0; i < n; i++)
 		{
-			int k = it->_SNPIndex[i];
-			SumWeight += weights[k];
+			int k = p->_SNPIndex[i];
+			sum += snp_weight[k];
 			if ((0 <= geno[k]) && (geno[k] <= 2))
-				nWeight += weights[k];
+				nw += snp_weight[k];
 		}
+		weight[w_i++] = double(nw) / sum;
+	}
 
-		/// set weight with respect to missing SNPs
-		if (nWeight > 0)
+	// initialize probability
+	_Predict.InitSumPostProbBuffer();
+	p = _ClassifierList.begin();
+	for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
+	{
+		if (weight[w_i] <= 0) continue;
+
+		Geno.IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
+		_Predict.PredictPostProb(p->_Haplo, Geno);
+		if (vote_method == 1)
 		{
-			Geno.IntToSNP(n, geno, &(it->_SNPIndex[0]));
-			_Predict.PredictPostProb(it->_Haplo, Geno);
-
-			if (vote_method == 1)
+			// predicting based on the averaged posterior probabilities
+			_Predict.AddProbToSum(weight[w_i]);
+		} else if (vote_method == 2)
+		{
+			// predicting by class majority voting
+			THLAType pd = _Predict.BestGuess();
+			if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
 			{
-				// predicting based on the averaged posterior probabilities
-				_Predict.AddProbToSum(double(nWeight) / SumWeight);
-			} else if (vote_method == 2)
-			{
-				// predicting by class majority voting
-				THLAType pd = _Predict.BestGuess();
-				if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
-				{
-					_Predict.InitPostProbBuffer();  // fill by ZERO
-					_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
-
-					// _Predict.AddProbToSum(double(nWeight) / SumWeight);
-					_Predict.AddProbToSum(1.0);
-				}
+				_Predict.InitPostProbBuffer();  // fill by ZERO
+				_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
+				_Predict.AddProbToSum(1.0);
 			}
 		}
 	}
 
+	// normalize the sum of posterior prob
 	_Predict.NormalizeSumPostProb();
 }
 
-void CAttrBag_Model::_GetSNPWeights(int OutWeight[])
+void CAttrBag_Model::_GetSNPWeights(int OutSNPWeight[])
 {
-	// ZERO
-	memset(OutWeight, 0, sizeof(int)*nSNP());
+	// initialize
+	memset(OutSNPWeight, 0, sizeof(int)*nSNP());
 	// for each classifier
-	vector<CAttrBag_Classifier>::const_iterator it;
-	for (it = _ClassifierList.begin(); it != _ClassifierList.end(); it++)
+	vector<CAttrBag_Classifier>::const_iterator p;
+	for (p = _ClassifierList.begin(); p != _ClassifierList.end(); p++)
 	{
-		const int n = it->nSNP();
-		for (int i=0; i < n; i++)
-			OutWeight[ it->_SNPIndex[i] ] ++;
+		const size_t n = p->nSNP();
+		for (size_t i=0; i < n; i++)
+			OutSNPWeight[ p->_SNPIndex[i] ] ++;
 	}
+}
+
+void CAttrBag_Model::_Init_PredictHLA()
+{
+
+}
+
+void CAttrBag_Model::_Done_PredictHLA()
+{
+
 }
