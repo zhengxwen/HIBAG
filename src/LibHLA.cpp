@@ -191,19 +191,19 @@ CdProgression HLA_LIB::Progress;
 
 THaplotype::THaplotype()
 {
-	Freq = OldFreq = 0;
+	Freq = aux.OldFreq = 0;
 }
 
 THaplotype::THaplotype(double _freq)
 {
 	Freq = _freq;
-	OldFreq = 0;
+	aux.OldFreq = 0;
 }
 
 THaplotype::THaplotype(const char *str, double _freq)
 {
 	Freq = _freq;
-	OldFreq = 0;
+	aux.OldFreq = 0;
 	StrToHaplo(str);
 }
 
@@ -442,7 +442,7 @@ void CHaplotypeList::SaveClearFrequency()
 	THaplotype *p = List;
 	for (size_t n=Num_Haplo; n > 0; n--)
 	{
-		p->OldFreq = p->Freq;
+		p->aux.OldFreq = p->Freq;
 		p->Freq = 0;
 		p ++;
 	}
@@ -1124,7 +1124,8 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 				if (p->Flag)
 				{
 					p->GenoFreq = (p->H1 != p->H2) ?
-						(2 * p->H1->OldFreq * p->H2->OldFreq) : (p->H1->OldFreq * p->H2->OldFreq);
+						(2 * p->H1->aux.OldFreq * p->H2->aux.OldFreq) :
+						(p->H1->aux.OldFreq * p->H2->aux.OldFreq);
 					psum += p->GenoFreq;
 				}
 			}
@@ -1471,7 +1472,11 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 	// initialize genotype list
 	_GenoList.List.resize(snpMat.Num_Total_Samp);
 	for (int i=0; i < snpMat.Num_Total_Samp; i++)
-		_GenoList.List[i].BootstrapCount = _BootstrapCnt[i];
+	{
+		TGenotype &g = _GenoList.List[i];
+		g.BootstrapCount = _BootstrapCnt[i];
+		g.aux_hla_type = hlaList.List[i];
+	}
 	_GenoList.Num_SNP = 0;
 
 	_Predict.InitPrediction(nHLA());
@@ -1509,7 +1514,7 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 	}
 }
 
-double CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
+int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
 #if (HIBAG_TIMING == 1)
 	_put_timing();
@@ -1518,17 +1523,15 @@ double CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 
-	int TotalCnt=0, CorrectCnt=0;
-	vector<TGenotype>::const_iterator it   = _GenoList.List.begin();
-	vector<THLAType>::const_iterator  pHLA = _HLAList->List.begin();
+	int CorrectCnt=0;
+	vector<TGenotype>::const_iterator p = _GenoList.List.begin();
 
-	for (; it != _GenoList.List.end(); it++, pHLA++)
+	for (; p != _GenoList.List.end(); p++)
 	{
-		if (it->BootstrapCount <= 0)
+		if (p->BootstrapCount <= 0)
 		{
 			CorrectCnt += CHLATypeList::Compare(
-				_Predict._PredBestGuess(Haplo, *it), *pHLA);
-			TotalCnt += 2;
+				_Predict._PredBestGuess(Haplo, *p), p->aux_hla_type);
 		}
 	}
 
@@ -1536,7 +1539,7 @@ double CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 	_inc_timing();
 #endif
 
-	return (TotalCnt>0) ? double(CorrectCnt)/TotalCnt : 1;
+	return CorrectCnt;
 }
 
 double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
@@ -1548,16 +1551,15 @@ double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
 
-	vector<TGenotype>::const_iterator it   = _GenoList.List.begin();
-	vector<THLAType>::const_iterator  pHLA = _HLAList->List.begin();
+	vector<TGenotype>::const_iterator p = _GenoList.List.begin();
 	double LogLik = 0;
 
-	for (; it != _GenoList.List.end(); it++, pHLA++)
+	for (; p != _GenoList.List.end(); p++)
 	{
-		if (it->BootstrapCount > 0)
+		if (p->BootstrapCount > 0)
 		{
-			LogLik += it->BootstrapCount *
-				log(_Predict._PredPostProb(Haplo, *it, *pHLA));
+			LogLik += p->BootstrapCount *
+				log(_Predict._PredPostProb(Haplo, *p, p->aux_hla_type));
 		}
 	}
 
@@ -1580,8 +1582,17 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	OutSNPIndex.clear();
 
 	// initialize internal variables
-	double Global_Max_OutOfBagAcc = 0;
+	int Global_Max_OutOfBagAcc = 0;  // # of correct alleles
 	double Global_Min_Loss = 1e+30;
+	int NumOOB = 0;
+	{
+		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
+		for (; p != _GenoList.List.end(); p++)
+		{
+			if (p->BootstrapCount <= 0) NumOOB ++;
+		}
+		if (NumOOB <= 0) NumOOB = 1;
+	}
 
 	// reserve memory for haplotype lists
 	const size_t reserve_num_haplo = nSamp() * 2;
@@ -1595,7 +1606,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 		// prepare for growing the individual classifier
 		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);
 
-		double max_OutOfBagAcc = Global_Max_OutOfBagAcc;
+		int max_OutOfBagAcc = Global_Max_OutOfBagAcc;
 		double min_loss = Global_Min_Loss;
 		int min_i = -1;
 
@@ -1614,7 +1625,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 				// evaluate losses
 				_GenoList.AddSNP(VarSampling[i], *_SNPMat);
 				double loss = 0;
-				double acc = _OutOfBagAccuracy(NextReducedHaplo);
+				int acc = _OutOfBagAccuracy(NextReducedHaplo);
 				if (acc >= max_OutOfBagAcc)
 					loss = _InBagLogLik(NextReducedHaplo);
 				_GenoList.ReduceSNP();
@@ -1623,7 +1634,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 				if (acc > max_OutOfBagAcc)
 				{
 					min_i = i;
-					min_loss = loss; max_OutOfBagAcc = acc;
+					min_loss = loss;
+					max_OutOfBagAcc = acc;
 					MinHaplo = NextReducedHaplo;
 				} else if (acc == max_OutOfBagAcc)
 				{
@@ -1686,7 +1698,9 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			{
 				Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
 					OutSNPIndex.size(), OutSNPIndex.back()+1,
-					Global_Min_Loss, Global_Max_OutOfBagAcc*100, OutHaplo.Num_Haplo);
+					Global_Min_Loss,
+					double(Global_Max_OutOfBagAcc) / NumOOB * 50,
+					OutHaplo.Num_Haplo);
 			}
 		} else {
 			// only keep "n_tmp - m" predictors
@@ -1694,7 +1708,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 		}
 	}
 
-	Out_Global_Max_OutOfBagAcc = Global_Max_OutOfBagAcc;
+	Out_Global_Max_OutOfBagAcc = 0.5 * Global_Max_OutOfBagAcc / NumOOB;
 }
 
 

@@ -148,8 +148,12 @@ namespace HLA_LIB
 		UINT8 PackedHaplo[HIBAG_PACKED_UTYPE_MAXNUM];
 		/// haplotype frequency
 		double Freq;
-		/// old haplotype frequency
-		double OldFreq;
+		/// auxiliary variables, sizeof(THaplotype)=32
+		union type_aux
+		{
+			double OldFreq;  /// old haplotype frequency
+			int HLA_allele;  /// the associated HLA allele
+		} aux;
 
 		THaplotype();
 		THaplotype(double _freq);
@@ -218,8 +222,16 @@ namespace HLA_LIB
 	};
 
 
+	/// A pair of HLA alleles
+	struct THLAType
+	{
+		int Allele1;  //< the first HLA allele
+		int Allele2;  //< the second HLA allele
+	};
+
+
 	/// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte
-	class TGenotype
+	struct TGenotype
 	{
 	public:
 		friend class CGenotypeList;
@@ -236,6 +248,12 @@ namespace HLA_LIB
 		/// the count in the bootstrapped data
 		int BootstrapCount;
 
+		/// auxiliary correct HLA type
+		THLAType aux_hla_type;
+		/// auxiliary integer to make sizeof(TGenotype)=64
+		int aux_temp;
+
+		/// constructor
 		TGenotype();
 
 		/// get SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
@@ -282,13 +300,6 @@ namespace HLA_LIB
 		int *pGeno;
 	};
 
-
-	/// A pair of HLA alleles
-	struct THLAType
-	{
-		int Allele1;  //< the first HLA allele
-		int Allele2;  //< the second HLA allele
-	};
 
 	/// A list of genotypes
 	class CGenotypeList
@@ -546,8 +557,8 @@ namespace HLA_LIB
 
 		/// initialize the haplotype list
 		void _InitHaplotype(CHaplotypeList &Haplo);
-		/// compute the out-of-bag accuracy using the haplotypes 'Haplo'
-		double _OutOfBagAccuracy(CHaplotypeList &Haplo);
+		/// compute the out-of-bag accuracy (the number of correct alleles)
+		int _OutOfBagAccuracy(CHaplotypeList &Haplo);
 		/// compute the in-bag log likelihood using the haplotypes 'Haplo'
 		double _InBagLogLik(CHaplotypeList &Haplo);
 	};

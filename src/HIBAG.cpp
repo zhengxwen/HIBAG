@@ -500,9 +500,10 @@ SEXP HIBAG_Close(SEXP model)
  *  \param prune           if TRUE, perform a parsimonious forward variable selection
  *  \param verbose         show information if TRUE
  *  \param verbose_detail  show more information if TRUE
+ *  \param proc_ptr        pointer to functions for an extensible component
 **/
 SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
-	SEXP prune, SEXP verbose, SEXP verbose_detail)
+	SEXP prune, SEXP verbose, SEXP verbose_detail, SEXP proc_ptr)
 {
 	CORE_TRY
 		int midx = Rf_asInteger(model);
@@ -1066,7 +1067,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Kernel_Version, 0),
 		CALL(HIBAG_New, 3),
 		CALL(HIBAG_NewClassifierHaplo, 7),
-		CALL(HIBAG_NewClassifiers, 6),
+		CALL(HIBAG_NewClassifiers, 7),
 		CALL(HIBAG_Predict_Resp, 5),
 		CALL(HIBAG_Predict_Resp_Prob, 5),
 		CALL(HIBAG_Training, 6),

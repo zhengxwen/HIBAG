@@ -73,7 +73,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
     # SNP genotypes
     samp.flag <- match(samp.id, snp$sample.id)
     snp.geno <- snp$genotype[, samp.flag]
-    storage.mode(snp.geno) <- "integer"
+    if (!is.integer(snp.geno))
+        storage.mode(snp.geno) <- "integer"
 
     tmp.snp.id <- snp$snp.id
     tmp.snp.position <- snp$snp.position
@@ -115,7 +116,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
     H1 <- as.integer(H[1L:n.samp]) - 1L
     H2 <- as.integer(H[(n.samp+1L):(2L*n.samp)]) - 1L
 
-    # create an attribute bagging object
+    # create an attribute bagging object (return an integer)
     ABmodel <- .Call(HIBAG_Training, n.snp, n.samp, snp.geno, n.hla, H1, H2)
 
     # number of variables randomly sampled as candidates at each split
@@ -164,7 +165,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
     # training ...
     # add new individual classifers
     .Call(HIBAG_NewClassifiers, ABmodel, nclassifier, mtry, prune,
-        verbose, verbose.detail)
+        verbose, verbose.detail, NULL)
 
     # output
     rv <- list(n.samp = n.samp, n.snp = n.snp, sample.id = samp.id,
