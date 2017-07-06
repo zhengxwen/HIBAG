@@ -527,10 +527,11 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
  *  \param nSamp        the number of samples in GenoMat
  *  \param vote_method  the voting method
  *  \param ShowInfo     whether showing information
+ *  \param proc_ptr     pointer to functions for an extensible component
  *  \return H1, H2 and posterior prob.
 **/
 SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP ShowInfo)
+	SEXP vote_method, SEXP ShowInfo, SEXP proc_ptr)
 {
 	int midx = Rf_asInteger(model);
 	int NumSamp = Rf_asInteger(nSamp);
@@ -547,9 +548,18 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
 		SET_ELEMENT(rv_ans, 2, out_Prob);
 
-		M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
-			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			NULL, Rf_asLogical(ShowInfo) == TRUE);
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		try {
+			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+				NULL, Rf_asLogical(ShowInfo)==TRUE);
+			GPUExtProcPtr = NULL;
+		}
+		catch(...) {
+			GPUExtProcPtr = NULL;
+			throw;
+		}
 
 		UNPROTECT(4);
 	CORE_CATCH
@@ -565,10 +575,11 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
  *  \param nSamp        the number of samples in GenoMat
  *  \param vote_method  the voting method
  *  \param ShowInfo     whether showing information
+ *  \param proc_ptr     pointer to functions for an extensible component
  *  \return H1, H2, prob. and a matrix of all probabilities
 **/
 SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP ShowInfo)
+	SEXP vote_method, SEXP ShowInfo, SEXP proc_ptr)
 {
 	int midx = Rf_asInteger(model);
 	int NumSamp = Rf_asInteger(nSamp);
@@ -589,9 +600,18 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 			allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp));
 		SET_ELEMENT(rv_ans, 3, out_MatProb);
 
-		M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
-			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			REAL(out_MatProb), Rf_asLogical(ShowInfo) == TRUE);
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		try {
+			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+				REAL(out_MatProb), Rf_asLogical(ShowInfo)==TRUE);
+			GPUExtProcPtr = NULL;
+		}
+		catch(...) {
+			GPUExtProcPtr = NULL;
+			throw;
+		}
 
 		UNPROTECT(5);
 	CORE_CATCH
@@ -1068,8 +1088,8 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_New, 3),
 		CALL(HIBAG_NewClassifierHaplo, 7),
 		CALL(HIBAG_NewClassifiers, 7),
-		CALL(HIBAG_Predict_Resp, 5),
-		CALL(HIBAG_Predict_Resp_Prob, 5),
+		CALL(HIBAG_Predict_Resp, 6),
+		CALL(HIBAG_Predict_Resp_Prob, 6),
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
 		CALL(HIBAG_SeqMerge, 1),

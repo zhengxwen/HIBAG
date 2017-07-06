@@ -472,6 +472,18 @@ size_t CHaplotypeList::StartHaploHLA(int hla) const
 	return rv;
 }
 
+void CHaplotypeList::SetHaploAux()
+{
+	THaplotype *p = List;
+	size_t *s = &LenPerHLA[0];
+	size_t n = LenPerHLA.size();
+	for (size_t i=0; i < n; i++)
+	{
+		for (size_t m=*s++; m > 0; m--, p++)
+			p->aux.HLA_allele = i;
+	}
+}
+
 
 
 // ========================================================================= //
@@ -1200,8 +1212,8 @@ void CAlg_Prediction::AddProbToSum(double weight)
 	{
 		double *p = &_PostProb[0];
 		double *s = &_SumPostProb[0];
-		for (size_t n = _SumPostProb.size(); n > 0; n--, s++, p++)
-			*s += (*p) * weight;
+		for (size_t n = _SumPostProb.size(); n > 0; n--)
+			(*s++) += (*p++) * weight;
 		_Sum_Weight += weight;
 	}
 }
@@ -1968,12 +1980,9 @@ void CAttrBag_Model::PredictHLA_Prob(const int *genomat, int n_samp,
 void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 	int vote_method)
 {
-	TGenotype Geno;
-	vector<CAttrBag_Classifier>::const_iterator p;
-
 	// weight for each classifier, based on missing proportion
 	double weight[_ClassifierList.size()];
-	p = _ClassifierList.begin();
+	vector<CAttrBag_Classifier>::const_iterator p = _ClassifierList.begin();
 	for (size_t w_i=0; p != _ClassifierList.end(); p++)
 	{
 		const int n = p->nSNP();
@@ -1988,34 +1997,49 @@ void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 		weight[w_i++] = double(nw) / sum;
 	}
 
-	// initialize probability
-	_Predict.InitSumPostProbBuffer();
-	p = _ClassifierList.begin();
-	for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
+	if (GPUExtProcPtr)
 	{
-		if (weight[w_i] <= 0) continue;
+		vector<TGenotype> Geno(_ClassifierList.size());
+		p = _ClassifierList.begin();
+		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
+		{
+			Geno[w_i].IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
+		}
+		(*GPUExtProcPtr->predict_avg_prob)(&Geno[0], weight,
+			&_Predict._SumPostProb[0]);
 
-		Geno.IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
-		_Predict.PredictPostProb(p->_Haplo, Geno);
-		if (vote_method == 1)
+	} else {
+		// initialize probability
+		_Predict.InitSumPostProbBuffer();
+		TGenotype Geno;
+
+		p = _ClassifierList.begin();
+		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
 		{
-			// predicting based on the averaged posterior probabilities
-			_Predict.AddProbToSum(weight[w_i]);
-		} else if (vote_method == 2)
-		{
-			// predicting by class majority voting
-			THLAType pd = _Predict.BestGuess();
-			if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
+			if (weight[w_i] <= 0) continue;
+
+			Geno.IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
+			_Predict.PredictPostProb(p->_Haplo, Geno);
+			if (vote_method == 1)
 			{
-				_Predict.InitPostProbBuffer();  // fill by ZERO
-				_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
-				_Predict.AddProbToSum(1.0);
+				// predicting based on the averaged posterior probabilities
+				_Predict.AddProbToSum(weight[w_i]);
+			} else if (vote_method == 2)
+			{
+				// predicting by class majority voting
+				THLAType pd = _Predict.BestGuess();
+				if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
+				{
+					_Predict.InitPostProbBuffer();  // fill by ZERO
+					_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
+					_Predict.AddProbToSum(1.0);
+				}
 			}
 		}
-	}
 
-	// normalize the sum of posterior prob
-	_Predict.NormalizeSumPostProb();
+		// normalize the sum of posterior prob
+		_Predict.NormalizeSumPostProb();
+	}
 }
 
 void CAttrBag_Model::_GetSNPWeights(int OutSNPWeight[])
@@ -2034,10 +2058,31 @@ void CAttrBag_Model::_GetSNPWeights(int OutSNPWeight[])
 
 void CAttrBag_Model::_Init_PredictHLA()
 {
+	if (GPUExtProcPtr)
+	{
+		// prepare data structure for GPU
+		const size_t n_classifier = _ClassifierList.size();
+		THaplotype* haplo[n_classifier];
+		int n_haplo[n_classifier];
 
+		vector<CAttrBag_Classifier>::iterator p;
+		p = _ClassifierList.begin();
+		for (size_t c_i=0; p != _ClassifierList.end(); p++, c_i++)
+		{
+			CHaplotypeList &hl = p->_Haplo;
+			hl.SetHaploAux();
+			haplo[c_i] = hl.List;
+			n_haplo[c_i] = hl.Num_Haplo;
+		}
+
+		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo, n_haplo);
+	}
 }
 
 void CAttrBag_Model::_Done_PredictHLA()
 {
-
+	if (GPUExtProcPtr)
+	{
+		(*GPUExtProcPtr->predict_done)();
+	}
 }

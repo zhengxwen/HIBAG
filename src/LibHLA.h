@@ -214,6 +214,9 @@ namespace HLA_LIB
 		/// the total number of unique HLA alleles
 		inline size_t nHLA() const { return LenPerHLA.size(); }
 
+		/// set the auxiliary variable aux.HLA_allele
+		void SetHaploAux();
+
 	private:
 		size_t reserve_size;
 		void *base_ptr;
@@ -462,6 +465,7 @@ namespace HLA_LIB
 	{
 	public:
 		friend class CVariableSelection;
+		friend class CAttrBag_Model;
 
 		CAlg_Prediction();
 
@@ -789,8 +793,8 @@ namespace HLA_LIB
 		double (*build_acc_ib)();
 
 		/// initialize the internal structure for predicting
-		void (*predict_init)(int nHLA, THaplotype *pHaplo[], int nHaplo[],
-			int nClassifier);
+		void (*predict_init)(int nHLA, int nClassifier, THaplotype *pHaplo[],
+			int nHaplo[]);
 		/// finalize the structure for predicting
 		void (*predict_done)();
 		/// average the posterior probabilities among classifiers for predicting

@@ -581,6 +581,10 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     # parallel units
     if (is.null(cl))
     {
+        # pointer to functions for an extensible component
+		pm <- list(...)
+		pm <- pm$proc_ptr
+
         # to predict HLA types
         if (type %in% c("response", "response+prob"))
         {
@@ -589,11 +593,11 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
             if (type == "response")
             {
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
-                    n.samp, vote_method, verbose)
+                    n.samp, vote_method, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob")
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
-                    as.integer(snp), n.samp, vote_method, verbose)
+                    as.integer(snp), n.samp, vote_method, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "postprob")
             }
 
@@ -639,9 +643,9 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                 {
                     library(HIBAG)
                     m <- hlaModelFromObj(mobj)
-                    pd <- predict(m, snp[,idx], type=type, vote=vote,
+                    on.exit(hlaClose(m))
+                    pd <- hlaPredict(m, snp[,idx], type=type, vote=vote,
                         verbose=FALSE)
-                    hlaClose(m)
                     pd
                 } else
                     NULL
