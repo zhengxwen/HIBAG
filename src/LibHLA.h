@@ -152,7 +152,10 @@ namespace HLA_LIB
 		union type_aux
 		{
 			double OldFreq;  /// old haplotype frequency
-			int HLA_allele;  /// the associated HLA allele
+			struct type_aux2 {
+				float Freq_f32;  /// 32-bit haplotype frequency
+				int HLA_allele;  /// the associated HLA allele
+			} a2;
 		} aux;
 
 		THaplotype();
@@ -216,6 +219,8 @@ namespace HLA_LIB
 
 		/// set the auxiliary variable aux.HLA_allele
 		void SetHaploAux();
+		/// set the auxiliary variable aux.Freq_f32
+		void SetHaploAux2();
 
 	private:
 		size_t reserve_size;

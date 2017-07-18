@@ -86,7 +86,7 @@ static inline int RandomNum(int n)
 // ========================================================================= //
 
 /// Frequency Calculation
-#define FREQ_MUTANT(p, cnt)    ((p) * EXP_LOG_MIN_RARE_FREQ[cnt]);
+#define FREQ_MUTANT(p, cnt)    ((p) * EXP_LOG_MIN_RARE_FREQ[cnt])
 
 /// exp(cnt * log(MIN_RARE_FREQ)), cnt is the hamming distance
 static double EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
@@ -480,7 +480,22 @@ void CHaplotypeList::SetHaploAux()
 	for (size_t i=0; i < n; i++)
 	{
 		for (size_t m=*s++; m > 0; m--, p++)
-			p->aux.HLA_allele = i;
+			p->aux.a2.HLA_allele = i;
+	}
+}
+
+void CHaplotypeList::SetHaploAux2()
+{
+	THaplotype *p = List;
+	size_t *s = &LenPerHLA[0];
+	size_t n = LenPerHLA.size();
+	for (size_t i=0; i < n; i++)
+	{
+		for (size_t m=*s++; m > 0; m--, p++)
+		{
+			p->aux.a2.Freq_f32 = p->Freq;
+			p->aux.a2.HLA_allele = i;
+		}
 	}
 }
 
@@ -2063,16 +2078,17 @@ void CAttrBag_Model::_Init_PredictHLA()
 		// prepare data structure for GPU
 		const size_t n_classifier = _ClassifierList.size();
 		THaplotype* haplo[n_classifier];
-		int n_haplo[n_classifier];
+		int n_haplo[n_classifier*2];
 
 		vector<CAttrBag_Classifier>::iterator p;
 		p = _ClassifierList.begin();
 		for (size_t c_i=0; p != _ClassifierList.end(); p++, c_i++)
 		{
 			CHaplotypeList &hl = p->_Haplo;
-			hl.SetHaploAux();
+			hl.SetHaploAux2();
 			haplo[c_i] = hl.List;
-			n_haplo[c_i] = hl.Num_Haplo;
+			n_haplo[c_i*2 + 0] = p->nHaplo();
+			n_haplo[c_i*2 + 1] = p->nSNP();
 		}
 
 		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo, n_haplo);
