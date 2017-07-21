@@ -602,22 +602,22 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 
 	for (; Length >= 8; Length -= 8, Index += 8)
 	{
-		int g1 = InBase[Index[0]];
-		size_t i1 = ((0<=g1) && (g1<=2)) ? g1 : 3;
-		int g2 = InBase[Index[1]];
-		size_t i2 = ((0<=g2) && (g2<=2)) ? g2 : 3;
-		int g3 = InBase[Index[2]];
-		size_t i3 = ((0<=g3) && (g3<=2)) ? g3 : 3;
-		int g4 = InBase[Index[3]];
-		size_t i4 = ((0<=g4) && (g4<=2)) ? g4 : 3;
-		int g5 = InBase[Index[4]];
-		size_t i5 = ((0<=g5) && (g5<=2)) ? g5 : 3;
-		int g6 = InBase[Index[5]];
-		size_t i6 = ((0<=g6) && (g6<=2)) ? g6 : 3;
-		int g7 = InBase[Index[6]];
-		size_t i7 = ((0<=g7) && (g7<=2)) ? g7 : 3;
-		int g8 = InBase[Index[7]];
-		size_t i8 = ((0<=g8) && (g8<=2)) ? g8 : 3;
+		unsigned g1 = InBase[Index[0]];
+		size_t i1 = (g1 < 3) ? g1 : 3;
+		unsigned g2 = InBase[Index[1]];
+		size_t i2 = (g2 < 3) ? g2 : 3;
+		unsigned g3 = InBase[Index[2]];
+		size_t i3 = (g3 < 3) ? g3 : 3;
+		unsigned g4 = InBase[Index[3]];
+		size_t i4 = (g4 < 3) ? g4 : 3;
+		unsigned g5 = InBase[Index[4]];
+		size_t i5 = (g5 < 3) ? g5 : 3;
+		unsigned g6 = InBase[Index[5]];
+		size_t i6 = (g6 < 3) ? g6 : 3;
+		unsigned g7 = InBase[Index[6]];
+		size_t i7 = (g7 < 3) ? g7 : 3;
+		unsigned g8 = InBase[Index[7]];
+		size_t i8 = (g8 < 3) ? g8 : 3;
 
 		*p1++ = P1[i1] | (P1[i2] << 1) | (P1[i3] << 2) | (P1[i4] << 3) |
 			(P1[i5] << 4) | (P1[i6] << 5) | (P1[i7] << 6) | (P1[i8] << 7);
@@ -632,8 +632,8 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 		*p1 = *p2 = *pM = 0;
 		for (size_t i=0; i < Length; i++)
 		{
-			int g1 = InBase[*Index++];
-			size_t i1 = ((0<=g1) && (g1<=2)) ? g1 : 3;
+			unsigned g1 = InBase[*Index++];
+			size_t i1 = (g1 < 3) ? g1 : 3;
 			*p1 |= (P1[i1] << i);
 			*p2 |= (P2[i1] << i);
 			*pM |= (PM[i1] << i);
@@ -2014,14 +2014,12 @@ void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 
 	if (GPUExtProcPtr)
 	{
-		vector<TGenotype> Geno(_ClassifierList.size());
 		p = _ClassifierList.begin();
 		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
 		{
-			Geno[w_i].IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
+			pGenoBuf[w_i].IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
 		}
-		(*GPUExtProcPtr->predict_avg_prob)(&Geno[0], weight,
-			&_Predict._SumPostProb[0]);
+		(*GPUExtProcPtr->predict_avg_prob)(weight, &_Predict._SumPostProb[0]);
 
 	} else {
 		// initialize probability
@@ -2091,7 +2089,8 @@ void CAttrBag_Model::_Init_PredictHLA()
 			n_haplo[c_i*2 + 1] = p->nSNP();
 		}
 
-		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo, n_haplo);
+		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo, n_haplo,
+			&pGenoBuf);
 	}
 }
 

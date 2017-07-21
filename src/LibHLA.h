@@ -708,6 +708,8 @@ namespace HLA_LIB
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
 		void _GetSNPWeights(int OutSNPWeight[]);
 
+		TGenotype *pGenoBuf;
+
 		void _Init_PredictHLA();
 		void _Done_PredictHLA();
 	};
@@ -799,12 +801,11 @@ namespace HLA_LIB
 
 		/// initialize the internal structure for predicting
 		void (*predict_init)(int nHLA, int nClassifier, THaplotype *pHaplo[],
-			int nHaplo[]);
+			int nHaplo[], TGenotype **pGeno);
 		/// finalize the structure for predicting
 		void (*predict_done)();
 		/// average the posterior probabilities among classifiers for predicting
-		void (*predict_avg_prob)(TGenotype *pGeno, const double weight[],
-			double out_prob[]);
+		void (*predict_avg_prob)(const double weight[], double out_prob[]);
 	};
 
 	/// 

@@ -621,7 +621,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
             # all probabilites
 
             rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
-                as.integer(snp), n.samp, vote_method, verbose)
+                as.integer(snp), n.samp, vote_method, verbose, pm)
             names(rv) <- c("H1", "H2", "prob", "postprob")
 
             res <- rv$postprob
