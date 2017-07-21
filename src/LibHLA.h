@@ -655,24 +655,25 @@ namespace HLA_LIB
 			bool verbose, bool verbose_detail=false);
 
 		/** get the best-guess HLA types
-		 *  \param genomat
-		 *  \param n_samp
-		 *  \param vote_method  1: average posterior prob, 2: majority voting
-		 *  \param OutH1
-		 *  \param OutH2
-		 *  \param OutProb
-		 *  \param ShowInfo
+		 *  \param genomat       genotype matrix
+		 *  \param n_samp        the number of samples in genomat
+		 *  \param vote_method   1: average posterior prob, 2: majority voting
+		 *  \param OutH1         the first HLA allele for samples
+		 *  \param OutH2         the second HLA allele for samples
+		 *  \param OutMaxProb    the posterior prob. of the best-guess HLA genotypes
+		 *  \param OutProbArray  the posterior prob. of all HLA genotypes
+		 *  \param ShowInfo      if true, show information
 		**/
 		void PredictHLA(const int *genomat, int n_samp, int vote_method,
 			int OutH1[], int OutH2[], double OutMaxProb[],
 			double OutProbArray[], bool ShowInfo);
 
 		/** get the posterior probabilities of HLA type
-		 *  \param genomat
-		 *  \param n_samp
-		 *  \param vote_method  1: average posterior prob, 2: majority voting
-		 *  \param OutProb
-		 *  \param ShowInfo
+		 *  \param genomat       genotype matrix
+		 *  \param n_samp        the number of samples in genomat
+		 *  \param vote_method   1: average posterior prob, 2: majority voting
+		 *  \param OutProb       the posterior prob. of all HLA genotypes
+		 *  \param ShowInfo      if true, show information
 		**/
 		void PredictHLA_Prob(const int *genomat, int n_samp, int vote_method,
 			double OutProb[], bool ShowInfo);
@@ -708,10 +709,12 @@ namespace HLA_LIB
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
 		void _GetSNPWeights(int OutSNPWeight[]);
 
-		TGenotype *pGenoBuf;
-
 		void _Init_PredictHLA();
 		void _Done_PredictHLA();
+
+	private:
+		vector<int> gpu_num_haplo;
+		vector<TGenotype> gpu_geno_buf;
 	};
 
 
@@ -800,12 +803,13 @@ namespace HLA_LIB
 		double (*build_acc_ib)();
 
 		/// initialize the internal structure for predicting
-		void (*predict_init)(int nHLA, int nClassifier, THaplotype *pHaplo[],
-			int nHaplo[], TGenotype **pGeno);
+		void (*predict_init)(int nHLA, int nClassifier,
+			const THaplotype *const pHaplo[], const int nHaplo[]);
 		/// finalize the structure for predicting
 		void (*predict_done)();
 		/// average the posterior probabilities among classifiers for predicting
-		void (*predict_avg_prob)(const double weight[], double out_prob[]);
+		void (*predict_avg_prob)(const int nHaplo[], const TGenotype geno[],
+			const double weight[], double out_prob[]);
 	};
 
 	/// 

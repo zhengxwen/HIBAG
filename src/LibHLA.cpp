@@ -2017,9 +2017,10 @@ void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 		p = _ClassifierList.begin();
 		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
 		{
-			pGenoBuf[w_i].IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
+			gpu_geno_buf[w_i].IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
 		}
-		(*GPUExtProcPtr->predict_avg_prob)(weight, &_Predict._SumPostProb[0]);
+		(*GPUExtProcPtr->predict_avg_prob)(&gpu_num_haplo[0], &gpu_geno_buf[0],
+			weight, &_Predict._SumPostProb[0]);
 
 	} else {
 		// initialize probability
@@ -2076,7 +2077,9 @@ void CAttrBag_Model::_Init_PredictHLA()
 		// prepare data structure for GPU
 		const size_t n_classifier = _ClassifierList.size();
 		THaplotype* haplo[n_classifier];
-		int n_haplo[n_classifier*2];
+
+		gpu_num_haplo.resize(n_classifier*2);
+		gpu_geno_buf.resize(n_classifier);
 
 		vector<CAttrBag_Classifier>::iterator p;
 		p = _ClassifierList.begin();
@@ -2085,12 +2088,12 @@ void CAttrBag_Model::_Init_PredictHLA()
 			CHaplotypeList &hl = p->_Haplo;
 			hl.SetHaploAux2();
 			haplo[c_i] = hl.List;
-			n_haplo[c_i*2 + 0] = p->nHaplo();
-			n_haplo[c_i*2 + 1] = p->nSNP();
+			gpu_num_haplo[c_i*2 + 0] = p->nHaplo();
+			gpu_num_haplo[c_i*2 + 1] = p->nSNP();
 		}
 
-		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo, n_haplo,
-			&pGenoBuf);
+		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,
+			&gpu_num_haplo[0]);
 	}
 }
 
