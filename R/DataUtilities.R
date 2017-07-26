@@ -1219,9 +1219,14 @@ hlaCombineAllele <- function(H1, H2)
         assembly = H1$assembly
     )
     rownames(rv$value) <- NULL
+
     if (!is.null(H1$value$prob) & !is.null(H2$value$prob))
     {
         rv$value$prob <- c(H1$value$prob, H2$value$prob)
+    }
+    if (!is.null(H1$value$matching) & !is.null(H2$value$matching))
+    {
+        rv$value$matching <- c(H1$value$matching, H2$value$matching)
     }
 
     if (!is.null(H1$postprob) & !is.null(H2$postprob))

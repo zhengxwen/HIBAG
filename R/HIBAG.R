@@ -576,7 +576,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     n.samp <- dim(snp)[2L]
     n.hla <- length(object$hla.allele)
     if (verbose)
-        cat(sprintf("Number of samples: %d.\n", n.samp))
+        cat(sprintf("Number of samples: %d\n", n.samp))
 
     # parallel units
     if (is.null(cl))
@@ -594,11 +594,11 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
             {
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
                     n.samp, vote_method, verbose, pm)
-                names(rv) <- c("H1", "H2", "prob")
+                names(rv) <- c("H1", "H2", "prob", "matching")
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
                     as.integer(snp), n.samp, vote_method, verbose, pm)
-                names(rv) <- c("H1", "H2", "prob", "postprob")
+                names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
             }
 
             res <- hlaAllele(geno.sampid,
@@ -606,6 +606,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                 H2 = object$hla.allele[rv$H2 + 1L],
                 locus = object$hla.locus, prob = rv$prob,
                 na.rm = FALSE, assembly = assembly)
+            res$value$matching <- rv$matching
             if (!is.null(rv$postprob))
             {
                 res$postprob <- rv$postprob
@@ -622,7 +623,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 
             rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
                 as.integer(snp), n.samp, vote_method, verbose, pm)
-            names(rv) <- c("H1", "H2", "prob", "postprob")
+            names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
 
             res <- rv$postprob
             colnames(res) <- geno.sampid
@@ -681,7 +682,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     {
         if (NA.cnt > 1L) s <- "s" else s <- ""
         warning(sprintf(
-            "No prediction output%s for %d individual%s ",
+            "No prediction output%s of %d individual%s ",
             s, NA.cnt, s),
             "(possibly due to missing SNPs.)")
     }

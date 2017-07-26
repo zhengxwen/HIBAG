@@ -494,7 +494,8 @@ namespace HLA_LIB
 
 		/// predict based on SNP profiles and haplotype list,
 		//    and save posterior probabilities in '_PostProb'
-		void PredictPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		void PredictPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb);
 		/// the best-guess HLA type from '_PostProb'
 		THLAType BestGuess();
 		/// the best-guess HLA type from '_SumPostProb'
@@ -658,25 +659,16 @@ namespace HLA_LIB
 		 *  \param genomat       genotype matrix
 		 *  \param n_samp        the number of samples in genomat
 		 *  \param vote_method   1: average posterior prob, 2: majority voting
-		 *  \param OutH1         the first HLA allele for samples
-		 *  \param OutH2         the second HLA allele for samples
-		 *  \param OutMaxProb    the posterior prob. of the best-guess HLA genotypes
-		 *  \param OutProbArray  the posterior prob. of all HLA genotypes
+		 *  \param OutH1         the first HLA allele per sample
+		 *  \param OutH2         the second HLA allele per sample
+		 *  \param OutMaxProb    the posterior prob. of the best-guess HLA genotypes per sample
+		 *  \param OutProbArray  the posterior prob. of all HLA genotypes per sample
+		 *  \param OutMatching   the sum of prior prob. per sample
 		 *  \param ShowInfo      if true, show information
 		**/
 		void PredictHLA(const int *genomat, int n_samp, int vote_method,
 			int OutH1[], int OutH2[], double OutMaxProb[],
-			double OutProbArray[], bool ShowInfo);
-
-		/** get the posterior probabilities of HLA type
-		 *  \param genomat       genotype matrix
-		 *  \param n_samp        the number of samples in genomat
-		 *  \param vote_method   1: average posterior prob, 2: majority voting
-		 *  \param OutProb       the posterior prob. of all HLA genotypes
-		 *  \param ShowInfo      if true, show information
-		**/
-		void PredictHLA_Prob(const int *genomat, int n_samp, int vote_method,
-			double OutProb[], bool ShowInfo);
+			double OutMatching[], double OutProbArray[], bool ShowInfo);
 
 		/// the number of samples
 		inline int nSamp() const { return _SNPMat.Num_Total_Samp; }
@@ -705,7 +697,8 @@ namespace HLA_LIB
 		CAlg_Prediction _Predict;
 
 		/// prediction HLA types internally
-		void _PredictHLA(const int geno[], const int snp_weight[], int vote_method);
+		void _PredictHLA(const int geno[], const int snp_weight[],
+			int vote_method, double &OutMatching);
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
 		void _GetSNPWeights(int OutSNPWeight[]);
 
@@ -713,8 +706,8 @@ namespace HLA_LIB
 		void _Done_PredictHLA();
 
 	private:
-		vector<int> gpu_num_haplo;
 		vector<TGenotype> gpu_geno_buf;
+		vector<int> gpu_num_haplo;
 	};
 
 
@@ -803,13 +796,18 @@ namespace HLA_LIB
 		double (*build_acc_ib)();
 
 		/// initialize the internal structure for predicting
+		//    nHaplo[(nHLA+3)*nClassifier]:
+		//    nHaplo[0] -- total # of haplotypes
+		//    nHaplo[1] -- # of SNPs
+		//    nHaplo[2] -- LenPerHLA[0..]
+		//    nHaplo[2+nHLA] -- sum(LenPerHLA[0..])
 		void (*predict_init)(int nHLA, int nClassifier,
 			const THaplotype *const pHaplo[], const int nHaplo[]);
 		/// finalize the structure for predicting
 		void (*predict_done)();
 		/// average the posterior probabilities among classifiers for predicting
-		void (*predict_avg_prob)(const int nHaplo[], const TGenotype geno[],
-			const double weight[], double out_prob[]);
+		void (*predict_avg_prob)(const TGenotype geno[], const double weight[],
+			double out_prob[], double out_match[]);
 	};
 
 	/// 

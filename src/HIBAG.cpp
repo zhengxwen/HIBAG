@@ -540,20 +540,22 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
-		rv_ans = PROTECT(NEW_LIST(3));
+		rv_ans = PROTECT(NEW_LIST(4));
 		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
 		SET_ELEMENT(rv_ans, 0, out_H1);
 		SEXP out_H2 = PROTECT(NEW_INTEGER(NumSamp));
 		SET_ELEMENT(rv_ans, 1, out_H2);
 		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
 		SET_ELEMENT(rv_ans, 2, out_Prob);
+		SEXP out_PriorProb = PROTECT(NEW_NUMERIC(NumSamp));
+		SET_ELEMENT(rv_ans, 3, out_PriorProb);
 
 		if (!Rf_isNull(proc_ptr))
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
 			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-				NULL, Rf_asLogical(ShowInfo)==TRUE);
+				REAL(out_PriorProb), NULL, Rf_asLogical(ShowInfo)==TRUE);
 			GPUExtProcPtr = NULL;
 		}
 		catch(...) {
@@ -561,7 +563,7 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 			throw;
 		}
 
-		UNPROTECT(4);
+		UNPROTECT(5);
 	CORE_CATCH
 }
 
@@ -588,7 +590,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
-		rv_ans = PROTECT(NEW_LIST(4));
+		rv_ans = PROTECT(NEW_LIST(5));
 
 		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
 		SET_ELEMENT(rv_ans, 0, out_H1);
@@ -596,16 +598,19 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 		SET_ELEMENT(rv_ans, 1, out_H2);
 		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
 		SET_ELEMENT(rv_ans, 2, out_Prob);
+		SEXP out_PriorProb = PROTECT(NEW_NUMERIC(NumSamp));
+		SET_ELEMENT(rv_ans, 3, out_PriorProb);
 		SEXP out_MatProb = PROTECT(
 			allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp));
-		SET_ELEMENT(rv_ans, 3, out_MatProb);
+		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
 		if (!Rf_isNull(proc_ptr))
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
 			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-				REAL(out_MatProb), Rf_asLogical(ShowInfo)==TRUE);
+				REAL(out_PriorProb), REAL(out_MatProb),
+				Rf_asLogical(ShowInfo)==TRUE);
 			GPUExtProcPtr = NULL;
 		}
 		catch(...) {
@@ -613,7 +618,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 			throw;
 		}
 
-		UNPROTECT(5);
+		UNPROTECT(6);
 	CORE_CATCH
 }
 
