@@ -2057,14 +2057,11 @@ void CAttrBag_Model::_Init_PredictHLA()
 	if (GPUExtProcPtr)
 	{
 		// prepare data structure for GPU
-		const size_t n_hla = nHLA();
 		const size_t n_classifier = _ClassifierList.size();
 		THaplotype* haplo[n_classifier];
 
 		gpu_geno_buf.resize(n_classifier);
-		gpu_num_haplo.resize(n_classifier*(n_hla+3));
-
-		size_t st_haplo = 0;
+		gpu_num_haplo.resize(n_classifier*2);
 		int *pg = &gpu_num_haplo[0];
 
 		vector<CAttrBag_Classifier>::iterator p;
@@ -2076,12 +2073,6 @@ void CAttrBag_Model::_Init_PredictHLA()
 			haplo[c_i] = hl.List;
 			*pg++ = p->nHaplo();
 			*pg++ = p->nSNP();
-			for (size_t i=0; i < n_hla; i++)
-			{
-				*pg++ = st_haplo;
-				st_haplo += hl.LenPerHLA[i];
-			}
-			*pg++ = st_haplo;
 		}
 
 		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,

@@ -796,11 +796,9 @@ namespace HLA_LIB
 		double (*build_acc_ib)();
 
 		/// initialize the internal structure for predicting
-		//    nHaplo[(nHLA+3)*nClassifier]:
+		//    nHaplo[2*nClassifier]:
 		//    nHaplo[0] -- total # of haplotypes
 		//    nHaplo[1] -- # of SNPs
-		//    nHaplo[2] -- LenPerHLA[0..]
-		//    nHaplo[2+nHLA] -- sum(LenPerHLA[0..])
 		void (*predict_init)(int nHLA, int nClassifier,
 			const THaplotype *const pHaplo[], const int nHaplo[]);
 		/// finalize the structure for predicting
