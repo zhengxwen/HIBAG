@@ -217,10 +217,8 @@ namespace HLA_LIB
 		/// the total number of unique HLA alleles
 		inline size_t nHLA() const { return LenPerHLA.size(); }
 
-		/// set the auxiliary variable aux.HLA_allele
+		/// set the auxiliary variable aux.Freq_f32 and aux.HLA_allele
 		void SetHaploAux();
-		/// set the auxiliary variable aux.Freq_f32
-		void SetHaploAux2();
 
 	private:
 		size_t reserve_size;
@@ -786,10 +784,14 @@ namespace HLA_LIB
 	struct TypeGPUExtProc
 	{
 		/// initialize the internal structure for building a model
-		void (*build_acc_init)(int nHLA, THaplotype pHaplo[], int nHaplo,
-			TGenotype pGeno[], int nGeno);
+		void (*build_init)(int nHLA, int nSample);
 		/// finalize the structure for building a model
-		void (*build_acc_done)();
+		void (*build_done)();
+		/// initialize bottstrapping
+		void (*build_set_bootstrap)(const int oob_cnt[]);
+		/// initialize haplotypes and SNPs genotypes
+		void (*build_set_haplo_geno)(const THaplotype haplo[], int n_haplo,
+			const TGenotype geno[], int n_snp);
 		/// calculate the out-of-bag accuracy (the number of correct alleles)
 		int (*build_acc_oob)();
 		/// calculate the in-bag log likelihood

@@ -480,18 +480,6 @@ void CHaplotypeList::SetHaploAux()
 	for (size_t i=0; i < n; i++)
 	{
 		for (size_t m=*s++; m > 0; m--, p++)
-			p->aux.a2.HLA_allele = i;
-	}
-}
-
-void CHaplotypeList::SetHaploAux2()
-{
-	THaplotype *p = List;
-	size_t *s = &LenPerHLA[0];
-	size_t n = LenPerHLA.size();
-	for (size_t i=0; i < n; i++)
-	{
-		for (size_t m=*s++; m > 0; m--, p++)
 		{
 			p->aux.a2.Freq_f32 = p->Freq;
 			p->aux.a2.HLA_allele = i;
@@ -1550,7 +1538,12 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 void CVariableSelection::_Init_EvalAcc(CHaplotypeList &Haplo,
 	CGenotypeList &Geno)
 {
-
+	if (GPUExtProcPtr)
+	{
+		Haplo.SetHaploAux();
+		(*GPUExtProcPtr->build_set_haplo_geno)(Haplo.List, Haplo.Num_Haplo,
+			&Geno.List[0], Haplo.Num_SNP);
+	}
 }
 
 void CVariableSelection::_Done_EvalAcc()
@@ -1568,14 +1561,18 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 
 	int CorrectCnt=0;
-	vector<TGenotype>::const_iterator p = _GenoList.List.begin();
-
-	for (; p != _GenoList.List.end(); p++)
+	if (GPUExtProcPtr)
 	{
-		if (p->BootstrapCount <= 0)
+		CorrectCnt = (*GPUExtProcPtr->build_acc_oob)();
+	} else {
+		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
+		for (; p != _GenoList.List.end(); p++)
 		{
-			CorrectCnt += CHLATypeList::Compare(
-				_Predict._PredBestGuess(Haplo, *p), p->aux_hla_type);
+			if (p->BootstrapCount <= 0)
+			{
+				THLAType g = _Predict._PredBestGuess(Haplo, *p);
+				CorrectCnt += CHLATypeList::Compare(g, p->aux_hla_type);
+			}
 		}
 	}
 
@@ -1595,22 +1592,27 @@ double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
 
-	vector<TGenotype>::const_iterator p = _GenoList.List.begin();
 	double LogLik = 0;
-
-	for (; p != _GenoList.List.end(); p++)
+	if (GPUExtProcPtr)
 	{
-		if (p->BootstrapCount > 0)
+		LogLik = (*GPUExtProcPtr->build_acc_ib)();
+	} else {
+		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
+		for (; p != _GenoList.List.end(); p++)
 		{
-			LogLik += p->BootstrapCount *
-				log(_Predict._PredPostProb(Haplo, *p, p->aux_hla_type));
+			if (p->BootstrapCount > 0)
+			{
+				LogLik += p->BootstrapCount *
+					log(_Predict._PredPostProb(Haplo, *p, p->aux_hla_type));
+			}
 		}
+		LogLik *= -2;
 	}
 
 #if (HIBAG_TIMING == 1)
 	_inc_timing();
 #endif
-	return -2 * LogLik;
+	return LogLik;
 }
 
 void CVariableSelection::Search(CBaseSampling &VarSampling,
@@ -1903,6 +1905,9 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	clock_t _start_time = clock();
 #endif
 
+	if (GPUExtProcPtr)
+		(*GPUExtProcPtr->build_init)(nHLA(), nSamp());
+
 	CSamplingWithoutReplace VarSampling;
 
 	for (int k=0; k < nclassifier; k++)
@@ -1910,6 +1915,9 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		VarSampling.Init(nSNP());
 
 		CAttrBag_Classifier *I = NewClassifierBootstrap();
+		if (GPUExtProcPtr)
+			(*GPUExtProcPtr->build_set_bootstrap)(&(I->BootstrapCount()[0]));
+
 		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
 		if (verbose)
 		{
@@ -1921,6 +1929,9 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 				k+1, s.c_str(), I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
 		}
 	}
+
+	if (GPUExtProcPtr)
+		(*GPUExtProcPtr->build_done)();
 
 #if (HIBAG_TIMING > 0)
 	Rprintf("It took %0.2f seconds, in %0.2f%%.\n",
@@ -2069,7 +2080,7 @@ void CAttrBag_Model::_Init_PredictHLA()
 		for (size_t c_i=0; p != _ClassifierList.end(); p++, c_i++)
 		{
 			CHaplotypeList &hl = p->_Haplo;
-			hl.SetHaploAux2();
+			hl.SetHaploAux();
 			haplo[c_i] = hl.List;
 			*pg++ = p->nHaplo();
 			*pg++ = p->nSNP();

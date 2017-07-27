@@ -508,12 +508,22 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
 	CORE_TRY
 		int midx = Rf_asInteger(model);
 		_Check_HIBAG_Model(midx);
-
 		GetRNGstate();
-		_HIBAG_MODELS_[midx]->BuildClassifiers(
-			Rf_asInteger(nclassifier), Rf_asInteger(mtry),
-			Rf_asLogical(prune) == TRUE, Rf_asLogical(verbose) == TRUE,
-			Rf_asLogical(verbose_detail) == TRUE);
+
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		try {
+			_HIBAG_MODELS_[midx]->BuildClassifiers(
+				Rf_asInteger(nclassifier), Rf_asInteger(mtry),
+				Rf_asLogical(prune) == TRUE, Rf_asLogical(verbose) == TRUE,
+				Rf_asLogical(verbose_detail) == TRUE);
+			GPUExtProcPtr = NULL;
+		}
+		catch(...) {
+			GPUExtProcPtr = NULL;
+			throw;
+		}
+
 		PutRNGstate();
 	CORE_CATCH
 }
