@@ -178,10 +178,11 @@ bool CdProgression::Forward(long step, bool Show)
 
 void CdProgression::ShowProgress()
 {
-	time_t tm; time(&tm);
-	string s(ctime(&tm));
-	s.erase(s.size()-1, 1);
-	Rprintf("%s (%s)\t%d%%\n", Info.c_str(), s.c_str(),
+	time_t rawtime;
+	time(&rawtime);
+	struct tm *p = localtime(&rawtime);
+	Rprintf("%s (%04d-%02d-%02d %02d:%02d:%02d)\t%d%%\n", Info.c_str(),
+		p->tm_year+1900, p->tm_mon+1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
 		int(fPercent*StepPercent));
 }
 
@@ -1927,12 +1928,13 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
 		if (verbose)
 		{
-			time_t tm; time(&tm);
-			string s(ctime(&tm));
-			s.erase(s.size()-1, 1);
+			time_t rawtime;
+			time(&rawtime);
+			struct tm *p = localtime(&rawtime);
 			Rprintf(
-				"[%d] %s, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
-				k+1, s.c_str(), I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
+				"[%d] %04d-%02d-%02d %02d:%02d:%02d, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
+				k+1, p->tm_year+1900, p->tm_mon+1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
+				I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
 		}
 	}
 
