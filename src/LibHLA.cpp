@@ -150,8 +150,19 @@ TypeGPUExtProc *HLA_LIB::GPUExtProcPtr = NULL;;
 
 
 // ========================================================================= //
-
 // CdProgression
+
+static char date_buffer[256];
+
+inline static const char *date_text()
+{
+	time_t rawtime;
+	time(&rawtime);
+	struct tm *p = localtime(&rawtime);
+	sprintf(date_buffer, "%04d-%02d-%02d %02d:%02d:%02d", p->tm_year+1900,
+		p->tm_mon+1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+	return date_buffer;
+}
 
 static const clock_t TimeInterval = 15*CLOCKS_PER_SEC;
 
@@ -189,11 +200,7 @@ bool CdProgression::Forward(long step, bool Show)
 
 void CdProgression::ShowProgress()
 {
-	time_t rawtime;
-	time(&rawtime);
-	struct tm *p = localtime(&rawtime);
-	Rprintf("%s (%04d-%02d-%02d %02d:%02d:%02d)\t%d%%\n", Info.c_str(),
-		p->tm_year+1900, p->tm_mon+1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
+	Rprintf("%s (%s)\t%d%%\n", Info.c_str(), date_text(),
 		int(fPercent*StepPercent));
 }
 
@@ -1896,6 +1903,9 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	HIBAG_TIMING(TM_TOTAL)
 #endif
 
+	if (verbose)
+		Rprintf("[-] %s\n", date_text());
+
 	if (GPUExtProcPtr)
 		(*GPUExtProcPtr->build_init)(nHLA(), nSamp());
 
@@ -1912,13 +1922,10 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
 		if (verbose)
 		{
-			time_t rawtime;
-			time(&rawtime);
-			struct tm *p = localtime(&rawtime);
 			Rprintf(
-				"[%d] %04d-%02d-%02d %02d:%02d:%02d, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
-				k+1, p->tm_year+1900, p->tm_mon+1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
-				I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
+				"[%d] %s, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
+				k+1, date_text(), I->OutOfBag_Accuracy()*100, I->nSNP(),
+				I->nHaplo());
 		}
 	}
 
