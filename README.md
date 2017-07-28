@@ -27,7 +27,9 @@ Release Version: 1.12.0
 
 ### Changes in Bioconductor Version (since v1.14.0):
 
-* 
+* revise the kernel to allow for the GPU extension
+
+* develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
 
 
 ### Changes in Bioconductor Version (since v1.3.0):
@@ -85,6 +87,11 @@ curl -L https://github.com/zhengxwen/HIBAG/tarball/master/ -o HIBAG_latest.tar.g
 R CMD INSTALL HIBAG_latest.tar.gz
 ```
 
+
+## Acceleration
+
+### CPU with Intel Intrinsics
+
 * Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
 You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
 
@@ -109,6 +116,16 @@ HIBAG (HLA Genotype Imputation with Attribute Bagging)
 Kernel Version: v1.4
 Supported by Streaming SIMD Extensions (SSE2 + hardware POPCNT)
 ```
+
+### GPU with OpenCL
+
+* Install [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu) from Github:
+```R
+library("devtools")
+install_github("zhengxwen/HIBAG.gpu")
+```
+Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and prediction.
+
 
 
 ## Archive
