@@ -28,20 +28,53 @@
 
 #include "LibHLA.h"
 
-#define HIBAG_TIMING	0
+#define HIBAG_ENABLE_TIMING
 // 0: No timing
 // 1: Spends ~83% of time on 'CVariableSelection::_OutOfBagAccuracy'
 //    and 'CVariableSelection::_InBagLogLik', using hardware popcnt
 // 2: ~14% of time on CAlg_EM::ExpectationMaximization
 // 3: ~0.5% of time on CAlg_EM::PrepareHaplotypes
 
-#if (HIBAG_TIMING > 0)
+#ifdef HIBAG_ENABLE_TIMING
 #   include <time.h>
 #endif
 
 
 using namespace std;
 using namespace HLA_LIB;
+
+
+
+// ========================================================================= //
+
+#ifdef HIBAG_ENABLE_TIMING
+
+static clock_t timing_array[5];
+
+template<size_t I> struct TTiming
+{
+	clock_t start;
+	inline TTiming() { start = clock(); }
+	inline ~TTiming() { Stop(); }
+	inline void Stop() { timing_array[I] += clock() - start; }
+};
+
+#define HIBAG_TIMING(i)    TTiming<i> tm;
+#define TM_TOTAL      0
+#define TM_ACC_OOB    1
+#define TM_ACC_IB     2
+#define TM_PRE_HAPLO  3
+#define TM_EM_ALG     4
+
+// _OutOfBagAccuracy: 41.00%
+// _InBagLogLik: 54.58%
+//  PrepareHaplotypes: 0.34%
+//  ExpectationMaximization: 3.30%
+
+#else
+#   define HIBAG_TIMING(i)
+#endif
+
 
 
 // ========================================================================= //
@@ -113,28 +146,6 @@ static CInit _Init;
 
 // GPU extensible component
 TypeGPUExtProc *HLA_LIB::GPUExtProcPtr = NULL;;
-
-
-
-// ========================================================================= //
-
-#if (HIBAG_TIMING > 0)
-
-static clock_t _timing_ = 0;
-static clock_t _timing_last_point;
-
-static inline void _put_timing()
-{
-	_timing_last_point = clock();
-}
-static inline void _inc_timing()
-{
-	clock_t t = clock();
-	_timing_ += t - _timing_last_point;
-	_timing_last_point = t;
-}
-
-#endif
 
 
 
@@ -949,10 +960,7 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
 	CHaplotypeList &NextHaplo)
 {
-#if (HIBAG_TIMING == 3)
-	_put_timing();
-#endif
-
+	HIBAG_TIMING(TM_PRE_HAPLO)
 	HIBAG_CHECKING(GenoList.nSamp() != HLAList.nSamp(),
 		"CAlg_EM::PrepareHaplotypes, GenoList and HLAList should have the same number of samples.");
 
@@ -1051,10 +1059,6 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 			}
 		}
 	}
-
-#if (HIBAG_TIMING == 3)
-	_inc_timing();
-#endif
 }
 
 bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
@@ -1112,9 +1116,7 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 
 void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 {
-#if (HIBAG_TIMING == 2)
-	_put_timing();
-#endif
+	HIBAG_TIMING(TM_EM_ALG)
 
 	// the converage tolerance
 	double ConvTol = 0, LogLik = -1e+30;
@@ -1176,10 +1178,6 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 			if (ConvTol < 0) ConvTol = 0;
 		}
 	}
-
-#if (HIBAG_TIMING == 2)
-	_inc_timing();
-#endif
 }
 
 
@@ -1560,10 +1558,7 @@ void CVariableSelection::_Done_EvalAcc()
 
 int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
-#if (HIBAG_TIMING == 1)
-	_put_timing();
-#endif
-
+	HIBAG_TIMING(TM_ACC_OOB)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 
@@ -1583,19 +1578,12 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 		}
 	}
 
-#if (HIBAG_TIMING == 1)
-	_inc_timing();
-#endif
-
 	return CorrectCnt;
 }
 
 double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 {
-#if (HIBAG_TIMING == 1)
-	_put_timing();
-#endif
-
+	HIBAG_TIMING(TM_ACC_IB)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
 
@@ -1615,10 +1603,6 @@ double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 		}
 		LogLik *= -2;
 	}
-
-#if (HIBAG_TIMING == 1)
-	_inc_timing();
-#endif
 	return LogLik;
 }
 
@@ -1907,9 +1891,9 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	bool verbose, bool verbose_detail)
 {
-#if (HIBAG_TIMING > 0)
-	_timing_ = 0;
-	clock_t _start_time = clock();
+#ifdef HIBAG_ENABLE_TIMING
+	memset(timing_array, 0, sizeof(timing_array));
+	HIBAG_TIMING(TM_TOTAL)
 #endif
 
 	if (GPUExtProcPtr)
@@ -1941,10 +1925,19 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	if (GPUExtProcPtr)
 		(*GPUExtProcPtr->build_done)();
 
-#if (HIBAG_TIMING > 0)
-	Rprintf("It took %0.2f seconds, in %0.2f%%.\n",
-		((double)_timing_)/CLOCKS_PER_SEC,
-		((double)_timing_) / (clock() - _start_time) * 100.0);
+#ifdef HIBAG_ENABLE_TIMING
+	tm.Stop();
+	Rprintf("It took %0.2f seconds in total:\n"
+			"    _OutOfBagAccuracy: %0.2f%%\n"
+			"    _InBagLogLik: %0.2f%%\n"
+			"    PrepareHaplotypes: %0.2f%%\n"
+			"    ExpectationMaximization: %0.2f%%\n",
+		((double)timing_array[TM_TOTAL]) / CLOCKS_PER_SEC,
+		100.0 * timing_array[TM_ACC_OOB] / timing_array[TM_TOTAL],
+		100.0 * timing_array[TM_ACC_IB] / timing_array[TM_TOTAL],
+		100.0 * timing_array[TM_PRE_HAPLO] / timing_array[TM_TOTAL],
+		100.0 * timing_array[TM_EM_ALG] / timing_array[TM_TOTAL]
+	);
 #endif
 }
 
