@@ -1497,6 +1497,12 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 		TGenotype &g = _GenoList.List[i];
 		g.BootstrapCount = _BootstrapCnt[i];
 		g.aux_hla_type = hlaList.List[i];
+		if (g.aux_hla_type.Allele2 < g.aux_hla_type.Allele1)
+		{
+			int w = g.aux_hla_type.Allele2;
+			g.aux_hla_type.Allele2 = g.aux_hla_type.Allele1;
+			g.aux_hla_type.Allele1 = w;
+		}
 	}
 	_GenoList.Num_SNP = 0;
 
