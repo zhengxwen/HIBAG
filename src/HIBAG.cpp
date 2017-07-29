@@ -1079,6 +1079,15 @@ SEXP HIBAG_Kernel_Version()
 }
 
 
+/**
+ *  Get the version and SSE information
+**/
+SEXP HIBAG_Clear_GPU()
+{
+	GPUExtProcPtr = NULL;
+	return R_NilValue;
+}
+
 
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
@@ -1109,6 +1118,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_SortAlleleStr, 1),
 		CALL(HIBAG_SeqMerge, 1),
 		CALL(HIBAG_SeqRmDot, 2),
+		CALL(HIBAG_Clear_GPU, 0),
 		{ NULL, NULL, 0 }
 	};
 

@@ -1134,7 +1134,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 		// save old values
 		// old log likelihood
 		double Old_LogLik = LogLik;
-		// old haplotype frequencies
+		// save old haplotype frequencies
 		NextHaplo.SaveClearFrequency();
 
 		// for-loop each sample
@@ -1160,7 +1160,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 				}
 			}
 			LogLik += s->BootstrapCount * log(psum);
-			psum = double(s->BootstrapCount) / psum;
+			psum = s->BootstrapCount / psum;
 
 			// update
 			for (p = s->PairList.begin(); p != s->PairList.end(); p++)

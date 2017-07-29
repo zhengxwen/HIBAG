@@ -27,7 +27,7 @@ Release Version: 1.12.0
 
 ### Changes in Bioconductor Version (since v1.14.0):
 
-* revise the kernel to allow for the GPU extension
+* revise the kernel to allow for GPU extension
 
 * develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
 
