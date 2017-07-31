@@ -1726,6 +1726,16 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
             names(attr(z, "dimnames")) <- "Posterior probability:"
             print(z)
         }
+
+        p <- hla$value$matching
+        if (!is.null(p))
+        {
+            cat("Matching statistic:\n")
+            z <- summary(p)
+            v <- c(unname(z), sd(p, na.rm=TRUE))
+            names(v) <- c(names(z), "SD")
+            print(v)
+        }
     }
 
     # return

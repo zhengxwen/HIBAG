@@ -320,6 +320,11 @@ namespace HLA_LIB
 		/// remove the last SNP
 		void ReduceSNP();
 
+		/// set all SNPs to missing
+		void SetAllMissing();
+		/// set missing SNP at a specified position
+		void SetMissing(int IdxSNP);
+
 		/// return the total number of samples
 		inline int nSamp() const { return List.size(); }
 

@@ -645,7 +645,11 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 			*p2 |= (P2[i1] << i);
 			*pM |= (PM[i1] << i);
 		}
+		pM ++;
 	}
+
+	for (; pM < PackedMissing + sizeof(PackedMissing); )
+		*pM++ = 0;
 }
 
 int TGenotype::HammingDistance(size_t Length,
@@ -702,15 +706,9 @@ inline int TGenotype::_HamDist(size_t Length,
 		__m128i mask1 = _mm_xor_si128(H, S2);
 		__m128i mask2 = _mm_shuffle_epi32(mask1, _MM_SHUFFLE(1,0,3,2));
 
+		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
 		__m128i M = _mm_set1_epi64x(*sM++);
 		__m128i MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
-
-		if (n < UTYPE_BIT_NUM)
-		{
-			// MASK &= (~(UTYPE(-1) << n));
-			__m128i ZFF = _mm_cmpeq_epi8(MASK, MASK);  // all ones
-			MASK = _mm_andnot_si128(_mm_slli_epi64(ZFF, n), MASK);
-		}
 
 		// val = '(H1 ^ S1) & MASK' / '(H2 ^ S2) & MASK'
 		__m128i val = _mm_and_si128(_mm_xor_si128(H, S1), MASK);
@@ -758,19 +756,10 @@ inline int TGenotype::_HamDist(size_t Length,
 		UTYPE H2 = *h2++;
 		UTYPE S1 = *s1++;
 		UTYPE S2 = *s2++;
-		UTYPE M  = *sM++;  // missing value
 
+		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
+		UTYPE M  = *sM++;  // missing value
 		UTYPE MASK = ((H1 ^ S2) | (H2 ^ S1)) & M;
-		if (n < UTYPE_BIT_NUM)
-		{
-		#ifdef WORDS_BIGENDIAN
-			UINT8 BYTE_MASK = ~(UINT8(-1) << (n & 0x07));
-			size_t r = (UTYPE_BIT_NUM - n - 1) & ~0x07;
-			MASK &= (UTYPE(-1) << (r+8)) | (UTYPE(BYTE_MASK) << r);
-		#else
-			MASK &= (~(UTYPE(-1) << n));
-		#endif
-		}
 
 		// popcount for '(H1 ^ S1) & MASK'
 		// suggested by
@@ -853,7 +842,6 @@ void CGenotypeList::AddSNP(int IdxSNP, const CSNPGenoMatrix &SNPMat)
 	{
 		int g = *pG;
 		pG += SNPMat.Num_Total_SNP;
-		if (g<0 || g>2) g = 3;
 		List[i]._SetSNP(Num_SNP, g);
 	}
 	Num_SNP ++;
@@ -864,6 +852,28 @@ void CGenotypeList::ReduceSNP()
 	HIBAG_CHECKING(Num_SNP <= 0,
 		"CGenotypeList::ReduceSNP, there is no SNP marker.");
 	Num_SNP --;
+}
+
+void CGenotypeList::SetAllMissing()
+{
+	size_t n = List.size();
+	for (TGenotype *p = &List[0]; n > 0; n--)
+	{
+		memset(p->PackedMissing, 0, sizeof(p->PackedMissing));
+		p ++;
+	}
+}
+
+void CGenotypeList::SetMissing(int idx)
+{
+	size_t i = idx >> 3, r = idx & 0x07;
+	UINT8 CLEAR = ~(UINT8(0x01) << r);
+	size_t n = List.size();
+	for (TGenotype *p = &List[0]; n > 0; n--)
+	{
+		p->PackedMissing[i] &= CLEAR;
+		p ++;
+	}
 }
 
 
@@ -1511,6 +1521,7 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 		}
 	}
 	_GenoList.Num_SNP = 0;
+	_GenoList.SetAllMissing();
 
 	_Predict.InitPrediction(nHLA());
 }
@@ -1746,7 +1757,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			// show ...
 			if (verbose_detail)
 			{
-				Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
+				 Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
 					OutSNPIndex.size(), OutSNPIndex.back()+1,
 					Global_Min_Loss,
 					double(Global_Max_OutOfBagAcc) / NumOOB * 50,
@@ -1755,6 +1766,8 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 		} else {
 			// only keep "n_tmp - m" predictors
 			VarSampling.RemoveSelection();
+			// remove the last SNP in the SNP genotype list (set it to missing)
+			_GenoList.SetMissing(_GenoList.Num_SNP);
 		}
 	}
 
@@ -1935,10 +1948,10 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 #ifdef HIBAG_ENABLE_TIMING
 	tm.Stop();
 	Rprintf("It took %0.2f seconds in total:\n"
-			"    _OutOfBagAccuracy: %0.2f%%\n"
-			"    _InBagLogLik: %0.2f%%\n"
-			"    PrepareHaplotypes: %0.2f%%\n"
-			"    ExpectationMaximization: %0.2f%%\n",
+			"    _OutOfBagAccuracy(): %0.2f%%\n"
+			"    _InBagLogLik(): %0.2f%%\n"
+			"    PrepareHaplotypes(): %0.2f%%\n"
+			"    ExpectationMaximization(): %0.2f%%\n",
 		((double)timing_array[TM_TOTAL]) / CLOCKS_PER_SEC,
 		100.0 * timing_array[TM_ACC_OOB] / timing_array[TM_TOTAL],
 		100.0 * timing_array[TM_ACC_IB] / timing_array[TM_TOTAL],
