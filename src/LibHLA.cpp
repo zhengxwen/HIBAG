@@ -648,7 +648,7 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 		pM ++;
 	}
 
-	for (; pM < PackedMissing + sizeof(PackedMissing); )
+	for (UINT8 *pEnd=PackedMissing+sizeof(PackedMissing); pM < pEnd; )
 		*pM++ = 0;
 }
 
@@ -857,9 +857,17 @@ void CGenotypeList::ReduceSNP()
 void CGenotypeList::SetAllMissing()
 {
 	size_t n = List.size();
+#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+	// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
+	__m128i zero = _mm_setzero_si128();
+#endif
 	for (TGenotype *p = &List[0]; n > 0; n--)
 	{
+	#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+		_mm_storeu_si128((__m128i*)p->PackedMissing, zero);
+	#else
 		memset(p->PackedMissing, 0, sizeof(p->PackedMissing));
+	#endif
 		p ++;
 	}
 }
