@@ -1731,10 +1731,7 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
         if (!is.null(p))
         {
             cat("Matching statistic:\n")
-            z <- summary(p)
-            v <- c(unname(z), sd(p, na.rm=TRUE))
-            names(v) <- c(names(z), "SD")
-            print(v)
+            print(summary(p))
         }
     }
 

@@ -168,7 +168,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
         verbose, verbose.detail, NULL)
 
     # output
-    rv <- list(n.samp = n.samp, n.snp = n.snp, sample.id = samp.id,
+    mod <- list(n.samp = n.samp, n.snp = n.snp, sample.id = samp.id,
         snp.id = tmp.snp.id, snp.position = tmp.snp.position,
         snp.allele = tmp.snp.allele,
         snp.allele.freq = 0.5*rowMeans(snp.geno, na.rm=TRUE),
@@ -177,10 +177,21 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
         assembly = as.character(snp$assembly)[1L],
         model = ABmodel,
         appendix = list())
-    if (is.na(rv$assembly)) rv$assembly <- "unknown"
+    if (is.na(mod$assembly)) mod$assembly <- "unknown"
 
-    class(rv) <- "hlaAttrBagClass"
-    rv
+    class(mod) <- "hlaAttrBagClass"
+
+
+    ###################################################################
+    # calculate matching statistic
+    if (verbose)
+        cat("Calculating matching statistic:\n")
+    pd <- hlaPredict(mod, snp.geno, verbose=FALSE)
+    mod$matching <- pd$value$matching
+    if (verbose)
+        print(summary(mod$matching))
+
+    mod
 }
 
 
@@ -869,6 +880,7 @@ hlaModelToObj <- function(model)
         hla.allele = model$hla.allele, hla.freq = model$hla.freq,
         assembly = model$assembly,
         classifiers = res,
+        matching = model$matching,
         appendix <- model$appendix)
     class(rv) <- "hlaAttrBagObj"
     rv
@@ -913,6 +925,7 @@ hlaCombineModelObj <- function(obj1, obj2)
         hla.freq = (obj1$hla.freq + obj2$hla.freq)*0.5,
         assembly = obj1$assembly,
         classifiers = c(obj1$classifiers, obj2$classifiers),
+        matching = c(obj1$matching, obj2$matching),
         appendix = appendix)
     class(rv) <- "hlaAttrBagObj"
     rv
@@ -971,6 +984,7 @@ hlaModelFromObj <- function(obj)
         hla.freq = obj$hla.freq,
         assembly = as.character(obj$assembly)[1L],
         model = ABmodel,
+        matching = obj$matching,
         appendix = obj$appendix)
     if (is.na(rv$assembly)) rv$assembly <- "unknown"
 
@@ -1040,6 +1054,13 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
             sprintf("%0.2f%%\n        (sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%, median: %0.2f%%)\n",
             mean(outofbag.acc), sd(outofbag.acc), min(outofbag.acc),
             max(outofbag.acc), median(outofbag.acc)))
+
+        p <- obj$matching
+        if (!is.null(p))
+        {
+            cat("Matching statistic:\n")
+            print(summary(p))
+        }
 
         if (is.null(obj$assembly))
             cat("Genome assembly: unknown\n")
@@ -1324,8 +1345,8 @@ plot.hlaAttrBagObj <- function(x, xlab=NULL, ylab=NULL,
             assembly <- x$assembly
     }
     info <- hlaLociInfo(assembly)
-    pos.start <- info[x$hla.locus, "start"]/1000
-    pos.end <- info[x$hla.locus, "end"]/1000
+    pos.start <- info[x$hla.locus, "start"] / 1000
+    pos.end <- info[x$hla.locus, "end"] / 1000
 
     # summary of the attribute bagging model
     desp <- summary(x, show=FALSE)
