@@ -29,11 +29,6 @@
 #include "LibHLA.h"
 
 #define HIBAG_ENABLE_TIMING
-// 0: No timing
-// 1: Spends ~83% of time on 'CVariableSelection::_OutOfBagAccuracy'
-//    and 'CVariableSelection::_InBagLogLik', using hardware popcnt
-// 2: ~14% of time on CAlg_EM::ExpectationMaximization
-// 3: ~0.5% of time on CAlg_EM::PrepareHaplotypes
 
 #ifdef HIBAG_ENABLE_TIMING
 #   include <time.h>
@@ -1956,15 +1951,19 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 #ifdef HIBAG_ENABLE_TIMING
 	tm.Stop();
 	Rprintf("It took %0.2f seconds in total:\n"
-			"    _OutOfBagAccuracy(): %0.2f%%\n"
-			"    _InBagLogLik(): %0.2f%%\n"
-			"    PrepareHaplotypes(): %0.2f%%\n"
-			"    ExpectationMaximization(): %0.2f%%\n",
+			"    _OutOfBagAccuracy(): %0.2f%%, %0.2fs\n"
+			"    _InBagLogLik(): %0.2f%%, %0.2fs\n"
+			"    PrepareHaplotypes(): %0.2f%%, %0.2fs\n"
+			"    ExpectationMaximization(): %0.2f%%, %0.2fs\n",
 		((double)timing_array[TM_TOTAL]) / CLOCKS_PER_SEC,
 		100.0 * timing_array[TM_ACC_OOB] / timing_array[TM_TOTAL],
+		((double)timing_array[TM_ACC_OOB]) / CLOCKS_PER_SEC,
 		100.0 * timing_array[TM_ACC_IB] / timing_array[TM_TOTAL],
+		((double)timing_array[TM_ACC_IB]) / CLOCKS_PER_SEC,
 		100.0 * timing_array[TM_PRE_HAPLO] / timing_array[TM_TOTAL],
-		100.0 * timing_array[TM_EM_ALG] / timing_array[TM_TOTAL]
+		((double)timing_array[TM_PRE_HAPLO]) / CLOCKS_PER_SEC,
+		100.0 * timing_array[TM_EM_ALG] / timing_array[TM_TOTAL],
+		((double)timing_array[TM_EM_ALG]) / CLOCKS_PER_SEC
 	);
 #endif
 }
