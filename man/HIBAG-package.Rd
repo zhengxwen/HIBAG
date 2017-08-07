@@ -12,7 +12,7 @@ method.
         Package: \tab HIBAG\cr
         Type:    \tab R/Bioconductor Package\cr
         License: \tab GPL version 3\cr
-        Kernel Version: \tab v1.3\cr
+        Kernel Version: \tab v1.4\cr
     }
 
     HIBAG is a state of the art software package for imputing HLA types using

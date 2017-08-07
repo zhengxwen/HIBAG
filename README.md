@@ -27,13 +27,14 @@ Release Version: 1.12.0
 
 ### Changes in Bioconductor Version (since v1.14.0):
 
-* revise the kernel to allow for GPU extension
-
+* Kernel Version: v1.4
+* modify the kernel to support the GPU extension
 * develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
 
 
 ### Changes in Bioconductor Version (since v1.3.0):
 
+* Kernel Version: v1.3
 * optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
 * hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
 * SSE2 popcount implementation without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4

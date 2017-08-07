@@ -1,9 +1,7 @@
 CHANGES IN VERSION 1.13.0-1.13.1
 -------------------------
 
-    o the version number was bumped for the Bioconductor release version 3.5
-
-    o revise the kernel to allow for GPU extension
+    o modify the kernel to support the GPU extension
 
 
 CHANGES IN VERSION 1.12.0
