@@ -28,6 +28,16 @@
 # Attribute Bagging method -- HIBAG algorithm
 #
 
+printMatching <- function(p)
+{
+    w <- summary(p)
+    class(w) <- "table"
+    w <- c(w[1L], "1% Qu."=quantile(p, 0.01, na.rm=TRUE, names=FALSE),
+        w[2L], w[3L], "SD"=sd(p, na.rm=TRUE), w[4L:length(w)])
+    print(w)
+}
+
+
 ##########################################################################
 # To fit an attribute bagging model for predicting
 #
@@ -188,8 +198,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
         cat("Calculating matching statistic:\n")
     pd <- hlaPredict(mod, snp.geno, verbose=FALSE)
     mod$matching <- pd$value$matching
-    if (verbose)
-        print(summary(mod$matching))
+    if (verbose) printMatching(mod$matching)
 
     mod
 }
@@ -1059,7 +1068,7 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
         if (!is.null(p))
         {
             cat("Matching statistic:\n")
-            print(summary(p))
+            printMatching(p)
         }
 
         if (is.null(obj$assembly))

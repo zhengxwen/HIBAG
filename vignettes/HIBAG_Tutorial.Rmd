@@ -39,6 +39,10 @@ Here we introduce a new prediction method for **H**LA **I**mputation using attri
 
 # Examples
 
+```{r echo=FALSE}
+options(width=110)
+```
+
 ```{r}
 library(HIBAG)
 ```
@@ -235,11 +239,22 @@ summary(model)
 
 # validation
 pred <- predict(model, test.geno)
+summary(pred)
 
 # compare
 comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0)
 comp$overall
+```
+
+### Evaluation in Figures
+```{r}
+# violin plot
+library(ggplot2)
+dat <- data.frame( matching=c(model$matching, pred$value$matching),
+    dataset=c(rep("training", length(model$matching)), rep("test", length(pred$value$matching))) )
+ggplot(dat, aes(x=dataset, y=matching)) +  geom_violin() +
+    geom_jitter(position=position_jitter(0.2)) + ylab("matching distribution")
 ```
 
 ### Report in Text
@@ -326,7 +341,6 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 | genotype  | three categories: [-/-], [-/h], [h/h] |
 
 ```{r echo=FALSE}
-options(width=110)
 fn <- system.file("doc", "case_control.txt", package="HIBAG")
 ```
 

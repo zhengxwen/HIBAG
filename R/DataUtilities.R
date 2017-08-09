@@ -1255,8 +1255,8 @@ hlaCombineAllele <- function(H1, H2)
 #
 
 hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
-    call.threshold=NaN, max.resolution="", output.individual=FALSE,
-    verbose=TRUE)
+    call.threshold=NaN, match.threshold=NaN, max.resolution="",
+    output.individual=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
@@ -1267,8 +1267,10 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
         inherits(allele.limit, "hlaAttrBagObj"))
     stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit",
         "8-digit", "allele", "protein", "2", "4", "6", "8", "full", ""))
-    stopifnot(is.logical(output.individual))
-    stopifnot(is.logical(verbose))
+    stopifnot(is.numeric(call.threshold), length(call.threshold)==1L)
+    stopifnot(is.numeric(match.threshold), length(match.threshold)==1L)
+    stopifnot(is.logical(output.individual), length(output.individual)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
 
     # get the common samples
     samp <- intersect(TrueHLA$value$sample.id, PredHLA$value$sample.id)
@@ -1311,9 +1313,28 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     if (is.finite(call.threshold))
     {
         prob <- PredHLA$value$prob
-        if (!is.null(prob)) prob <- prob[flag]
+        if (is.null(prob))
+        {
+            warning("No probabilities in predicted HLA genotypes.",
+                call.=FALSE, immediate.=TRUE)
+        } else
+            prob <- prob[flag]
     } else {
         prob <- NULL
+    }
+
+    # match.threshold
+    if (is.finite(match.threshold))
+    {
+        matching <- PredHLA$value$matching
+        if (is.null(matching))
+        {
+            warning("No matching information in predicted HLA genotypes.",
+                call.=FALSE, immediate.=TRUE)
+        } else
+            matching <- matching[flag]
+    } else {
+        matching <- NULL
     }
 
     # allele limitation
@@ -1360,6 +1381,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     ps1 <- ps1[flag]; ps2 <- ps2[flag]
     samp.id <- samp.id[flag]
     if (!is.null(prob)) prob <- prob[flag]
+    if (!is.null(matching)) matching <- matching[flag]
 
     # init ...
     cnt.ind <- 0L; cnt.haplo <- 0L; cnt.call <- 0L
@@ -1374,8 +1396,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     WrongTab <- NULL
 
     # for PredNum
-    fn <- function(x, LT)
-        { if (x %in% LT) x else "..." }
+    fn <- function(x, LT) { if (x %in% LT) x else "..." }
 
     acc.array <- rep(NaN, n)
     ind.truehla <- character(n)
@@ -1393,8 +1414,14 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
             if (is.null(prob))
                 flag <- TRUE
             else
-                flag <- (prob[i] >= call.threshold)
-            if (flag)
+                flag <- prob[i] >= call.threshold
+            # matching statistic cut-off
+            if (is.null(matching))
+                flag1 <- TRUE
+            else
+                flag1 <- matching[i] >= matching.threshold
+
+            if (flag & flag1)
             {
                 # update TrueNum and PredNum
                 TrueNum[[ ts1[i] ]] <- TrueNum[[ ts1[i] ]] + 1L
@@ -1704,7 +1731,7 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
     })
     unique.n.geno <- nlevels(factor(lst))
 
-    if (isTRUE(verbose))
+    if (verbose)
     {
         cat("Gene: ", .hla_gene_name_string(hla$locus), "\n", sep="")
         cat(sprintf("Range: [%s, %s]",

@@ -4,7 +4,7 @@
     Build a HIBAG model
 }
 \description{
-    To build a HIBAG model for predicting HLA types.
+    To build a HIBAG model for predicting HLA types with SNP markers.
 }
 \usage{
 hlaAttrBagging(hla, snp, nclassifier=100, mtry=c("sqrt", "all", "one"),
@@ -26,7 +26,7 @@ hlaAttrBagging(hla, snp, nclassifier=100, mtry=c("sqrt", "all", "one"),
 }
 \details{
     \code{mtry} (the number of variables randomly sampled as candidates
-        for each selection):
+        for each selection, "sqrt" by default):
     \code{"sqrt"}, using the square root of the total number of candidate SNPs;
     \code{"all"}, using all candidate SNPs;
     \code{"one"}, using one SNP;
