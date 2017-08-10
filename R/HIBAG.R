@@ -28,12 +28,15 @@
 # Attribute Bagging method -- HIBAG algorithm
 #
 
-printMatching <- function(p)
+.printMatching <- function(p)
 {
     w <- summary(p)
     class(w) <- "table"
-    w <- c(w[1L], "1% Qu."=quantile(p, 0.01, na.rm=TRUE, names=FALSE),
-        w[2L], w[3L], "SD"=sd(p, na.rm=TRUE), w[4L:length(w)])
+    w <- c(w[1L],
+        "0.1% Qu." = quantile(p, 0.001, na.rm=TRUE, names=FALSE),
+        "1% Qu."   = quantile(p, 0.01, na.rm=TRUE, names=FALSE),
+        w[2L], w[3L], w[5L], w[6L],
+        w[4L], "SD" = sd(p, na.rm=TRUE))
     print(w)
 }
 
@@ -193,12 +196,12 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
 
 
     ###################################################################
-    # calculate matching statistic
+    # calculate matching proportion
     if (verbose)
-        cat("Calculating matching statistic:\n")
+        cat("Calculating matching proportion:\n")
     pd <- hlaPredict(mod, snp.geno, verbose=FALSE)
     mod$matching <- pd$value$matching
-    if (verbose) printMatching(mod$matching)
+    if (verbose) .printMatching(mod$matching)
 
     mod
 }
@@ -1067,8 +1070,8 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
         p <- obj$matching
         if (!is.null(p))
         {
-            cat("Matching statistic:\n")
-            printMatching(p)
+            cat("Matching proportion:\n")
+            .printMatching(p)
         }
 
         if (is.null(obj$assembly))

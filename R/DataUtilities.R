@@ -1329,7 +1329,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
         matching <- PredHLA$value$matching
         if (is.null(matching))
         {
-            warning("No matching information in predicted HLA genotypes.",
+            warning("No matching proportion in predicted HLA genotypes.",
                 call.=FALSE, immediate.=TRUE)
         } else
             matching <- matching[flag]
@@ -1415,11 +1415,11 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
                 flag <- TRUE
             else
                 flag <- prob[i] >= call.threshold
-            # matching statistic cut-off
+            # matching proportion cut-off
             if (is.null(matching))
                 flag1 <- TRUE
             else
-                flag1 <- matching[i] >= matching.threshold
+                flag1 <- matching[i] >= match.threshold
 
             if (flag & flag1)
             {
@@ -1511,16 +1511,11 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     }
 
     # confusion matrix
-    if (is.null(WrongTab))
-    {
-        nw <- 0L
-    } else {
-        nw <- ncol(WrongTab)
-    }
+    nw <- ifelse(is.null(WrongTab), 0L, ncol(WrongTab))
     v <- .Call(HIBAG_Confusion, m, confusion, nw,
         match(WrongTab, names(PredNum)) - 1L)
     dimnames(v) <- list(Predict=names(PredNum), True=names(TrueNum))
-    confusion <- round(v, 2)
+    confusion <- round(v, 2L)
 
     # detail -- sensitivity and specificity
     detail <- data.frame(allele = allele, stringsAsFactors=FALSE)
@@ -1757,7 +1752,7 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
         p <- hla$value$matching
         if (!is.null(p))
         {
-            cat("Matching statistic:\n")
+            cat("Matching proportion of SNP haplotype:\n")
             print(summary(p))
         }
     }
@@ -2322,4 +2317,112 @@ hlaReport <- function(object, export.fn="",
     }
 
     invisible()
+}
+
+
+##########################################################################
+# to create a report for evaluating accuracies
+#
+
+hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
+    fig=c("matching", "callrate"), match.threshold=NaN, log_scale=TRUE)
+{
+    # check
+    stopifnot(is.null(PredHLA) | inherits(PredHLA, "hlaAlleleClass"))
+    stopifnot(is.null(TrueHLA) | inherits(TrueHLA, "hlaAlleleClass"))
+    stopifnot(is.null(model) | inherits(model, "hlaAttrBagClass"))
+    fig <- match.arg(fig)
+    stopifnot(is.logical(log_scale), length(log_scale)==1L)
+
+    # library
+    if (!requireNamespace("ggplot2"))
+        stop("The ggplot2 package should be installed.")
+
+    if (fig == "matching")
+    {
+        test.qu <- NaN
+        if (!is.null(PredHLA))
+        {
+            if (is.null(PredHLA$value$matching))
+                stop("No matching proportion in prediction.")
+            if (!is.null(TrueHLA))
+                stop("'TrueHLA' should be NULL.")
+            if (!is.null(model) & !inherits(model, "hlaAttrBagClass"))
+                stop("'model' should be NULL or a hlaAttrBagClass object.")
+            m <- PredHLA$value$matching
+            d <- rep("test", length(PredHLA$value$matching))
+            test.qu <- quantile(PredHLA$value$matching, 0.01, na.rm=TRUE)
+        } else {
+            if (!inherits(model, "hlaAttrBagClass"))
+                stop("'model' should be a hlaAttrBagClass object when 'PredHLA=NULL'.")
+            m <- d <- NULL
+        }
+        if (inherits(model, "hlaAttrBagClass"))
+        {
+            m <- c(m, model$matching)
+            d <- c(d, rep("training", length(model$matching)))
+        }
+        if (log_scale)
+        {
+            m[m <= 0] <- 1e-128
+            m <- log10(m)
+        }
+        dat <- data.frame(matching=m, dataset=d)
+        p <- ggplot2::ggplot(dat, ggplot2::aes(dataset, matching)) +
+            ggplot2::geom_violin() +
+            ggplot2::geom_jitter(size=0.5, position=ggplot2::position_jitter(0.2)) +
+            ggplot2::ylab(ifelse(log_scale,
+                "distribution of log10(matching proportion)",
+                "distribution of matching proportion"))
+        if (inherits(model, "hlaAttrBagClass") & !is.null(model$matching))
+        {
+            ct <- cutoff <- quantile(model$matching, 0.01, na.rm=TRUE)
+            if (log_scale)
+            {
+                ct <- log10(ct)
+                test.qu <- log10(test.qu)
+            }
+            p <- p + ggplot2::geom_hline(yintercept=ct, color="red") +
+                ggplot2::geom_hline(yintercept=test.qu, color="orange") +
+                ggplot2::annotate("label", x=2.4, y=ct, size=3, colour="red",
+                    label="1% Qu. of\nmatching\nproportion\nin training") +
+                ggplot2::annotate("label", x=0.6, y=test.qu, size=3,
+                    colour="orange",
+                    label="1% Qu. of\nmatching\nproportion\nin test data")
+            m <- sum(PredHLA$value$matching < cutoff, na.rm=TRUE)
+            n <- length(PredHLA$value$matching)
+            p <- p + ggplot2::xlab(sprintf(
+                "%d individual%s, %.1f%%, under matching threshold of training set",
+                m, ifelse(m>1L, "s", ""), m/n*100))
+        }
+
+    } else if (fig == "callrate")
+    {
+        stopifnot(inherits(PredHLA, "hlaAlleleClass"))
+        stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
+        if (!identical(PredHLA$value$sample.id, TrueHLA$value$sample.id))
+            stop("PredHLA and TrueHLA should have the same sample order.")
+        pr <- PredHLA$value$prob
+        if (is.null(pr))
+            stop("No probability information in prediction.")
+        if (anyNA(pr))
+            stop("PredHLA$value$prob should have no missing value.")
+
+        pr <- c(0, pr)
+        cr <- acc <- NULL
+        for (i in order(pr))
+        {
+            ov <- hlaCompareAllele(TrueHLA, PredHLA, call.threshold=pr[i],
+                match.threshold=match.threshold, verbose=FALSE)$overall
+            cr <- c(cr, ov$call.rate)
+            acc <- c(acc, ov$acc.haplo)
+        }
+
+        dat <- data.frame(cr=cr*100, acc=acc*100)
+        p <- ggplot2::ggplot(dat, ggplot2::aes(x=cr, y=acc)) +
+            ggplot2::xlab("call rate (%)") + ggplot2::ylab("accuracy (%)") +
+            ggplot2::geom_point() + ggplot2::geom_line()
+    }
+
+    p
 }
