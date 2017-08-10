@@ -252,6 +252,7 @@ comp$overall
 ```{r}
 # violin plot
 hlaReportPlot(pred, model=model, fig="matching")
+hlaReportPlot(pred, hlatab$validation, fig="callrate")
 ```
 
 ### Report in Text

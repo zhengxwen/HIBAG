@@ -2392,7 +2392,7 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
             m <- sum(PredHLA$value$matching < cutoff, na.rm=TRUE)
             n <- length(PredHLA$value$matching)
             p <- p + ggplot2::xlab(sprintf(
-                "%d individual%s, %.1f%%, under matching threshold of training set",
+                "%d test individual%s (%.1f%%), under matching threshold of training set",
                 m, ifelse(m>1L, "s", ""), m/n*100))
         }
 

@@ -1,11 +1,12 @@
-CHANGES IN VERSION 1.13.0-1.13.1
+CHANGES IN VERSION 1.13.0-1.13.2
 -------------------------
 
     o modify the kernel to support the GPU extension
 
-    o add a matching statistic to measure the similarity of SNP haplotypes
-      between training and test datasets, and use it as a threshold to filter
-      out underrepresented samples
+    o add matching proportion to measure the similarity of SNP haplotypes
+      between training and test datasets
+
+    o new function `hlaReportPlot()`
 
 
 CHANGES IN VERSION 1.12.0
