@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2015   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2017   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -175,6 +175,17 @@
     }
 
     val
+}
+
+
+#######################################################################
+# clear GPU pointer
+#
+
+.hlaClearGPU <- function()
+{
+    .Call(HIBAG_Clear_GPU)
+    invisible()
 }
 
 
@@ -1219,9 +1230,14 @@ hlaCombineAllele <- function(H1, H2)
         assembly = H1$assembly
     )
     rownames(rv$value) <- NULL
+
     if (!is.null(H1$value$prob) & !is.null(H2$value$prob))
     {
         rv$value$prob <- c(H1$value$prob, H2$value$prob)
+    }
+    if (!is.null(H1$value$matching) & !is.null(H2$value$matching))
+    {
+        rv$value$matching <- c(H1$value$matching, H2$value$matching)
     }
 
     if (!is.null(H1$postprob) & !is.null(H2$postprob))
@@ -1239,8 +1255,8 @@ hlaCombineAllele <- function(H1, H2)
 #
 
 hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
-    call.threshold=NaN, max.resolution="", output.individual=FALSE,
-    verbose=TRUE)
+    call.threshold=NaN, match.threshold=NaN, max.resolution="",
+    output.individual=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
@@ -1251,8 +1267,10 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
         inherits(allele.limit, "hlaAttrBagObj"))
     stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit",
         "8-digit", "allele", "protein", "2", "4", "6", "8", "full", ""))
-    stopifnot(is.logical(output.individual))
-    stopifnot(is.logical(verbose))
+    stopifnot(is.numeric(call.threshold), length(call.threshold)==1L)
+    stopifnot(is.numeric(match.threshold), length(match.threshold)==1L)
+    stopifnot(is.logical(output.individual), length(output.individual)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
 
     # get the common samples
     samp <- intersect(TrueHLA$value$sample.id, PredHLA$value$sample.id)
@@ -1295,9 +1313,28 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     if (is.finite(call.threshold))
     {
         prob <- PredHLA$value$prob
-        if (!is.null(prob)) prob <- prob[flag]
+        if (is.null(prob))
+        {
+            warning("No probabilities in predicted HLA genotypes.",
+                call.=FALSE, immediate.=TRUE)
+        } else
+            prob <- prob[flag]
     } else {
         prob <- NULL
+    }
+
+    # match.threshold
+    if (is.finite(match.threshold))
+    {
+        matching <- PredHLA$value$matching
+        if (is.null(matching))
+        {
+            warning("No matching proportion in predicted HLA genotypes.",
+                call.=FALSE, immediate.=TRUE)
+        } else
+            matching <- matching[flag]
+    } else {
+        matching <- NULL
     }
 
     # allele limitation
@@ -1344,6 +1381,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     ps1 <- ps1[flag]; ps2 <- ps2[flag]
     samp.id <- samp.id[flag]
     if (!is.null(prob)) prob <- prob[flag]
+    if (!is.null(matching)) matching <- matching[flag]
 
     # init ...
     cnt.ind <- 0L; cnt.haplo <- 0L; cnt.call <- 0L
@@ -1358,8 +1396,7 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     WrongTab <- NULL
 
     # for PredNum
-    fn <- function(x, LT)
-        { if (x %in% LT) x else "..." }
+    fn <- function(x, LT) { if (x %in% LT) x else "..." }
 
     acc.array <- rep(NaN, n)
     ind.truehla <- character(n)
@@ -1377,8 +1414,14 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
             if (is.null(prob))
                 flag <- TRUE
             else
-                flag <- (prob[i] >= call.threshold)
-            if (flag)
+                flag <- prob[i] >= call.threshold
+            # matching proportion cut-off
+            if (is.null(matching))
+                flag1 <- TRUE
+            else
+                flag1 <- matching[i] >= match.threshold
+
+            if (flag & flag1)
             {
                 # update TrueNum and PredNum
                 TrueNum[[ ts1[i] ]] <- TrueNum[[ ts1[i] ]] + 1L
@@ -1468,16 +1511,11 @@ hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
     }
 
     # confusion matrix
-    if (is.null(WrongTab))
-    {
-        nw <- 0L
-    } else {
-        nw <- ncol(WrongTab)
-    }
+    nw <- ifelse(is.null(WrongTab), 0L, ncol(WrongTab))
     v <- .Call(HIBAG_Confusion, m, confusion, nw,
         match(WrongTab, names(PredNum)) - 1L)
     dimnames(v) <- list(Predict=names(PredNum), True=names(TrueNum))
-    confusion <- round(v, 2)
+    confusion <- round(v, 2L)
 
     # detail -- sensitivity and specificity
     detail <- data.frame(allele = allele, stringsAsFactors=FALSE)
@@ -1688,7 +1726,7 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
     })
     unique.n.geno <- nlevels(factor(lst))
 
-    if (isTRUE(verbose))
+    if (verbose)
     {
         cat("Gene: ", .hla_gene_name_string(hla$locus), "\n", sep="")
         cat(sprintf("Range: [%s, %s]",
@@ -1709,6 +1747,13 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
             z[] <- sprintf("%d (%0.1f%%)", z, prop.table(z)*100)
             names(attr(z, "dimnames")) <- "Posterior probability:"
             print(z)
+        }
+
+        p <- hla$value$matching
+        if (!is.null(p))
+        {
+            cat("Matching proportion of SNP haplotype:\n")
+            print(summary(p))
         }
     }
 
@@ -2272,4 +2317,112 @@ hlaReport <- function(object, export.fn="",
     }
 
     invisible()
+}
+
+
+##########################################################################
+# to create a report for evaluating accuracies
+#
+
+hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
+    fig=c("matching", "callrate"), match.threshold=NaN, log_scale=TRUE)
+{
+    # check
+    stopifnot(is.null(PredHLA) | inherits(PredHLA, "hlaAlleleClass"))
+    stopifnot(is.null(TrueHLA) | inherits(TrueHLA, "hlaAlleleClass"))
+    stopifnot(is.null(model) | inherits(model, "hlaAttrBagClass"))
+    fig <- match.arg(fig)
+    stopifnot(is.logical(log_scale), length(log_scale)==1L)
+
+    # library
+    if (!requireNamespace("ggplot2"))
+        stop("The ggplot2 package should be installed.")
+
+    if (fig == "matching")
+    {
+        test.qu <- NaN
+        if (!is.null(PredHLA))
+        {
+            if (is.null(PredHLA$value$matching))
+                stop("No matching proportion in prediction.")
+            if (!is.null(TrueHLA))
+                stop("'TrueHLA' should be NULL.")
+            if (!is.null(model) & !inherits(model, "hlaAttrBagClass"))
+                stop("'model' should be NULL or a hlaAttrBagClass object.")
+            m <- PredHLA$value$matching
+            d <- rep("test", length(PredHLA$value$matching))
+            test.qu <- quantile(PredHLA$value$matching, 0.01, na.rm=TRUE)
+        } else {
+            if (!inherits(model, "hlaAttrBagClass"))
+                stop("'model' should be a hlaAttrBagClass object when 'PredHLA=NULL'.")
+            m <- d <- NULL
+        }
+        if (inherits(model, "hlaAttrBagClass"))
+        {
+            m <- c(m, model$matching)
+            d <- c(d, rep("training", length(model$matching)))
+        }
+        if (log_scale)
+        {
+            m[m <= 0] <- 1e-128
+            m <- log10(m)
+        }
+        dat <- data.frame(matching=m, dataset=d)
+        p <- ggplot2::ggplot(dat, ggplot2::aes(dataset, matching)) +
+            ggplot2::geom_violin() +
+            ggplot2::geom_jitter(size=0.5, position=ggplot2::position_jitter(0.2)) +
+            ggplot2::ylab(ifelse(log_scale,
+                "distribution of log10(matching proportion)",
+                "distribution of matching proportion"))
+        if (inherits(model, "hlaAttrBagClass") & !is.null(model$matching))
+        {
+            ct <- cutoff <- quantile(model$matching, 0.01, na.rm=TRUE)
+            if (log_scale)
+            {
+                ct <- log10(ct)
+                test.qu <- log10(test.qu)
+            }
+            p <- p + ggplot2::geom_hline(yintercept=ct, color="red") +
+                ggplot2::geom_hline(yintercept=test.qu, color="orange") +
+                ggplot2::annotate("label", x=2.4, y=ct, size=3, colour="red",
+                    label="1% Qu. of\nmatching\nproportion\nin training") +
+                ggplot2::annotate("label", x=0.6, y=test.qu, size=3,
+                    colour="orange",
+                    label="1% Qu. of\nmatching\nproportion\nin test data")
+            m <- sum(PredHLA$value$matching < cutoff, na.rm=TRUE)
+            n <- length(PredHLA$value$matching)
+            p <- p + ggplot2::xlab(sprintf(
+                "%d test individual%s (%.1f%%), under matching threshold of training set",
+                m, ifelse(m>1L, "s", ""), m/n*100))
+        }
+
+    } else if (fig == "callrate")
+    {
+        stopifnot(inherits(PredHLA, "hlaAlleleClass"))
+        stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
+        if (!identical(PredHLA$value$sample.id, TrueHLA$value$sample.id))
+            stop("PredHLA and TrueHLA should have the same sample order.")
+        pr <- PredHLA$value$prob
+        if (is.null(pr))
+            stop("No probability information in prediction.")
+        if (anyNA(pr))
+            stop("PredHLA$value$prob should have no missing value.")
+
+        pr <- c(0, pr)
+        cr <- acc <- NULL
+        for (i in order(pr))
+        {
+            ov <- hlaCompareAllele(TrueHLA, PredHLA, call.threshold=pr[i],
+                match.threshold=match.threshold, verbose=FALSE)$overall
+            cr <- c(cr, ov$call.rate)
+            acc <- c(acc, ov$acc.haplo)
+        }
+
+        dat <- data.frame(cr=cr*100, acc=acc*100)
+        p <- ggplot2::ggplot(dat, ggplot2::aes(x=cr, y=acc)) +
+            ggplot2::xlab("call rate (%)") + ggplot2::ylab("accuracy (%)") +
+            ggplot2::geom_point() + ggplot2::geom_line()
+    }
+
+    p
 }

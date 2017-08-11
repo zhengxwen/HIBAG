@@ -9,7 +9,8 @@ predictive value, negative predictive value.
 }
 \usage{
 hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL, call.threshold=NaN,
-    max.resolution="", output.individual=FALSE, verbose=TRUE)
+    match.threshold=NaN, max.resolution="", output.individual=FALSE,
+    verbose=TRUE)
 }
 \arguments{
     \item{TrueHLA}{an object of \code{\link{hlaAlleleClass}}, the true
@@ -23,6 +24,8 @@ hlaCompareAllele(TrueHLA, PredHLA, allele.limit=NULL, call.threshold=NaN,
     \item{call.threshold}{the call threshold for posterior probability, i.e.,
         call or no call is determined by whether \code{prob >= call.threshold}
         or not}
+    \item{match.threshold}{the matching threshold for SNP haplotype similiarity,
+        e.g., use 1\% quantile of matching statistics of a training model}
     \item{max.resolution}{"2-digit", "4-digit", "6-digit", "8-digit", "allele",
         "protein", "2", "4", "6", "8", "full" or "": "allele" = "2-digit",
         "protein" = "4-digit", "full" and "" indicating no limit on resolution}

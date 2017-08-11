@@ -1,7 +1,12 @@
-CHANGES IN VERSION 1.13.0
+CHANGES IN VERSION 1.13.0-1.13.2
 -------------------------
 
-    o the version number was bumped for the Bioconductor release version 3.5
+    o modify the kernel to support the GPU extension
+
+    o add matching proportion to measure the similarity of SNP haplotypes
+      between training and test datasets
+
+    o new function `hlaReportPlot()`
 
 
 CHANGES IN VERSION 1.12.0

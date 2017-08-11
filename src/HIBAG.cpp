@@ -500,19 +500,30 @@ SEXP HIBAG_Close(SEXP model)
  *  \param prune           if TRUE, perform a parsimonious forward variable selection
  *  \param verbose         show information if TRUE
  *  \param verbose_detail  show more information if TRUE
+ *  \param proc_ptr        pointer to functions for an extensible component
 **/
 SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
-	SEXP prune, SEXP verbose, SEXP verbose_detail)
+	SEXP prune, SEXP verbose, SEXP verbose_detail, SEXP proc_ptr)
 {
 	CORE_TRY
 		int midx = Rf_asInteger(model);
 		_Check_HIBAG_Model(midx);
-
 		GetRNGstate();
-		_HIBAG_MODELS_[midx]->BuildClassifiers(
-			Rf_asInteger(nclassifier), Rf_asInteger(mtry),
-			Rf_asLogical(prune) == TRUE, Rf_asLogical(verbose) == TRUE,
-			Rf_asLogical(verbose_detail) == TRUE);
+
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		try {
+			_HIBAG_MODELS_[midx]->BuildClassifiers(
+				Rf_asInteger(nclassifier), Rf_asInteger(mtry),
+				Rf_asLogical(prune) == TRUE, Rf_asLogical(verbose) == TRUE,
+				Rf_asLogical(verbose_detail) == TRUE);
+			GPUExtProcPtr = NULL;
+		}
+		catch(...) {
+			GPUExtProcPtr = NULL;
+			throw;
+		}
+
 		PutRNGstate();
 	CORE_CATCH
 }
@@ -526,10 +537,11 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
  *  \param nSamp        the number of samples in GenoMat
  *  \param vote_method  the voting method
  *  \param ShowInfo     whether showing information
+ *  \param proc_ptr     pointer to functions for an extensible component
  *  \return H1, H2 and posterior prob.
 **/
 SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP ShowInfo)
+	SEXP vote_method, SEXP ShowInfo, SEXP proc_ptr)
 {
 	int midx = Rf_asInteger(model);
 	int NumSamp = Rf_asInteger(nSamp);
@@ -538,19 +550,30 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
-		rv_ans = PROTECT(NEW_LIST(3));
+		rv_ans = PROTECT(NEW_LIST(4));
 		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
 		SET_ELEMENT(rv_ans, 0, out_H1);
 		SEXP out_H2 = PROTECT(NEW_INTEGER(NumSamp));
 		SET_ELEMENT(rv_ans, 1, out_H2);
 		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
 		SET_ELEMENT(rv_ans, 2, out_Prob);
+		SEXP out_PriorProb = PROTECT(NEW_NUMERIC(NumSamp));
+		SET_ELEMENT(rv_ans, 3, out_PriorProb);
 
-		M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
-			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			NULL, Rf_asLogical(ShowInfo) == TRUE);
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		try {
+			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+				REAL(out_PriorProb), NULL, Rf_asLogical(ShowInfo)==TRUE);
+			GPUExtProcPtr = NULL;
+		}
+		catch(...) {
+			GPUExtProcPtr = NULL;
+			throw;
+		}
 
-		UNPROTECT(4);
+		UNPROTECT(5);
 	CORE_CATCH
 }
 
@@ -564,10 +587,11 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
  *  \param nSamp        the number of samples in GenoMat
  *  \param vote_method  the voting method
  *  \param ShowInfo     whether showing information
+ *  \param proc_ptr     pointer to functions for an extensible component
  *  \return H1, H2, prob. and a matrix of all probabilities
 **/
 SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP ShowInfo)
+	SEXP vote_method, SEXP ShowInfo, SEXP proc_ptr)
 {
 	int midx = Rf_asInteger(model);
 	int NumSamp = Rf_asInteger(nSamp);
@@ -576,7 +600,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
-		rv_ans = PROTECT(NEW_LIST(4));
+		rv_ans = PROTECT(NEW_LIST(5));
 
 		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
 		SET_ELEMENT(rv_ans, 0, out_H1);
@@ -584,15 +608,27 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 		SET_ELEMENT(rv_ans, 1, out_H2);
 		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
 		SET_ELEMENT(rv_ans, 2, out_Prob);
+		SEXP out_PriorProb = PROTECT(NEW_NUMERIC(NumSamp));
+		SET_ELEMENT(rv_ans, 3, out_PriorProb);
 		SEXP out_MatProb = PROTECT(
 			allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp));
-		SET_ELEMENT(rv_ans, 3, out_MatProb);
+		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
-		M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
-			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			REAL(out_MatProb), Rf_asLogical(ShowInfo) == TRUE);
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		try {
+			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+				REAL(out_PriorProb), REAL(out_MatProb),
+				Rf_asLogical(ShowInfo)==TRUE);
+			GPUExtProcPtr = NULL;
+		}
+		catch(...) {
+			GPUExtProcPtr = NULL;
+			throw;
+		}
 
-		UNPROTECT(5);
+		UNPROTECT(6);
 	CORE_CATCH
 }
 
@@ -670,8 +706,8 @@ SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 		CAttrBag_Model *AB = _HIBAG_MODELS_[midx];
 
 		const CAttrBag_Classifier &Voter = AB->ClassifierList()[cidx - 1];
-		const int nHaplo = Voter.nHaplo();
-		const vector< vector<THaplotype> > &List = Voter.Haplotype().List;
+		const size_t nHaplo = Voter.nHaplo();
+		const CHaplotypeList &Haplo = Voter.Haplotype();
 		const vector<int> &Num = Voter.BootstrapCount();
 
 		rv_ans = PROTECT(NEW_LIST(6));
@@ -682,18 +718,17 @@ SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
 		SEXP out_Haplo = PROTECT(NEW_CHARACTER(nHaplo));
 		SET_ELEMENT(rv_ans, 2, out_Haplo);
 
-		size_t idx = 0;
-		for (size_t i=0; i < List.size(); i++)
+		for (size_t i=0; i < nHaplo; i++)
 		{
-			vector<THaplotype>::const_iterator it;
-			for (it=List[i].begin(); it != List[i].end(); it++)
-			{
-				REAL(out_Freq)[idx] = it->Frequency;
-				INTEGER(out_HLA)[idx] = i + 1;
-				SET_STRING_ELT(out_Haplo, idx,
-					mkChar(it->HaploToStr(Voter.nSNP()).c_str()));
-				idx ++;
-			}
+			REAL(out_Freq)[i] = Haplo.List[i].Freq;
+			SET_STRING_ELT(out_Haplo, i,
+				mkChar(Haplo.List[i].HaploToStr(Voter.nSNP()).c_str()));
+		}
+		size_t idx = 0;
+		for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
+		{
+			for (size_t k=Haplo.LenPerHLA[i]; k > 0; k--)
+				INTEGER(out_HLA)[idx++] = i + 1;
 		}
 
 		SEXP out_SNPIdx = PROTECT(NEW_INTEGER(Voter.SNPIndex().size()));
@@ -1044,6 +1079,15 @@ SEXP HIBAG_Kernel_Version()
 }
 
 
+/**
+ *  Get the version and SSE information
+**/
+SEXP HIBAG_Clear_GPU()
+{
+	GPUExtProcPtr = NULL;
+	return R_NilValue;
+}
+
 
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
@@ -1067,13 +1111,14 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Kernel_Version, 0),
 		CALL(HIBAG_New, 3),
 		CALL(HIBAG_NewClassifierHaplo, 7),
-		CALL(HIBAG_NewClassifiers, 6),
-		CALL(HIBAG_Predict_Resp, 5),
-		CALL(HIBAG_Predict_Resp_Prob, 5),
+		CALL(HIBAG_NewClassifiers, 7),
+		CALL(HIBAG_Predict_Resp, 6),
+		CALL(HIBAG_Predict_Resp_Prob, 6),
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
 		CALL(HIBAG_SeqMerge, 1),
 		CALL(HIBAG_SeqRmDot, 2),
+		CALL(HIBAG_Clear_GPU, 0),
 		{ NULL, NULL, 0 }
 	};
 

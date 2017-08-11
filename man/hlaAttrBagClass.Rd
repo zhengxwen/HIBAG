@@ -24,6 +24,7 @@
         \code{platform} -- supported platform(s);
         \code{information} -- other information, like training sets, authors;
         \code{warning} -- any warning message}
+    \item{matching}{matching proportion in the training set}
 }
 
 \author{Xiuwen Zheng}
