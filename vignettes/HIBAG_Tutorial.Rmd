@@ -249,7 +249,7 @@ comp$overall
 
 ### Evaluation in Figures
 
-```{r}
+```{r fig.align="center", fig.height=3, fig.width=5}
 # violin plot
 hlaReportPlot(pred, model=model, fig="matching")
 hlaReportPlot(pred, hlatab$validation, fig="callrate")
