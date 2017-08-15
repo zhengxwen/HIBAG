@@ -45,7 +45,7 @@
 # To fit an attribute bagging model for predicting
 #
 
-hlaAttrBagging <- function(hla, snp, nclassifier=100,
+hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
     verbose=TRUE, verbose.detail=FALSE)
 {
@@ -56,6 +56,9 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
     if (verbose.detail) verbose <- TRUE
+
+    with.matching <- (nclassifier > 0L)
+    if (!with.matching) nclassifier <- 1L
 
     # get the common samples
     samp.id <- intersect(hla$value$sample.id, snp$sample.id)
@@ -197,11 +200,14 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100,
 
     ###################################################################
     # calculate matching proportion
-    if (verbose)
-        cat("Calculating matching proportion:\n")
-    pd <- hlaPredict(mod, snp.geno, verbose=FALSE)
-    mod$matching <- pd$value$matching
-    if (verbose) .printMatching(mod$matching)
+    if (with.matching)
+    {
+        if (verbose)
+            cat("Calculating matching proportion:\n")
+        pd <- hlaPredict(mod, snp.geno, verbose=FALSE)
+        mod$matching <- pd$value$matching
+        if (verbose) .printMatching(mod$matching)
+    }
 
     mod
 }
@@ -268,7 +274,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
             fun = function(job, hla, snp, mtry, prune, rm.na)
             {
                 eval(parse(text="library(HIBAG)"))
-                model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=1,
+                model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=0L,
                     mtry=mtry, prune=prune, rm.na=rm.na,
                     verbose=FALSE, verbose.detail=FALSE)
                 mobj <- hlaModelToObj(model)
@@ -319,11 +325,24 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         parallel::nextRNGSubStream(rand)
     }
 
-    # return
-    if (auto.save == "")
-        hlaModelFromObj(ans)
-    else
+    if (auto.save != "")
+        ans <- get(load(auto.save))
+    mod <- hlaModelFromObj(ans)
+    if (verbose)
+        cat("Calculating matching proportion:\n")
+    pd <- hlaPredict(mod, snp, verbose=FALSE)
+    mod$matching <- pd$value$matching
+    if (verbose) .printMatching(mod$matching)
+
+    # output
+    if (auto.save != "")
+    {
+        mobj <- hlaModelToObj(mod)
+        save(mobj, file=auto.save)
         invisible()
+    } else {
+        mod
+    }
 }
 
 

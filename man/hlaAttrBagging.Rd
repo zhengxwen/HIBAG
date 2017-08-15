@@ -7,7 +7,7 @@
     To build a HIBAG model for predicting HLA types with SNP markers.
 }
 \usage{
-hlaAttrBagging(hla, snp, nclassifier=100, mtry=c("sqrt", "all", "one"),
+hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
     prune=TRUE, rm.na=TRUE, verbose=TRUE, verbose.detail=FALSE)
 }
 \arguments{
