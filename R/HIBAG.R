@@ -928,7 +928,7 @@ hlaModelToObj <- function(model)
         assembly = model$assembly,
         classifiers = res,
         matching = model$matching,
-        appendix <- model$appendix)
+        appendix = model$appendix)
     class(rv) <- "hlaAttrBagObj"
     rv
 }
