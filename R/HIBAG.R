@@ -58,7 +58,11 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     if (verbose.detail) verbose <- TRUE
 
     with.matching <- (nclassifier > 0L)
-    if (!with.matching) nclassifier <- 1L
+    if (!with.matching)
+    {
+        nclassifier <- -nclassifier
+        if (nclassifier == 0L) nclassifier <- 1L
+    }
 
     # get the common samples
     samp.id <- intersect(hla$value$sample.id, snp$sample.id)
@@ -204,9 +208,21 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     {
         if (verbose)
             cat("Calculating matching proportion:\n")
-        pd <- hlaPredict(mod, snp.geno, verbose=FALSE)
+        pd <- hlaPredict(mod, snp, verbose=FALSE)
         mod$matching <- pd$value$matching
-        if (verbose) .printMatching(mod$matching)
+        if (verbose)
+        {
+            .printMatching(mod$matching)
+            acc <- hlaCompareAllele(hla, pd)$overall$acc.haplo
+            cat(sprintf("Accuracy with training data: %.1f%%\n", acc*100))
+        }
+    }
+    # out-of-bag accuracy
+    if (verbose)
+    {
+        mobj <- hlaModelToObj(mod)
+        acc <- sapply(mobj$classifiers, function(x) x$outofbag.acc)
+        cat(sprintf("Out-of-bag accuracy: %.1f%%\n", mean(acc)*100))
     }
 
     mod
