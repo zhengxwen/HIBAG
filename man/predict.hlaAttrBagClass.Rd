@@ -20,9 +20,9 @@ hlaPredict(object, snp, cl=NULL,
 \arguments{
     \item{object}{a model of \code{\link{hlaAttrBagClass}}}
     \item{snp}{a genotypic object of \code{\link{hlaSNPGenoClass}}}
-    \item{cl}{a cluster object, created by the package \link[parallel]{parallel}
-        or \href{http://CRAN.R-project.org/package=snow}{snow}; if \code{NULL}
-        is given, a uniprocessor implementation will be performed}
+    \item{cl}{if a cluster object, created by the package
+        \link[parallel]{parallel}; if \code{NULL}, serial implementation will
+        be performed; if numeric, specify the number of cores}
     \item{type}{"response": return the best-guess type plus its posterior
         probability; "prob": return all posterior probabilities;
         "response+prob": return the best-guess and all posterior probabilities}

@@ -213,7 +213,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         if (verbose)
         {
             .printMatching(mod$matching)
-            acc <- hlaCompareAllele(hla, pd)$overall$acc.haplo
+            acc <- hlaCompareAllele(hla, pd, verbose=FALSE)$overall$acc.haplo
             cat(sprintf("Accuracy with training data: %.1f%%\n", acc*100))
         }
     }
@@ -234,11 +234,11 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 #
 
 hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
-    nclassifier=100, mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
+    nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
     stop.cluster=FALSE, verbose=TRUE)
 {
     # check
-    stopifnot(is.null(cl) | inherits(cl, "cluster"))
+    stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
 
@@ -250,10 +250,22 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     stopifnot(is.logical(stop.cluster))
     stopifnot(is.logical(verbose))
 
-    if (!is.null(cl))
+    if (inherits(cl, "cluster"))
     {
         if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
+    } else if (is.numeric(cl))
+    {
+        if (cl > 1L)
+        {
+            if (!requireNamespace("parallel", quietly=TRUE))
+                stop("The `parallel' package should be installed.")
+            cl <- parallel::makeCluster(cl)
+            on.exit(parallel::stopCluster(cl))
+            stop.cluster <- FALSE
+        } else {
+            cl <- NULL
+        }
     }
 
     if (verbose)
@@ -261,7 +273,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         if (!is.null(cl))
         {
             cat("Build a HIBAG model of", sprintf(
-                "%d individual classifier%s in parallel with %d node%s:\n",
+                "%d individual classifier%s in parallel with %d compute node%s:\n",
                 nclassifier, if (nclassifier>1L) "s" else "",
                 length(cl), if (length(cl)>1L) "s" else ""
             ))
@@ -395,7 +407,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 {
     # check
     stopifnot(inherits(object, "hlaAttrBagClass"))
-    stopifnot(is.null(cl) | inherits(cl, "cluster"))
+    stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
     stopifnot(is.logical(allele.check), length(allele.check)==1L)
     stopifnot(is.logical(same.strand), length(same.strand)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
@@ -404,11 +416,23 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     vote <- match.arg(vote)
     match.type <- match.arg(match.type)
     vote_method <- match(vote, c("prob", "majority"))
-    if (!is.null(cl))
+
+    if (inherits(cl, "cluster"))
     {
         if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
         if (length(cl) <= 1L) cl <- NULL
+    } else if (is.numeric(cl))
+    {
+        if (cl > 1L)
+        {
+            if (!requireNamespace("parallel", quietly=TRUE))
+                stop("The `parallel' package should be installed.")
+            cl <- parallel::makeCluster(cl)
+            on.exit(parallel::stopCluster(cl))
+        } else {
+            cl <- NULL
+        }
     }
 
     # if warning
@@ -424,7 +448,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
         CNum <- .Call(HIBAG_GetNumClassifiers, object$model)
 
         cat(sprintf(
-"HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
+            "HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
             CNum, .plural(CNum), length(object$snp.id),
             length(object$hla.allele)))
 
@@ -438,7 +462,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
         if (!is.null(cl))
         {
             cat(sprintf(
-                "Run in parallel with %d computing node%s.\n",
+                "Run in parallel with %d compute node%s.\n",
                 length(cl), if (length(cl)>1) "s" else ""
             ))
         }

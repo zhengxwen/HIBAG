@@ -183,6 +183,11 @@ model <- hlaModelFromObj(model.obj)
 summary(model)
 ```
 
+```R
+# best-guess genotypes and all posterior probabilities
+pred.guess <- predict(model, yourgeno, type="response+prob", cl=cl)
+```
+
 
 ## Evaluate Overall Accuracy, Sensitivity, Specificity, etc
 
