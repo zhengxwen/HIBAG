@@ -1871,14 +1871,14 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
     if (rm.unused.snp)
     {
         # get frequency of use for SNPs
-        snp.hist <- rep(0, length(mobj$snp.id))
+        snp.hist <- rep(0L, length(mobj$snp.id))
         for (i in 1L:length(mobj$classifiers))
         {
             idx <- mobj$classifiers[[i]]$snpidx
-            snp.hist[idx] <- snp.hist[idx] + 1
+            snp.hist[idx] <- snp.hist[idx] + 1L
         }
 
-        flag <- (snp.hist > 0)
+        flag <- (snp.hist > 0L)
         if (sum(flag) < mobj$n.snp)
         {
             if (verbose)
@@ -1894,7 +1894,7 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
         mobj$snp.allele <- mobj$snp.allele[flag]
         mobj$snp.allele.freq <- mobj$snp.allele.freq[flag]
 
-        idx.list <- rep(0, length(flag))
+        idx.list <- rep(0L, length(flag))
         idx.list[flag] <- 1L:mobj$n.snp
 
         for (i in 1L:length(mobj$classifiers))
@@ -2085,9 +2085,9 @@ hlaReport <- function(object, export.fn="",
     # check
     stopifnot(is.list(object))
     stopifnot(is.data.frame(object$detail))
-    stopifnot(is.character(export.fn))
+    stopifnot(is.character(export.fn), length(export.fn)==1L)
     type <- match.arg(type)
-    stopifnot(is.logical(header))
+    stopifnot(is.logical(header), length(header)==1L)
 
     # create an output file
     if (export.fn != "")
@@ -2325,7 +2325,8 @@ hlaReport <- function(object, export.fn="",
 #
 
 hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
-    fig=c("matching", "callrate"), match.threshold=NaN, log_scale=TRUE)
+    fig=c("matching", "call.rate", "call.threshold"), match.threshold=NaN,
+    log_scale=TRUE)
 {
     # check
     stopifnot(is.null(PredHLA) | inherits(PredHLA, "hlaAlleleClass"))
@@ -2374,6 +2375,7 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
             ggplot2::ylab(ifelse(log_scale,
                 "distribution of log10(matching proportion)",
                 "distribution of matching proportion"))
+
         if (inherits(model, "hlaAttrBagClass") & !is.null(model$matching))
         {
             ct <- cutoff <- quantile(model$matching, 0.01, na.rm=TRUE)
@@ -2385,10 +2387,11 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
             p <- p + ggplot2::geom_hline(yintercept=ct, color="red") +
                 ggplot2::geom_hline(yintercept=test.qu, color="orange") +
                 ggplot2::annotate("label", x=2.4, y=ct, size=3, colour="red",
-                    label="1% Qu. of\nmatching\nproportion\nin training") +
-                ggplot2::annotate("label", x=0.6, y=test.qu, size=3,
-                    colour="orange",
-                    label="1% Qu. of\nmatching\nproportion\nin test data")
+                    label="1% Qu. of\nmatching\nproportion\nin training",
+                    vjust="inward") +
+                ggplot2::annotate("label", x=0.6, y=test.qu, size=3, colour="orange",
+                    label="1% Qu. of\nmatching\nproportion\nin test data",
+                    vjust="inward")
             m <- sum(PredHLA$value$matching < cutoff, na.rm=TRUE)
             n <- length(PredHLA$value$matching)
             p <- p + ggplot2::xlab(sprintf(
@@ -2396,19 +2399,25 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
                 m, ifelse(m>1L, "s", ""), m/n*100))
         }
 
-    } else if (fig == "callrate")
+    } else if (fig == "call.rate")
     {
         stopifnot(inherits(PredHLA, "hlaAlleleClass"))
         stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
         if (!identical(PredHLA$value$sample.id, TrueHLA$value$sample.id))
-            stop("PredHLA and TrueHLA should have the same sample order.")
+        {
+            if (nrow(PredHLA$value) != nrow(TrueHLA$value))
+                stop("PredHLA and TrueHLA should have the same number of samples.")
+            PredHLA <- hlaAlleleSubset(PredHLA, match(TrueHLA$value$sample.id,
+                PredHLA$value$sample.id))
+        }
+
         pr <- PredHLA$value$prob
         if (is.null(pr))
             stop("No probability information in prediction.")
         if (anyNA(pr))
             stop("PredHLA$value$prob should have no missing value.")
 
-        pr <- c(0, pr)
+        pr <- unique(c(0, pr))
         cr <- acc <- NULL
         for (i in order(pr))
         {
@@ -2421,7 +2430,40 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
         dat <- data.frame(cr=cr*100, acc=acc*100)
         p <- ggplot2::ggplot(dat, ggplot2::aes(x=cr, y=acc)) +
             ggplot2::xlab("call rate (%)") + ggplot2::ylab("accuracy (%)") +
-            ggplot2::geom_point() + ggplot2::geom_line()
+            ggplot2::geom_line(color="gray") + ggplot2::geom_point(size=0.9)
+
+    } else if (fig == "call.threshold")
+    {
+        stopifnot(inherits(PredHLA, "hlaAlleleClass"))
+        stopifnot(inherits(TrueHLA, "hlaAlleleClass"))
+        if (!identical(PredHLA$value$sample.id, TrueHLA$value$sample.id))
+        {
+            if (nrow(PredHLA$value) != nrow(TrueHLA$value))
+                stop("PredHLA and TrueHLA should have the same number of samples.")
+            PredHLA <- hlaAlleleSubset(PredHLA, match(TrueHLA$value$sample.id,
+                PredHLA$value$sample.id))
+        }
+
+        pr <- PredHLA$value$prob
+        if (is.null(pr))
+            stop("No probability information in prediction.")
+        if (anyNA(pr))
+            stop("PredHLA$value$prob should have no missing value.")
+
+        pr <- unique(c(0, pr))
+        ct <- acc <- NULL
+        for (i in order(pr))
+        {
+            ov <- hlaCompareAllele(TrueHLA, PredHLA, call.threshold=pr[i],
+                match.threshold=match.threshold, verbose=FALSE)$overall
+            ct <- c(ct, pr[i])
+            acc <- c(acc, ov$acc.haplo)
+        }
+
+        dat <- data.frame(ct=ct, acc=acc*100)
+        p <- ggplot2::ggplot(dat, ggplot2::aes(x=ct, y=acc)) +
+            ggplot2::xlab("call threshold") + ggplot2::ylab("accuracy (%)") +
+            ggplot2::geom_line(color="gray") + ggplot2::geom_point(size=0.9)
     }
 
     p

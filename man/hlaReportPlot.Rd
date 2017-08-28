@@ -8,7 +8,8 @@
 }
 \usage{
 hlaReportPlot(PredHLA=NULL, TrueHLA=NULL, model=NULL,
-    fig=c("matching", "callrate"), match.threshold=NaN, log_scale=TRUE)
+    fig=c("matching", "call.rate", "call.threshold"), match.threshold=NaN,
+    log_scale=TRUE)
 }
 \arguments{
     \item{PredHLA}{NULL, an object of \code{\link{hlaAlleleClass}}, the
@@ -17,7 +18,8 @@ hlaReportPlot(PredHLA=NULL, TrueHLA=NULL, model=NULL,
         HLA types}
     \item{model}{NULL, or a model of \code{\link{hlaAttrBagClass}}}
     \item{fig}{"matching": violin plot for matching measurements;
-        "callrate": }
+        "call.rate": relationship between accuracy and call rate;
+        "call.threshold": relationship between accuracy and call threshold}
     \item{match.threshold}{the threshold for matching proportion}
     \item{log_scale}{if TRUE, use log scale for matching violin plot}
 }
@@ -78,7 +80,9 @@ hlaReportPlot(model=model, fig="matching")
 
 hlaReportPlot(pred, model=model, fig="matching")
 
-hlaReportPlot(pred, hlatab$validation, fig="callrate")
+hlaReportPlot(pred, hlatab$validation, fig="call.rate")
+
+hlaReportPlot(pred, hlatab$validation, fig="call.threshold")
 }
 
 \keyword{genetics}
