@@ -115,7 +115,7 @@ If the package compilation succeeds with hardware POPCNT instructions, you shoul
 ```
 HIBAG (HLA Genotype Imputation with Attribute Bagging)
 Kernel Version: v1.4
-Supported by Streaming SIMD Extensions (SSE2 + hardware POPCNT)
+Supported by Streaming SIMD Extensions (SSE2 + POPCNT)
 ```
 
 ### GPU with OpenCL

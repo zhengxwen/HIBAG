@@ -45,13 +45,9 @@ if a new SNP predictor reduces the current out-of-bag accuracy, then it is
 removed from the candidate SNP set for future searching. Parsimonious selection
 helps to improve the computational efficiency by reducing the searching times
 of non-informative SNP markers.
-
-    If \code{auto.save=""}, the function returns a HIBAG model (an object of
-\code{\link{hlaAttrBagClass}}); otherwise, there is no return.
 }
 \value{
-    Return an object of \code{\link{hlaAttrBagClass}} if \code{auto.save}
-is specified.
+    Return an object of \code{\link{hlaAttrBagClass}} if \code{auto.save=""}.
 }
 \references{
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
