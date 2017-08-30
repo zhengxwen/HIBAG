@@ -8,7 +8,7 @@
 }
 \usage{
 hlaParallelAttrBagging(cl, hla, snp, auto.save="",
-    nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
+    nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
     stop.cluster=FALSE, verbose=TRUE)
 }
 \arguments{
@@ -24,7 +24,7 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
         sampled as candidates for each selection. See details}
     \item{prune}{if TRUE, to perform a parsimonious forward variable selection,
         otherwise, exhaustive forward variable selection. See details}
-    \item{rm.na}{if TRUE, remove the samples with missing HLA types}
+    \item{na.rm}{if TRUE, remove the samples with missing HLA types}
     \item{stop.cluster}{\code{TRUE}: stop cluster nodes after computing}
     \item{verbose}{if TRUE, show information}
 }

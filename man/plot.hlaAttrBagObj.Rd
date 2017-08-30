@@ -9,17 +9,19 @@
 positions.
 }
 \usage{
-\method{plot}{hlaAttrBagObj}(x, xlab=NULL, ylab=NULL,
-    locus.color="red", locus.lty=2, locus.cex=1.25, assembly="auto", ...)
+\method{plot}{hlaAttrBagObj}(x, snp.col="gray33", snp.pch=1, snp.sz=1,
+    locus.col="blue", locus.lty=2, addplot=NULL,
+    assembly="auto", ...)
 \method{plot}{hlaAttrBagClass}(x, ...)
 }
 \arguments{
     \item{x}{an object of \code{\link{hlaAttrBagObj}}}
-    \item{xlab}{the label of X-axis}
-    \item{ylab}{the label of Y-axis}
-    \item{locus.color}{the color of text and line for HLA locus}
+    \item{snp.col}{the color of SNP uses}
+    \item{snp.pch}{the point type of SNP uses}
+    \item{snp.sz}{the point size of SNP uses}
+    \item{locus.col}{the color of text and line for HLA locus}
     \item{locus.lty}{the type of line for HLA locus}
-    \item{locus.cex}{the font size of HLA locus}
+    \item{addplot}{NULL for creating a plot, or a ggplot object to be appended}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}

@@ -2339,6 +2339,8 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
     if (!requireNamespace("ggplot2"))
         stop("The ggplot2 package should be installed.")
 
+    dataset <- matching <- NULL
+
     if (fig == "matching")
     {
         test.qu <- NaN

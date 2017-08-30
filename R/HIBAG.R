@@ -46,13 +46,16 @@
 #
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
-    mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
+    mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
     verbose=TRUE, verbose.detail=FALSE)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
+    stopifnot(is.numeric(nclassifier), length(nclassifier)==1L)
     stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
+    stopifnot(is.logical(prune), length(prune)==1L)
+    stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
     if (verbose.detail) verbose <- TRUE
@@ -71,7 +74,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     samp.flag <- match(samp.id, hla$value$sample.id)
     hla.allele1 <- hla$value$allele1[samp.flag]
     hla.allele2 <- hla$value$allele2[samp.flag]
-    if (rm.na)
+    if (na.rm)
     {
         if (any(is.na(c(hla.allele1, hla.allele2))))
         {
@@ -234,19 +237,18 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 #
 
 hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
-    nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, rm.na=TRUE,
+    nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
     stop.cluster=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
-
     stopifnot(is.character(auto.save), length(auto.save)==1L)
-    stopifnot(is.numeric(nclassifier))
-    stopifnot(is.character(mtry) | is.numeric(mtry))
-    stopifnot(is.logical(prune))
-    stopifnot(is.logical(rm.na))
+    stopifnot(is.numeric(nclassifier), length(nclassifier)==1L)
+    stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
+    stopifnot(is.logical(prune), length(prune)==1L)
+    stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(stop.cluster))
     stopifnot(is.logical(verbose))
 
@@ -299,11 +301,11 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         total <- 0L
 
         .DynamicClusterCall(cl,
-            fun = function(job, hla, snp, mtry, prune, rm.na)
+            fun = function(job, hla, snp, mtry, prune, na.rm)
             {
                 eval(parse(text="library(HIBAG)"))
                 model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=0L,
-                    mtry=mtry, prune=prune, rm.na=rm.na,
+                    mtry=mtry, prune=prune, na.rm=na.rm,
                     verbose=FALSE, verbose.detail=FALSE)
                 mobj <- hlaModelToObj(model)
                 hlaClose(model)
@@ -344,7 +346,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 }
             },
             n = nclassifier, stop.cluster = stop.cluster,
-            hla=hla, snp=snp, mtry=mtry, prune=prune, rm.na=rm.na
+            hla=hla, snp=snp, mtry=mtry, prune=prune, na.rm=na.rm
         )
     })
 
@@ -1437,6 +1439,8 @@ plot.hlaAttrBagObj <- function(x, snp.col="gray33", snp.pch=1, snp.sz=1,
 
     # draw
     dat <- data.frame(pos=x$snp.position/1000L, ht=desp$snp.hist)
+    pos <- ht <- NULL
+
     if (is.null(addplot))
     {
         p <- ggplot2::ggplot(dat, ggplot2::aes(x=pos, y=ht)) +

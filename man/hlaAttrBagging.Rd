@@ -8,7 +8,7 @@
 }
 \usage{
 hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
-    prune=TRUE, rm.na=TRUE, verbose=TRUE, verbose.detail=FALSE)
+    prune=TRUE, na.rm=TRUE, verbose=TRUE, verbose.detail=FALSE)
 }
 \arguments{
     \item{hla}{the training HLA types, an object of
@@ -20,7 +20,7 @@ hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
         randomly sampled as candidates for each selection. See details}
     \item{prune}{if TRUE, to perform a parsimonious forward variable selection,
         otherwise, exhaustive forward variable selection. See details}
-    \item{rm.na}{if TRUE, remove the samples with missing HLA types}
+    \item{na.rm}{if TRUE, remove the samples with missing HLA types}
     \item{verbose}{if TRUE, show information}
     \item{verbose.detail}{if TRUE, show more information}
 }
