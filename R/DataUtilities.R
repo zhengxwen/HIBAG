@@ -266,16 +266,30 @@ hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
 # To select a subset of SNP genotypes
 #
 
-hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL)
+hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
 {
     # check
     stopifnot(inherits(genoobj, "hlaSNPGenoClass"))
+
     stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.integer(samp.sel))
     if (is.logical(samp.sel))
         stopifnot(length(samp.sel) == length(genoobj$sample.id))
+
     stopifnot(is.null(snp.sel) | is.logical(snp.sel) | is.integer(snp.sel))
-    if (is.logical(snp.sel))
-        stopifnot(length(snp.sel) == length(genoobj$snp.id))
+    if (!is.null(snp.sel))
+    {
+        if (!is.null(snp.id))
+            stop("'snp.id' should be NULL if 'snp.sel' is not NULL.")
+        if (is.logical(snp.sel))
+        {
+            if (length(snp.sel) != length(genoobj$snp.id))
+                stop("'snp.sel' should have the same length as the SNP dataset.")
+        }
+    } else {
+        if (!is.null(snp.id))
+            snp.sel <- genoobj$snp.id %in% snp.id
+    }
+
     if (is.integer(samp.sel))
     {
         stopifnot(!any(is.na(samp.sel)))

@@ -7,12 +7,13 @@
     To get a subset of genotypes from a \code{\link{hlaSNPGenoClass}} object.
 }
 \usage{
-hlaGenoSubset(genoobj, samp.sel=NULL, snp.sel=NULL)
+hlaGenoSubset(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
 }
 \arguments{
     \item{genoobj}{a genotype object of \code{\link{hlaSNPGenoClass}}}
     \item{samp.sel}{a logical vector, or an integer vector of indices}
     \item{snp.sel}{a logical vector, or an integer vector of indices}
+    \item{snp.id}{SNP IDs to be selected, or NULL}
 }
 \details{
     \code{genoobj$genotype} is a numeric matrix, with an entry value 0 standing
@@ -28,6 +29,7 @@ others for missing values (missing genotypes are usually set to be NA).
     \item{snp.position}{a vector of SNP positions in basepair}
     \item{snp.allele}{a vector of characters with the format of
         ``A allele/B allele''}
+    \item{assembly}{optional, human genome information}
 }
 \author{Xiuwen Zheng}
 \seealso{
