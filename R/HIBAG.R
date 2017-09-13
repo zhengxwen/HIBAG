@@ -1012,6 +1012,13 @@ hlaCombineModelObj <- function(obj1, obj2)
         classifiers = c(obj1$classifiers, obj2$classifiers),
         matching = c(obj1$matching, obj2$matching),
         appendix = appendix)
+    if (identical(obj1$sample.id, obj2$sample.id) && !is.null(obj1$sample.id))
+    {
+        n1 <- length(obj1$classifiers)
+        n2 <- length(obj2$classifiers)
+        n <- n1 + n2
+        rv$matching <- n1/n*obj1$matching + n2/n*obj2$matching
+    }
     class(rv) <- "hlaAttrBagObj"
     rv
 }

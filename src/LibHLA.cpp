@@ -445,14 +445,12 @@ void CHaplotypeList::EraseDoubleHaplos(double RareProb, CHaplotypeList &OutHaplo
 		OutHaplos.LenPerHLA[i] = num;
 	}
 
-	// TODO
-	int ss = 0;
+	// DEBUG, TODO: remove
+	size_t ss = 0;
 	for (size_t i=0; i < OutHaplos.LenPerHLA.size(); i++)
-	{
 		ss += OutHaplos.LenPerHLA[i];
-	}
 	if (ss != OutHaplos.Num_Haplo)
-		throw "Erroroeewrweq";
+		throw "assert in CHaplotypeList::EraseDoubleHaplos()";
 
 	OutHaplos.ScaleFrequency(1/sum);
 }
