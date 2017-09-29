@@ -128,6 +128,20 @@ install_github("zhengxwen/HIBAG.gpu")
 Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and prediction.
 
 
+**Speedup ratios for training HIBAG models:**
+
+| CPU (1 core) | CPU (1 core, POPCNT) | 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M40 | 1x NVIDIA Tesla P100 |
+|:------------:|:--------------------:|:-------------------:|:-------------------:|:--------------------:|
+| 1            | 1.63 x               | 24.3 x              | 35.4 x              | 121.5 x              |
+
+*using HIBAG v1.14.0 and HIBAG.gpu v0.9*
+
+*CPU (1 core), the default installation from Bioconductor supporting SIMD SSE2 instructions, using Intel(R) Xeon(R) CPU E5-2630L @2.40GHz*
+
+*CPU (1 core, POPCNT), optimization with Intel/AMD POPCNT instruction, using Intel(R) Xeon(R) CPU E5-2630L @2.40GHz*
+
+*This work was made possible, in part, through HPC time donated by Microway, Inc. We gratefully acknowledge Microway for providing access to their GPU-accelerated compute cluster (http://www.microway.com/gpu-test-drive/).*
+
 
 ## Archive
 
