@@ -60,6 +60,7 @@ on non-informative SNP markers.
     \item{hla.freq}{the HLA allele frequencies}
     \item{assembly}{the human genome reference, such like "hg19"}
     \item{model}{internal use}
+    \item{matching}{matching proportion in the training set}
 }
 \references{
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;

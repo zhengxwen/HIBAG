@@ -19,6 +19,7 @@
     \item{hla.freq}{the HLA allele frequencies}
     \item{assembly}{the human genome reference, such like "hg19"}
     \item{classifiers}{a list of all classifiers (described as follows)}
+    \item{matching}{matching proportion in the training set}
     \item{appendix}{
         \code{platform} -- supported platform(s);
         \code{information} -- other information, like training sets, authors;
