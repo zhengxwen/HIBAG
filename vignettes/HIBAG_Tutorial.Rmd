@@ -257,6 +257,10 @@ comp$overall
 ```{r fig.align="center", fig.height=3.3, fig.width=5}
 # violin plot
 hlaReportPlot(pred, model=model, fig="matching")
+```
+Matching proportion is a measure or proportion describing how the SNP profile matches the SNP haplotypes observed in the training set, i.e., the likelihood of SNP profile in a random-mating population consisting of training haplotypes. It is not directly related to confidence score, but a very low value of matching indicates that it is underrepresented in the training set.
+
+```{r fig.align="center", fig.height=3.3, fig.width=5}
 hlaReportPlot(pred, hlatab$validation, fig="call.rate")
 hlaReportPlot(pred, hlatab$validation, fig="call.threshold")
 ```
