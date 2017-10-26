@@ -20,7 +20,7 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor Package
 
-Release Version: 1.12.0
+Release Version: 1.14.0
 
 [http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 
@@ -30,6 +30,7 @@ Release Version: 1.12.0
 * Kernel Version: v1.4
 * modify the kernel to support the GPU extension
 * develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
+* The kernel v1.4 outputs exactly the same parameter estimates as v1.3, and the model training with v1.4 is 1.2 times faster than v1.3.
 
 
 ### Changes in Bioconductor Version (since v1.3.0):

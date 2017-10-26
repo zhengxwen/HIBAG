@@ -115,7 +115,7 @@ static inline int RandomNum(int n)
 // ========================================================================= //
 
 /// Frequency Calculation
-#define FREQ_MUTANT(p, cnt)    ((p) * EXP_LOG_MIN_RARE_FREQ[cnt])
+#define ADD_FREQ_MUTANT(ans, p, cnt)  ans += ((p) * EXP_LOG_MIN_RARE_FREQ[cnt])
 
 /// exp(cnt * log(MIN_RARE_FREQ)), cnt is the hamming distance
 static double EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
@@ -1282,7 +1282,7 @@ void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 			THaplotype *i2 = i1;
 			for (size_t m2=m1; m2 > 0; m2--, i2++)
 			{
-				sum += FREQ_MUTANT((i1 != i2) ?
+				ADD_FREQ_MUTANT(sum, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
 					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 			}
@@ -1301,7 +1301,7 @@ void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
-					sum += FREQ_MUTANT(2 * i1->Freq * i2->Freq,
+					ADD_FREQ_MUTANT(sum, 2 * i1->Freq * i2->Freq,
 						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 				}
 			}
@@ -1344,7 +1344,7 @@ THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
 			THaplotype *i2 = i1;
 			for (size_t m2=m1; m2 > 0; m2--, i2++)
 			{
-				prob += FREQ_MUTANT((i1 != i2) ?
+				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
 					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 			}
@@ -1367,7 +1367,7 @@ THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
-					prob += FREQ_MUTANT(2 * i1->Freq * i2->Freq,
+					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
 						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 				}
 			}
@@ -1409,7 +1409,7 @@ double CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
 			THaplotype *i2 = i1;
 			for (size_t m2=m1; m2 > 0; m2--, i2++)
 			{
-				prob += FREQ_MUTANT((i1 != i2) ?
+				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
 					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 			}
@@ -1429,7 +1429,7 @@ double CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
-					prob += FREQ_MUTANT(2 * i1->Freq * i2->Freq,
+					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
 						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
 				}
 			}
