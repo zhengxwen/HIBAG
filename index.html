@@ -31,7 +31,7 @@
         <h1>
 <a id="hla-genotype-imputation-with-attribute-bagging" class="anchor" href="#hla-genotype-imputation-with-attribute-bagging" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>HLA Genotype Imputation with Attribute Bagging</h1>
 
-<p>Kernel Version: v1.3</p>
+<p>Kernel Version: v1.4</p>
 
 <p><img src="http://www.gnu.org/graphics/gplv3-88x31.png" alt="GPLv3">
 <a href="http://www.gnu.org/copyleft/gpl.html">GNU General Public License, GPLv3</a></p>
@@ -54,10 +54,17 @@
 
 <p>Development Version: <a href="http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html">http://www.bioconductor.org/packages/devel/bioc/html/HIBAG.html</a></p>
 
-<h3>
-<a id="changes-in-bioconductor-version-since-v130" class="anchor" href="#changes-in-bioconductor-version-since-v130" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Changes in Bioconductor Version (since v1.3.0):</h3>
-
+<h3>Changes in Bioconductor Version (since v1.14.0):</h3>
 <ul>
+<li>Kernel Version: v1.4</li>
+<li>modify the kernel to support the GPU extension</li>
+<li>develop a complementary R package (<a href="https://github.com/zhengxwen/HIBAG.gpu">HIBAG.gpu</a>) for GPU computing</li>
+<li>The kernel v1.4 outputs exactly the same parameter estimates as v1.3, and the model training with v1.4 is 1.2 times faster than v1.3</li>
+</ul>
+
+<h3>Changes in Bioconductor Version (since v1.3.0):</h3>
+<ul>
+<li>Kernel Version: v1.3</li>
 <li>optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available</li>
 <li>hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4</li>
 <li>SSE2 popcount implementation without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4</li>
