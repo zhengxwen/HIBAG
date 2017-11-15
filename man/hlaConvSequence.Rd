@@ -30,8 +30,9 @@ hlaConvSequence(hla=character(), locus=NULL,
         code=="exact", region="P.code" if code=="P.code"|"P.code.merge",
         region="G.code" if code=="G.code"|"G.code.merge"}
     \item{release}{"v3.22.0" -- IPD-IMGT/HLA 3.22.0 database (2015-10-07)}
-    \item{replace}{NULL, or a character vector, like \code{c("09:02"="107:01")},
-        any "09:02" will be replaced by "107:01"}
+    \item{replace}{NULL, or a character vector, e.g., \code{c("09:02"="107:01")},
+        any "09:02" will be replaced by "107:01". Due to the change of HLA
+        nomenclature from 2010, HLA-DPB1*09:02 is replaced by DPB1*107:01}
 }
 \details{
     The P or G codes for reporting of ambiguous allele typings can be found:
@@ -89,8 +90,12 @@ Tissue Antigens. 2000 55:280-7
 
 \examples{
 hlaConvSequence(locus="A", method="protein_reference")
+
+# exact match
 hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
     locus="A")
+
+# allow ambiguity
 hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
     locus="A", code="P.code")
 hlaConvSequence(c("01:01", "02:02", "01:01:01G", "01:01:01:01", "07"),
