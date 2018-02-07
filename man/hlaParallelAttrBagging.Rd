@@ -13,7 +13,7 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
 }
 \arguments{
     \item{cl}{if a cluster object, created by the package
-        \link[parallel]{parallel}; if \code{NULL}, serial implementation will
+        \link{parallel-package}; if \code{NULL}, serial implementation will
         be performed; if numeric, specify the number of cores}
     \item{hla}{training HLA types, an object of \code{\link{hlaAlleleClass}}}
     \item{snp}{training SNP genotypes, an object of

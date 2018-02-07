@@ -135,7 +135,7 @@ Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and 
 |:------------:|:--------------------:|:-------------------:|:-------------------:|:--------------------:|
 | 1            | 1.63 x               | 24.3 x              | 35.4 x              | 121.5 x              |
 
-*using HIBAG v1.14.0 and HIBAG.gpu v0.9*
+*using HIBAG v1.14.0 and HIBAG.gpu v0.9.0*
 
 *CPU (1 core), the default installation from Bioconductor supporting SIMD SSE2 instructions, using Intel(R) Xeon(R) CPU E5-2630L @2.40GHz*
 

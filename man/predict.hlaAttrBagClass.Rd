@@ -21,7 +21,7 @@ hlaPredict(object, snp, cl=NULL,
     \item{object}{a model of \code{\link{hlaAttrBagClass}}}
     \item{snp}{a genotypic object of \code{\link{hlaSNPGenoClass}}}
     \item{cl}{if a cluster object, created by the package
-        \link[parallel]{parallel}; if \code{NULL}, serial implementation will
+        \link{parallel-package}; if \code{NULL}, serial implementation will
         be performed; if numeric, specify the number of cores}
     \item{type}{"response": return the best-guess type plus its posterior
         probability; "prob": return all posterior probabilities;
