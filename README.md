@@ -131,11 +131,11 @@ Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and 
 
 **Speedup ratios for training HIBAG models:**
 
-| CPU (1 core) | CPU (1 core, POPCNT) | 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M40 | 1x NVIDIA Tesla P100 |
+| CPU (1 core) | CPU (1 core, POPCNT) | 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M60 | 1x NVIDIA Tesla V100 |
 |:------------:|:--------------------:|:-------------------:|:-------------------:|:--------------------:|
-| 1            | 1.63 x               | 24.3 x              | 35.4 x              | 121.5 x              |
+| 1            | 1.63 x               | 46.5 x              | 57.5 x              | 246.3 x              |
 
-*using HIBAG v1.14.0 and HIBAG.gpu v0.9.0*
+*using HIBAG v1.14.0 and HIBAG.gpu v0.9.1*
 
 *CPU (1 core), the default installation from Bioconductor supporting SIMD SSE2 instructions, using Intel(R) Xeon(R) CPU E5-2630L @2.40GHz*
 
