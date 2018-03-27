@@ -107,9 +107,9 @@ CXXFLAGS=-g -O3 -march=native -mtune=native
 Or force to create hardware POPCNT code:
 ```sh
 ## for C code
-CFLAGS=-g -O3 -mpopcnt
+CFLAGS=-g -O3 -mpopcnt -msse4.2
 ## for C++ code
-CXXFLAGS=-g -O3 -mpopcnt
+CXXFLAGS=-g -O3 -mpopcnt -msse4.2
 ```
 
 If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message after loading the package:
@@ -131,9 +131,9 @@ Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and 
 
 **Speedup ratios for training HIBAG models:**
 
-| CPU (1 core) | CPU (1 core, POPCNT) | 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M60 | 1x NVIDIA Tesla P100 | 1x NVIDIA Tesla V100 |
-|:------------:|:--------------------:|:-------------------:|:-------------------:|:--------------------:|:--------------------:|
-| 1            | 1.63 x               | 46.5 x              | 57.5 x              | 209.1 x              | 246.3 x              |
+| CPU (1 core) | CPU (1 core, POPCNT) | 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M60 | 1x NVIDIA GTX 1080Ti | 1x NVIDIA Tesla P100 | 1x NVIDIA Tesla V100 |
+|:------------:|:--------------------:|:-------------------:|:-------------------:|:--------------------:|:--------------------:|:--------------------:|
+| 1            | 1.63 x               | 46.5 x              | 57.5 x              | 93.7 x               | 209.1 x              | 246.3 x              |
 
 *using HIBAG v1.14.0 and HIBAG.gpu v0.9.1*
 
