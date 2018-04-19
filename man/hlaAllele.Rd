@@ -1,14 +1,16 @@
 \name{hlaAllele}
 \alias{hlaAllele}
 \title{
-    A list of HLA types
+    A list of HLA/KIR types
 }
 \description{
-    Return an object of \code{\link{hlaAlleleClass}}, which contains HLA types.
+    Return an object of \code{\link{hlaAlleleClass}}, which contains
+HLA/KIR types.
 }
 \usage{
 hlaAllele(sample.id, H1, H2, max.resolution="", locus="any", assembly="auto",
-    locus.pos.start=NA, locus.pos.end=NA, prob=NULL, na.rm=TRUE)
+    locus.pos.start=NA_integer_, locus.pos.end=NA_integer_, prob=NULL,
+    na.rm=TRUE)
 }
 \arguments{
     \item{sample.id}{sample IDs}

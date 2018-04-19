@@ -1,10 +1,10 @@
 \name{hlaLociInfo}
 \alias{hlaLociInfo}
 \title{
-    HLA Locus Information
+    HLA/KIR Locus Information
 }
 \description{
-    To get the starting and ending positions in basepair of HLA loci.
+    To get the starting and ending positions in basepair of HLA/KIR loci.
 }
 \usage{
 hlaLociInfo(assembly=c("auto", "auto-silent", "hg18", "hg19", "hg38",
@@ -20,6 +20,7 @@ hlaLociInfo(assembly=c("auto", "auto-silent", "hg18", "hg19", "hg38",
 }
 
 \references{
+    GeneCards: \url{https://www.genecards.org/cgi-bin/carddisp.pl?gene=},
     NCBI Resources: \url{http://www.ncbi.nlm.nih.gov/gene},
     HLA Nomenclature: \url{http://hla.alleles.org/genes/index.html}
 }

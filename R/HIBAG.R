@@ -180,7 +180,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         cat("# of SNPs randomly sampled as candidates for each selection: ",
             mtry, "\n", sep="")
         cat("# of SNPs: ", n.snp, ", # of samples: ", n.samp, "\n", sep="")
-        cat("# of unique HLA alleles: ", n.hla, "\n", sep="")
+        s <- ifelse(!grepl("^KIR", hla$locus), "HLA", "KIR")
+        cat("# of unique ", s, " alleles: ", n.hla, "\n", sep="")
     }
 
 

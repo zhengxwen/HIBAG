@@ -1,19 +1,22 @@
 \name{hlaFlankingSNP}
 \alias{hlaFlankingSNP}
+\alias{hlaGenoSubsetFlank}
 \title{
-    SNP IDs in Flanking Region
+    SNP IDs or SNP genotypes in Flanking Region
 }
 \description{
-    To select SNPs in the flanking region of a specified HLA locus.
+    To get SNPs in the flanking region of a specified HLA/KIR locus.
 }
 \usage{
-hlaFlankingSNP(snp.id, position, hla.id, flank.bp=500*1000, assembly="auto",
+hlaFlankingSNP(snp.id, position, locus, flank.bp=500000L, assembly="auto",
     pos.start=NA_integer_, pos.end=NA_integer_)
+hlaGenoSubsetFlank(genoobj, locus="any", flank.bp=500000L, assembly="auto")
 }
 \arguments{
     \item{snp.id}{a vector of SNP IDs}
+    \item{genoobj}{a genotype object of \code{\link{hlaSNPGenoClass}}}
     \item{position}{a vector of positions}
-    \item{hla.id}{the name of HLA locus, or "any" for other genes}
+    \item{locus}{the name of HLA locus, or "any" for other genes}
     \item{flank.bp}{the size of flanking region on each side in basepair}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
@@ -45,10 +48,13 @@ hla <- hlaAllele(HLA_Type_Table$sample.id,
 region <- 500   # kb
 snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
     hla.id, region*1000, assembly="hg19")
-
 train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
-    snp.sel  = match(snpid, HapMap_CEU_Geno$snp.id),
-    samp.sel = match(hla$training$value$sample.id, HapMap_CEU_Geno$sample.id))
+    snp.sel  = match(snpid, HapMap_CEU_Geno$snp.id))
+summary(train.geno)
+
+
+# or using hlaGenoSubsetFlank
+train.geno <- hlaGenoSubsetFlank(HapMap_CEU_Geno, hla.id, region*1000)
 summary(train.geno)
 
 

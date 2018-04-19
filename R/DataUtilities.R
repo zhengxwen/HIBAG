@@ -319,6 +319,41 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
 
 
 #######################################################################
+# To select a subset of SNP genotypes within the flanking region
+#
+
+hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
+    assembly="auto")
+{
+    # check
+    stopifnot(inherits(genoobj, "hlaSNPGenoClass"))
+
+    if (assembly=="auto") assembly <- genoobj$assembly
+    assembly <- .hla_assembly(assembly)
+    HLAinfo <- hlaLociInfo(assembly)
+
+    if (locus %in% rownames(HLAinfo))
+    {
+        ps <- HLAinfo[locus, "start"]
+        pe <- HLAinfo[locus, "end"]
+    } else {
+        ps <- pe <- NA_integer_
+    }
+
+    if (!is.na(ps) & !is.na(pe))
+    {
+        ps <- ps - flank.bp
+        pe <- pe + flank.bp
+        rv <- hlaGenoSubset(genoobj,
+            snp.sel=(ps<=genoobj$snp.position) & (genoobj$snp.position<=pe))
+    } else
+        stop("No position information for ", locus, " on ", assembly)
+
+    rv
+}
+
+
+#######################################################################
 # To get the overlapping SNPs between target and template with
 #   corrected strand.
 #
@@ -921,7 +956,14 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
 
         # allele information
         cat("Allelic information:")
-        print(rv$allele)
+        b <- rv$allele
+        b <- b[order(b, decreasing=TRUE)]
+        if (length(b) >= 32L)
+        {
+            cat("\n")
+            b <- c(b[1L:31L], "..."=sum(b[32L:length(b)]))
+        }
+        print(b)
     }
 
     # return
@@ -1123,8 +1165,8 @@ hlaUniqueAllele <- function(hla)
 #
 
 hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
-    assembly="auto", locus.pos.start=NA, locus.pos.end=NA, prob=NULL,
-    na.rm=TRUE)
+    assembly="auto", locus.pos.start=NA_integer_, locus.pos.end=NA_integer_,
+    prob=NULL, na.rm=TRUE)
 {
     # check
     stopifnot(is.vector(sample.id))
@@ -1153,8 +1195,8 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
         if (!is.finite(locus.pos.end))
             locus.pos.end <- HLAinfo[locus, "end"]
     } else {
-        locus.pos.start <- as.integer(NA)
-        locus.pos.end <- as.integer(NA)
+        locus.pos.start <- as.integer(locus.pos.start)
+        locus.pos.end <- as.integer(locus.pos.end)
     }
 
     # remove missing values
@@ -1672,31 +1714,31 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 # To select SNPs in the flanking region of a specified HLA locus
 #
 
-hlaFlankingSNP <- function(snp.id, position, hla.id, flank.bp=500*1000,
+hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
     assembly="auto", pos.start=NA_integer_, pos.end=NA_integer_)
 {
     # check
     stopifnot(length(snp.id) == length(position))
-    stopifnot(is.character(hla.id), length(hla.id)==1L)
+    stopifnot(is.character(locus), length(locus)==1L)
 
     # init
-    if (hla.id != "any")
+    if (locus != "any")
     {
         assembly <- .hla_assembly(assembly)
         HLAInfo <- hlaLociInfo(assembly)
         ID <- rownames(HLAInfo)
 
-        if (!(hla.id %in% ID))
-            stop(paste("`hla.id' should be one of", paste(ID, collapse=", ")))
+        if (!(locus %in% ID))
+            stop(paste("'locus' should be one of", paste(ID, collapse=", ")))
     } else {
         if (!is.finite(pos.start) | !is.finite(pos.end))
             stop("'pos.start' and 'pos.end' should be specified.")
     }
 
     if (!is.finite(pos.start))
-        pos.start <- HLAInfo[hla.id, "start"] - flank.bp
+        pos.start <- HLAInfo[locus, "start"] - flank.bp
     if (!is.finite(pos.end))
-        pos.end <- HLAInfo[hla.id, "end"] + flank.bp
+        pos.end <- HLAInfo[locus, "end"] + flank.bp
 
     if (is.finite(pos.start) & is.finite(pos.end))
     {
