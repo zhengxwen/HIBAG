@@ -1397,7 +1397,7 @@ hlaGenoLD <- function(hla, geno)
 # SNP LD visualization
 #
 
-hlaLDMat <- function(geno, maf=0.01, loci=NULL, assembly="auto",
+hlaLDMatrix <- function(geno, loci=NULL, maf=0.01, assembly="auto",
     draw=TRUE, verbose=TRUE)
 {
     # check
@@ -1446,14 +1446,15 @@ hlaLDMat <- function(geno, maf=0.01, loci=NULL, assembly="auto",
     }
 
     # calculate the LD matrix
-    ld <- cor(t(geno$genotype), use="na.or.complete")^2
+    ld <- suppressWarnings(cor(t(geno$genotype), use="na.or.complete")^2)
 
     if (isTRUE(draw))
     {
+        Var1 <- Var2 <- value <- NULL
         dat <- reshape2::melt(ld)
         p <- ggplot2::ggplot(dat, ggplot2::aes(x=Var2, y=Var1)) +
             ggplot2::geom_raster(ggplot2::aes(fill=value)) +
-            ggplot2::scale_fill_gradient(low="grey90", high="red")
+            ggplot2::scale_fill_gradient2(low="grey95", mid="orange", high="red", midpoint=0.5)
         rg <- range(geno$snp.position)
         p <- p + ggplot2::labs(
             x=sprintf("%d SNPs [%.3f mb, %.3f mb], MAF >= %g",

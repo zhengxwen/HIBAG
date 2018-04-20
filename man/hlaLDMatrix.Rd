@@ -1,5 +1,5 @@
-\name{hlaLDMat}
-\alias{hlaLDMat}
+\name{hlaLDMatrix}
+\alias{hlaLDMatrix}
 \title{
     Composite Linkage Disequilibrium in a Region
 }
@@ -8,7 +8,8 @@
 region.
 }
 \usage{
-hlaLDMat(geno, maf=0.01, loci=NULL, assembly="auto", draw=TRUE, verbose=TRUE)
+hlaLDMatrix(geno, loci=NULL, maf=0.01, assembly="auto", draw=TRUE,
+    verbose=TRUE)
 }
 \arguments{
     \item{geno}{an object of \code{\link{hlaSNPGenoClass}}}
@@ -36,7 +37,7 @@ region <- 500*1000   # basepair
 geno <- hlaGenoSubsetFlank(HapMap_CEU_Geno, "A", region)
 summary(geno)
 
-hlaLDMat(geno, loci=c("A"))
+hlaLDMatrix(geno, "A")
 }
 
 \keyword{SNP}
