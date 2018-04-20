@@ -10,7 +10,7 @@ positions.
 }
 \usage{
 \method{plot}{hlaAttrBagObj}(x, snp.col="gray33", snp.pch=1, snp.sz=1,
-    locus.col="blue", locus.lty=2, addplot=NULL,
+    locus.col="blue", locus.lty=1L, locus.lty2=2L, addplot=NULL,
     assembly="auto", ...)
 \method{plot}{hlaAttrBagClass}(x, ...)
 }
@@ -20,7 +20,8 @@ positions.
     \item{snp.pch}{the point type of SNP uses}
     \item{snp.sz}{the point size of SNP uses}
     \item{locus.col}{the color of text and line for HLA locus}
-    \item{locus.lty}{the type of line for HLA locus}
+    \item{locus.lty}{the type of line for the bounds of HLA locus}
+    \item{locus.lty2}{the type of line for HLA locus}
     \item{addplot}{NULL for creating a plot, or a ggplot object to be appended}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without

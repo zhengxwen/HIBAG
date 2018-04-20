@@ -1,13 +1,13 @@
 \name{hlaAlleleClass}
 \alias{hlaAlleleClass}
-\title{Class of HLA Type}
+\title{Class of HLA/KIR Type}
 \description{
-    The definition of a class for HLA types, returned from
+    The definition of a class for HLA/KIR types, returned from
 \code{\link{hlaAllele}}.
 }
 \value{
     There are following components:
-    \item{locus}{HLA locus}
+    \item{locus}{HLA/KIR locus}
     \item{pos.start}{the starting position in basepair}
     \item{pos.end}{the end position in basepair}
     \item{value}{a data frame}

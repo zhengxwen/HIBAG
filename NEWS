@@ -3,7 +3,7 @@ CHANGES IN VERSION 1.16.0
 
     o KIR information in `hlaLociInfo()`
 
-    o new function `hlaGenoSubsetFlank()`
+    o new functions `hlaGenoSubsetFlank()` and `hlaLDMat()`
 
 
 CHANGES IN VERSION 1.14.0

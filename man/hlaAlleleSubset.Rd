@@ -1,10 +1,11 @@
 \name{hlaAlleleSubset}
 \alias{hlaAlleleSubset}
 \title{
-    Get a subset of HLA types
+    Get a subset of HLA/KIR types
 }
 \description{
-    Get a subset of HLA types from an object of \code{\link{hlaAlleleClass}}.
+    Get a subset of HLA/KIR types from an object of
+\code{\link{hlaAlleleClass}}.
 }
 \usage{
 hlaAlleleSubset(hla, samp.sel=NULL)

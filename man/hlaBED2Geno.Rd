@@ -17,7 +17,8 @@ hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     \item{rm.invalid.allele}{if TRUE, remove SNPs with invalid alleles}
     \item{import.chr}{the chromosome, "1" .. "22", "X", "Y", "XY", "MT",
         "xMHC", or "", where "xMHC" implies the extended MHC on chromosome 6,
-        and "" for all SNPs}
+        and "" for all SNPs; "6" for all SNPs on chromosome 6 for HLA;
+        "19" for all SNPs on chromosome 19 for KIR}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}

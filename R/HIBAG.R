@@ -1340,7 +1340,7 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 #
 
 ##########################################################################
-# To calculate linkage disequilibrium between HLA locus and SNP markers
+# Calculate linkage disequilibrium between HLA locus and SNP markers
 #
 
 hlaGenoLD <- function(hla, geno)
@@ -1393,6 +1393,93 @@ hlaGenoLD <- function(hla, geno)
 }
 
 
+##########################################################################
+# SNP LD visualization
+#
+
+hlaLDMat <- function(geno, maf=0.01, loci=NULL, assembly="auto",
+    draw=TRUE, verbose=TRUE)
+{
+    # check
+    stopifnot(inherits(geno, "hlaSNPGenoClass"))
+    stopifnot(is.numeric(maf), length(maf)==1L)
+    stopifnot(is.null(loci) | is.vector(loci))
+    stopifnot(is.logical(draw), length(draw)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
+
+    # maf filter
+    if (is.na(maf)) maf <- 0
+    if (maf > 0)
+    {
+        af <- rowMeans(geno$genotype, na.rm=TRUE) * 0.5
+        af <- pmin(af, 1-af)
+        xx <- af >= maf
+        xx[is.na(xx)] <- FALSE
+        if (sum(xx) < length(af))
+        {
+            if (verbose)
+            {
+                cat("MAF filter (>=", maf, "), excluding ",
+                    length(af)-sum(xx), " SNP(s)\n", sep="")
+            }
+            geno <- hlaGenoSubset(geno, snp.sel=xx)
+        }
+    }
+
+    if (!is.null(loci))
+    {
+        if (assembly=="auto") assembly <- geno$assembly
+        assembly <- .hla_assembly(assembly)
+        info <- hlaLociInfo(assembly)
+        if (!all(loci %in% rownames(info)))
+        {
+            stop("'loci' should be one of ", paste(rownames(info),
+                collapse=", "))
+        }
+        info <- info[loci, ]
+        st <- sapply(info$start, function(p) {
+            mean(c(which(p <= geno$snp.position)[1L],
+            rev(which(p >= geno$snp.position))[1L])) })
+        ed <- sapply(info$end, function(p) {
+            mean(c(which(p <= geno$snp.position)[1L],
+            rev(which(p >= geno$snp.position))[1L])) })
+    }
+
+    # calculate the LD matrix
+    ld <- cor(t(geno$genotype), use="na.or.complete")^2
+
+    if (isTRUE(draw))
+    {
+        dat <- reshape2::melt(ld)
+        p <- ggplot2::ggplot(dat, ggplot2::aes(x=Var2, y=Var1)) +
+            ggplot2::geom_raster(ggplot2::aes(fill=value)) +
+            ggplot2::scale_fill_gradient(low="grey90", high="red")
+        rg <- range(geno$snp.position)
+        p <- p + ggplot2::labs(
+            x=sprintf("%d SNPs [%.3f mb, %.3f mb], MAF >= %g",
+                length(geno$snp.id), rg[1L]/1000000, rg[2L]/1000000, maf),
+            y="SNP index", title=expression("Linkage Disequilibrium r"^2))
+        for (i in seq_along(loci))
+        {
+            md <- (st[i]+ed[i])*0.5
+            if (is.finite(md))
+            {
+                p <- p +
+                    ggplot2::geom_vline(xintercept=st[i], size=0.25, colour="blue", alpha=0.5) +
+                    ggplot2::geom_vline(xintercept=ed[i], size=0.25, colour="blue", alpha=0.5) +
+                    ggplot2::geom_vline(xintercept=md, linetype=2, colour="blue") +
+                    ggplot2::annotate("label", x=md,
+                        y=length(geno$snp.position), vjust="inward",
+                        label=ifelse(grepl("^KIR", loci[i]), loci[i],
+                            paste("HLA", loci[i], sep="-")))
+            }
+        }
+        return(p)
+    } else {
+        return(ld)
+    }
+}
+
 
 
 ##########################################################################
@@ -1425,7 +1512,7 @@ print.hlaAttrBagClass <- function(x, ...)
 #
 
 plot.hlaAttrBagObj <- function(x, snp.col="gray33", snp.pch=1, snp.sz=1,
-    locus.col="blue", locus.lty=2, addplot=NULL,
+    locus.col="blue", locus.lty=1L, locus.lty2=2L, addplot=NULL,
     assembly="auto", ...)
 {
     # check
@@ -1458,13 +1545,16 @@ plot.hlaAttrBagObj <- function(x, snp.col="gray33", snp.pch=1, snp.sz=1,
         p <- addplot
     }
     p <- p +
-        ggplot2::geom_vline(xintercept=pos.start, color=locus.col,
-            linetype=locus.lty) +
-        ggplot2::geom_vline(xintercept=pos.end, color=locus.col,
-            linetype=locus.lty) +
+        ggplot2::geom_vline(xintercept=pos.start, colour=locus.col,
+            linetype=locus.lty, size=0.25, alpha=0.5) +
+        ggplot2::geom_vline(xintercept=pos.end, colour=locus.col,
+            linetype=locus.lty, size=0.25, alpha=0.5) +
+        ggplot2::geom_vline(xintercept=(pos.start+pos.end)*0.5,
+            linetype=locus.lty2, colour=locus.col) +
         ggplot2::annotate("label", x=(pos.start + pos.end)/2,
-            y=max(dat$ht), colour=locus.col, vjust="inward",
-            label=paste("HLA", x$hla.locus, sep="-"))
+            y=max(dat$ht), vjust="inward",
+            label=ifelse(grepl("^KIR", x$hla.locus), x$hla.locus,
+                paste("HLA", x$hla.locus, sep="-")))
     if (is.null(addplot))
     {
         p <- p + ggplot2::geom_point(color=snp.col, shape=snp.pch, size=snp.sz)
