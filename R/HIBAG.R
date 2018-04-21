@@ -1457,9 +1457,12 @@ hlaLDMatrix <- function(geno, loci=NULL, maf=0.01, assembly="auto",
             ggplot2::scale_fill_gradient2(low="grey95", mid="orange", high="red", midpoint=0.5)
         rg <- range(geno$snp.position)
         p <- p + ggplot2::labs(
-            x=sprintf("%d SNPs [%.3f mb, %.3f mb], MAF >= %g",
-                length(geno$snp.id), rg[1L]/1000000, rg[2L]/1000000, maf),
+            x=sprintf("%d SNPs in total, MAF >= %g", length(geno$snp.id), maf),
             y="SNP index", title=expression("Linkage Disequilibrium r"^2))
+        ii <- c(0, 0.25, 0.5, 0.75, 1)
+        p <- p + ggplot2::scale_x_continuous(
+            breaks=unname(quantile(1:length(geno$snp.position), ii)),
+            labels=sprintf("%.3fMb", c(quantile(geno$snp.position, ii)/10^6)))
         for (i in seq_along(loci))
         {
             md <- (st[i]+ed[i])*0.5
