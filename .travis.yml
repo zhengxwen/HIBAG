@@ -4,15 +4,15 @@ sudo: required
 warnings_are_errors: false
 
 r_binary_packages:
-  - RUnit
-  - rmarkdown
-  - knitr
-  - ggplot2
 
 bioc_packages:
   - BiocStyle
   - gdsfmt
   - SNPRelate
+  - RUnit
+  - rmarkdown
+  - knitr
+  - ggplot2
 
 os:
   - linux
