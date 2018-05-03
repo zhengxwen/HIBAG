@@ -1,7 +1,7 @@
 ---
 title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging"
 author: "Xiuwen Zheng"
-date: "Jan 3, 2016"
+date: "May 3, 2018"
 output:
   html_document:
     theme: default
@@ -253,6 +253,14 @@ comp$overall
 ```
 
 ### Evaluation in Figures
+
+The distance matrix is calculated based on the haplotype similarity carrying HLA alleles:
+```{r fig.align="center", fig.height=3.3, fig.width=5}
+# hierarchical cluster analysis
+d <- hlaDistance(model)
+p <- hclust(as.dist(d))
+plot(p, xlab="HLA alleles")
+```
 
 ```{r fig.align="center", fig.height=3.3, fig.width=5}
 # violin plot

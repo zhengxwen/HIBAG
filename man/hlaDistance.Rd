@@ -37,11 +37,10 @@ summary(model)
 
 # distance matrix
 d <- hlaDistance(model)
-hla.allele.distance <- as.dist(d)
 
 # draw
-p <- hclust(hla.allele.distance)
-plot(p)
+p <- hclust(as.dist(d))
+plot(p, xlab="HLA alleles")
 }
 
 \keyword{HLA}
