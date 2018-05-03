@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2017   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2018   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -1484,6 +1484,37 @@ hlaLDMatrix <- function(geno, loci=NULL, maf=0.01, assembly="auto",
     }
 }
 
+
+##########################################################################
+# Calculate the distances among different HLA alleles
+#
+
+hlaDistance <- function(model)
+{
+    # check
+    if (inherits(model, "hlaAttrBagClass"))
+        model <- hlaModelToObj(model)
+
+    # the total number of classifiers
+    n <- length(model$classifiers)
+    lst <- vector("list", n)
+    hla <- model$hla.allele
+    num <- matrix(0L, nrow=length(hla), ncol=length(hla))
+    for (i in seq_len(n))
+    {
+        z <- model$classifiers[[i]]$haplos
+        m <- .Call(HIBAG_Distance, length(hla), match(z$hla, hla),
+            z$freq, z$haplo)
+        num <- num + !is.na(m)
+        m[is.na(m)] <- 0
+        lst[[i]] <- m
+    }
+
+    # output
+    rv <- Reduce("+", lst) / num
+    colnames(rv) <- rownames(rv) <- hla
+    rv
+}
 
 
 ##########################################################################

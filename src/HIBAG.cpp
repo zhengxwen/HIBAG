@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2017   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2018   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1041,6 +1041,60 @@ SEXP HIBAG_SeqRmDot(SEXP ref, SEXP seq)
 
 
 /**
+ *  Calculate the distances among different HLA alleles
+**/
+SEXP HIBAG_Distance(SEXP NumHLA, SEXP Idx, SEXP Freq, SEXP HaploStr)
+{
+	int num_hla = Rf_asInteger(NumHLA);
+	int n = LENGTH(Idx);
+	int *I = INTEGER(Idx);
+	double *freq = REAL(Freq);
+
+	SEXP freq_sum = Rf_allocMatrix(REALSXP, num_hla, num_hla);
+	PROTECT(freq_sum);
+	double *p_freq_sum = REAL(freq_sum);
+	memset(p_freq_sum, 0, sizeof(double)*num_hla*num_hla);
+
+	SEXP dist_sum = Rf_allocMatrix(REALSXP, num_hla, num_hla);
+	PROTECT(dist_sum);
+	double *p_dist_sum = REAL(dist_sum);
+	memset(p_dist_sum, 0, sizeof(double)*num_hla*num_hla);
+
+	for (int i=0; i < n; i++)
+	{
+		for (int j=i; j < n; j++)
+		{
+			if (I[i]!=NA_INTEGER && I[j]!=NA_INTEGER)
+			{
+				const char *s1 = CHAR(STRING_ELT(HaploStr, i));
+				const char *s2 = CHAR(STRING_ELT(HaploStr, j));
+				int d = 0;
+				for (; *s1 && *s2; s1++, s2++)
+					if (*s1 != *s2) d++;
+				double f = freq[i] * freq[j];
+				int ii = (I[i]-1) * num_hla + (I[j]-1);
+				p_freq_sum[ii] += f;
+				p_dist_sum[ii] += f*d;
+			}
+		}
+	}
+
+	for (int i=0; i < num_hla; i++)
+	{
+		for (int j=i; j < num_hla; j++)
+		{
+			int ii = i * num_hla + j;
+			int jj = j * num_hla + i;
+			p_dist_sum[jj] = p_dist_sum[ii] = p_dist_sum[ii] / p_freq_sum[ii];
+		}
+	}
+
+	UNPROTECT(2);
+	return dist_sum;
+}
+
+
+/**
  *  Get an error message
 **/
 SEXP HIBAG_ErrMsg()
@@ -1107,6 +1161,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Close, 1),
 		CALL(HIBAG_Confusion, 4),
 		CALL(HIBAG_ConvBED, 5),
+		CALL(HIBAG_Distance, 4),
 		CALL(HIBAG_ErrMsg, 0),
 		CALL(HIBAG_Kernel_Version, 0),
 		CALL(HIBAG_New, 3),
