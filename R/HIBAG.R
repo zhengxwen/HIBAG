@@ -407,7 +407,7 @@ hlaClose <- function(model)
 
 hlaPredict <- function(object, snp, cl=NULL,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 {
     stopifnot(inherits(object, "hlaAttrBagClass"))
@@ -417,7 +417,7 @@ hlaPredict <- function(object, snp, cl=NULL,
 
 predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
 {
     # check
@@ -478,7 +478,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
         {
             cat(sprintf(
                 "Run in parallel with %d compute node%s.\n",
-                length(cl), if (length(cl)>1) "s" else ""
+                length(cl), ifelse(length(cl)>1L, "s", "")
             ))
         }
     }

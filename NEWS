@@ -1,7 +1,9 @@
-CHANGES IN VERSION 1.17.1
+CHANGES IN VERSION 1.17.1-1.17.2
 -------------------------
 
     o new function `hlaDistance()`
+
+    o `match.type="Position"` is the default option in `hlaPredict()`
 
 
 CHANGES IN VERSION 1.16.0
