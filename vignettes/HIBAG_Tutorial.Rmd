@@ -40,7 +40,7 @@ Here we introduce a new prediction method for **H**LA **I**mputation using attri
 # Examples
 
 ```{r echo=FALSE}
-options(width=100)
+options(width=110)
 ```
 
 ```{r}
@@ -255,7 +255,7 @@ comp$overall
 ### Evaluation in Figures
 
 The distance matrix is calculated based on the haplotype similarity carrying HLA alleles:
-```{r fig.align="center", fig.height=3.3, fig.width=5}
+```{r fig.align="center", fig.height=4, fig.width=5}
 # hierarchical cluster analysis
 d <- hlaDistance(model)
 p <- hclust(as.dist(d))
@@ -363,6 +363,7 @@ fn <- system.file("doc", "case_control.txt", package="HIBAG")
 ```R
 # prepare data
 fn <- "case_control.txt"
+# or fn <- system.file("doc", "case_control.txt", package="HIBAG")
 ```
 The example text file: [case_control.txt](case_control.txt).
 ```{r}
