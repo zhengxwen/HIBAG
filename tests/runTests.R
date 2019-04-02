@@ -13,7 +13,7 @@ library(HIBAG)
 hla.list <- c("A", "B", "C", "DQA1", "DQB1", "DRB1")
 
 # pre-defined lower bound of prediction accuracy
-hla.acc <- c(0.9, 0.8, 0.8, 0.85, 0.85, 0.75)
+hla.acc <- c(0.9, 0.8, 0.8, 0.8, 0.8, 0.7)
 
 
 for (hla.idx in seq_len(length(hla.list)))
