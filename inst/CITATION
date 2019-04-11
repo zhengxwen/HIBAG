@@ -16,3 +16,18 @@ citEntry(entry="Article",
             "The Pharmacogenomics Journal.",
             "(2014)", "14, 192-200")
 )
+
+citEntry(entry="Article",
+    title = "Imputation-Based HLA Typing with SNPs in GWAS Studies",
+    author = personList(person("Xiuwen", "Zheng")),
+    journal = {"Methods in Molecular Biology"},
+    year = "2018",
+    url = "https://doi.org/10.1007/978-1-4939-8546-3_11",
+
+    textVersion =
+        paste("Zheng, X.",
+            "Imputation-Based HLA Typing with SNPs in GWAS Studies.",
+            "In: Boegel S. (eds) HLA Typing.",
+            "Methods in Molecular Biology.",
+            "(2018)", "Vol 1802. Humana Press, New York, NY.")
+)

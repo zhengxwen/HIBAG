@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2018   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2019   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -46,7 +46,7 @@
 #
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
-    mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
+    mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE, mono.rm=TRUE,
     verbose=TRUE, verbose.detail=FALSE)
 {
     # check
@@ -56,6 +56,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
+    stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
     if (verbose.detail) verbose <- TRUE
@@ -104,23 +105,27 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     tmp.snp.allele <- snp$snp.allele
 
     # remove mono-SNPs
-    snpsel <- rowMeans(snp.geno, na.rm=TRUE)
-    snpsel[!is.finite(snpsel)] <- 0
-    snpsel <- (0 < snpsel) & (snpsel < 2)
-    if (sum(!snpsel) > 0L)
+    if (mono.rm)
     {
-        snp.geno <- snp.geno[snpsel, ]
-        if (verbose)
+        snpsel <- rowMeans(snp.geno, na.rm=TRUE)
+        snpsel[!is.finite(snpsel)] <- 0
+        snpsel <- (0 < snpsel) & (snpsel < 2)
+        if (sum(!snpsel) > 0L)
         {
-            a <- sum(!snpsel)
-            if (a > 0L)
-                cat(sprintf("Exclude %d monomorphic SNP%s\n", a, .plural(a)))
+            snp.geno <- snp.geno[snpsel, ]
+            if (verbose)
+            {
+                a <- sum(!snpsel)
+                if (a > 0L)
+                    cat(sprintf("Exclude %d monomorphic SNP%s\n", a, .plural(a)))
+            }
+            tmp.snp.id <- tmp.snp.id[snpsel]
+            tmp.snp.position <- tmp.snp.position[snpsel]
+            tmp.snp.allele <- tmp.snp.allele[snpsel]
         }
-        tmp.snp.id <- tmp.snp.id[snpsel]
-        tmp.snp.position <- tmp.snp.position[snpsel]
-        tmp.snp.allele <- tmp.snp.allele[snpsel]
     }
 
+    # check
     if (length(samp.id) <= 0L)
         stop("There is no common sample between 'hla' and 'snp'.")
     if (length(dim(snp.geno)[1L]) <= 0L)
@@ -239,7 +244,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 
 hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
-    stop.cluster=FALSE, verbose=TRUE)
+    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
@@ -250,6 +255,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
+    stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
     stopifnot(is.logical(stop.cluster))
     stopifnot(is.logical(verbose))
 
@@ -302,11 +308,11 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         total <- 0L
 
         .DynamicClusterCall(cl,
-            fun = function(job, hla, snp, mtry, prune, na.rm)
+            fun = function(job, hla, snp, mtry, prune, na.rm, mono.rm)
             {
                 eval(parse(text="library(HIBAG)"))
                 model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=0L,
-                    mtry=mtry, prune=prune, na.rm=na.rm,
+                    mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
                     verbose=FALSE, verbose.detail=FALSE)
                 mobj <- hlaModelToObj(model)
                 hlaClose(model)
@@ -347,7 +353,8 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 }
             },
             n = nclassifier, stop.cluster = stop.cluster,
-            hla=hla, snp=snp, mtry=mtry, prune=prune, na.rm=na.rm
+            hla=hla, snp=snp, mtry=mtry, prune=prune,
+            na.rm=na.rm, mono.rm=mono.rm
         )
     })
 

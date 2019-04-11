@@ -9,7 +9,7 @@
 \usage{
 hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
-    stop.cluster=FALSE, verbose=TRUE)
+    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE)
 }
 \arguments{
     \item{cl}{if a cluster object, created by the package
@@ -25,6 +25,7 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     \item{prune}{if TRUE, to perform a parsimonious forward variable selection,
         otherwise, exhaustive forward variable selection. See details}
     \item{na.rm}{if TRUE, remove the samples with missing HLA types}
+    \item{mono.rm}{if TRUE, remove monomorphic SNPs}
     \item{stop.cluster}{\code{TRUE}: stop cluster nodes after computing}
     \item{verbose}{if TRUE, show information}
 }
