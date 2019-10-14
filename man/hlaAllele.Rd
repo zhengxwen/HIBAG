@@ -14,14 +14,14 @@ hlaAllele(sample.id, H1, H2, max.resolution="", locus="any", assembly="auto",
 }
 \arguments{
     \item{sample.id}{sample IDs}
-    \item{H1}{a vector of HLA alleles}
-    \item{H2}{a vector of HLA alleles}
+    \item{H1}{a vector of HLA/KIR alleles}
+    \item{H2}{a vector of HLA/KIR alleles}
     \item{max.resolution}{"2-digit", "4-digit", "6-digit", "8-digit", "allele",
         "protein", "2", "4", "6", "8", "full" or "": "allele" = "2-digit",
         "protein" = "4-digit", "full" and "" indicating no limit on resolution}
     \item{locus}{the name of HLA locus: "A", "B", "C", "DRB1", "DRB5",
-        "DQA1", "DQB1", "DPB1", or "any", where "any" indicates any other
-        multiallelic locus}
+        "DQA1", "DQB1", "DPB1", KIR locus, or "any", where "any" indicates any other
+        multiallelic locus; see \code{\link{hlaLociInfo}} for possible locus names}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
@@ -54,7 +54,8 @@ a possible maximum resolution.
 }
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{hlaAlleleDigit}}, \code{\link{hlaAlleleSubset}}
+    \code{\link{hlaAlleleDigit}}, \code{\link{hlaAlleleSubset}},
+    \code{\link{hlaLociInfo}}
 }
 
 \examples{

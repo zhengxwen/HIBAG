@@ -20,24 +20,24 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor Package
 
-Release Version: 1.16.0
+Release Version: 1.20.0
 
-[http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
+[http://www.bioconductor.org/packages/HIBAG/](http://www.bioconductor.org/packages/HIBAG/)
 
 
-### Changes in Bioconductor Version (since v1.14.0):
+### Changes in Bioconductor Version (since v1.14.0, Y2017):
 
 * Kernel Version: v1.4
-* modify the kernel to support the GPU extension
-* develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
+* Modify the kernel to support the GPU extension
+* Develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
 * The kernel v1.4 outputs exactly the same parameter estimates as v1.3, and the model training with v1.4 is 1.2 times faster than v1.3.
 
 
-### Changes in Bioconductor Version (since v1.3.0):
+### Changes in Bioconductor Version (since v1.3.0, Y2013):
 
 * Kernel Version: v1.3
-* optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
-* hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
+* Optimize the calculation of hamming distance using SSE2 and hardware POPCNT instructions if available
+* Hardware POPCNT: 2.4x speedup for large-scale data, compared to the implementation in v1.2.4
 * SSE2 popcount implementation without hardware POPCNT: 1.5x speedup for large-scale data, compared to the implementation in v1.2.4
 
 
@@ -48,13 +48,9 @@ Dr. Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
 
 ## Pre-fit Model Download
 
-[http://zhengxwen.github.io/HIBAG/](http://zhengxwen.github.io/HIBAG/)
-
-[http://zhengxwen.github.io/HIBAG/hibag_index.html](http://zhengxwen.github.io/HIBAG/hibag_index.html)
-
-Platform-specific models: [http://zhengxwen.github.io/HIBAG/platforms.html](http://zhengxwen.github.io/HIBAG/platforms.html)
-
-or [http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)
+* [https://hibag.s3.amazonaws.com/index.html](https://hibag.s3.amazonaws.com/index.html)
+* Platform-specific HLARES models: [https://hibag.s3.amazonaws.com/hlares_index.html](https://hibag.s3.amazonaws.com/hlares_index.html)
+* [http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)
 
 
 ## Citation
@@ -73,7 +69,7 @@ source("http://bioconductor.org/biocLite.R")
 biocLite("HIBAG")
 ```
 
-* Development version from Github:
+* Development version from Github (for developers/testers only):
 ```R
 library("devtools")
 install_github("zhengxwen/HIBAG")
@@ -123,7 +119,7 @@ Supported by Streaming SIMD Extensions (SSE2 + POPCNT)
 
 ### GPU with OpenCL
 
-* Install [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu) from Github:
+* Install [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu) from Github (for developers/testers only):
 ```R
 library("devtools")
 install_github("zhengxwen/HIBAG.gpu")
@@ -131,11 +127,15 @@ install_github("zhengxwen/HIBAG.gpu")
 Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and prediction.
 
 
-**Speedup ratios for training HIBAG models:**
+**Speed-up factors for training HIBAG models:**
 
-| CPU (1 core) | CPU (1 core, POPCNT) | 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M60 | 1x NVIDIA GTX 1080Ti | 1x NVIDIA Tesla P100 | 1x NVIDIA Tesla V100 |
-|:------------:|:--------------------:|:-------------------:|:-------------------:|:--------------------:|:--------------------:|:--------------------:|
-| 1            | 1.63 x               | 46.5 x              | 57.5 x              | 93.7 x               | 209.1 x              | 246.3 x              |
+| CPU (1 core) | CPU (1 core, POPCNT) |
+|:------------:|:--------------------:|
+| 1            | 1.63 x               |
+
+| 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M60 | 1x NVIDIA GTX 1080Ti | 1x NVIDIA Tesla P100 | 1x NVIDIA Tesla V100 |
+|:-------------------:|:-------------------:|:--------------------:|:--------------------:|:--------------------:|
+| 46.5 x              | 57.5 x              | 93.7 x               | 209.1 x              | 246.3 x              |
 
 *using HIBAG v1.14.0 and HIBAG.gpu v0.9.1*
 

@@ -1,20 +1,20 @@
 ---
 title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging"
-author: "Xiuwen Zheng"
+author: "Dr. Xiuwen Zheng"
 date: "May 3, 2018"
 output:
-  html_document:
-    theme: default
-    highlight: tango
-    toc: yes
-  pdf_document:
-    toc: yes
-    toc_depth: 3
+    html_document:
+        theme: default
+        highlight: tango
+        toc: yes
+    pdf_document:
+        toc: yes
+        toc_depth: 3
 bibliography: HIBAG_Ref.bib
 vignette: >
-  %\VignetteIndexEntry{HIBAG vignette html}
-  %\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS}
-  %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteIndexEntry{HIBAG vignette html}
+    %\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS}
+    %\VignetteEngine{knitr::rmarkdown}
 ---
 
 # Overview
