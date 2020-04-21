@@ -755,8 +755,8 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 # Convert from SNP GDS format (SNPRelate)
 #
 
-hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE,
-    import.chr="xMHC", assembly="auto", verbose=TRUE)
+hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
+    assembly="auto", verbose=TRUE)
 {
     # library
     if (!requireNamespace("gdsfmt"))

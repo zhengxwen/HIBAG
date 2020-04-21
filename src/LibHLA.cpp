@@ -733,10 +733,10 @@ inline int TGenotype::_HamDist(size_t Length,
 		val = _mm_and_si128(_mm_add_epi64(val, _mm_srli_epi64(val, 4)), Z0F);
 
 		// ans += (val * 0x0101010101010101LLU) >> 56;
-		uint64_t r0 = _mm_cvtsi128_si64(val);
-		uint64_t r1 = _mm_cvtsi128_si64(_mm_unpackhi_epi64(val, val));
-		ans += ((r0 * 0x0101010101010101LLU) >> 56) +
-			((r1 * 0x0101010101010101LLU) >> 56);
+		uint64_t r[2];
+		_mm_storeu_si128((__m128i*)r, val);
+		ans += ((r[0] * 0x0101010101010101LLU) >> 56) +
+			((r[1] * 0x0101010101010101LLU) >> 56);
 
 	#endif
 	}
