@@ -29,7 +29,7 @@ Here we introduce a new prediction method for **H**LA **I**mputation using attri
 
 # Features
 
-* HIBAG can be used by researchers with published parameter estimates ([http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)) instead of requiring access to large training sample datasets.
+* HIBAG can be used by researchers with published parameter estimates ([http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/) or [https://hibag.s3.amazonaws.com/hlares_index.html](https://hibag.s3.amazonaws.com/hlares_index.html)) instead of requiring access to large training sample datasets.
 * A typical HIBAG parameter file contains only haplotype frequencies at different SNP subsets rather than individual training genotypes.
 * SNPs within the xMHC region (chromosome 6) are used for imputation.
 * HIBAG employs unphased genotypes of unrelated individuals as a training set.
@@ -49,7 +49,7 @@ library(HIBAG)
 
 ## Pre-fit HIBAG Models for HLA Imputation
 
-```{r fig.width=10, fig.height=5, fig.align='center'}
+```{r fig.width=10, fig.height=4, fig.align='center'}
 # load the published parameter estimates from European ancestry
 #   e.g., filename <- "HumanOmniExpressExome-European-HLA4-hg19.RData"
 #   here, we use example data in the package
@@ -60,6 +60,7 @@ model.list <- get(load(filename))
 hla.id <- "A"
 model <- hlaModelFromObj(model.list[[hla.id]])
 summary(model)
+plot(model)    # show the frequency of SNP marker in the model
 
 # SNPs in the model
 head(model$snp.id)
@@ -75,7 +76,7 @@ yourgeno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
 summary(yourgeno)
 
 # best-guess genotypes and all posterior probabilities
-pred.guess <- predict(model, yourgeno, type="response+prob")
+pred.guess <- hlaPredict(model, yourgeno, type="response+prob")
 summary(pred.guess)
 
 pred.guess$value
@@ -185,7 +186,7 @@ summary(model)
 
 ```R
 # best-guess genotypes and all posterior probabilities
-pred.guess <- predict(model, yourgeno, type="response+prob", cl=cl)
+pred.guess <- hlaPredict(model, yourgeno, type="response+prob", cl=cl)
 ```
 
 
@@ -243,7 +244,7 @@ model <- hlaModelFromObj(mobj)
 summary(model)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 summary(pred)
 
 # compare
@@ -376,7 +377,7 @@ summary(hla)
 ```
 Or the best-guess HLA genotypes from `predict()` or `hlaPredict()`:
 ```R
-hla <- predict(model, yourgeno)
+hla <- hlaPredict(model, yourgeno)
 ```
 
 ### Allelic Association

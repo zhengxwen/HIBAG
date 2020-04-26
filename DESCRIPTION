@@ -1,8 +1,8 @@
 Package: HIBAG
 Type: Package
 Title: HLA Genotype Imputation with Attribute Bagging
-Version: 1.23.1
-Date: 2020-04-21
+Version: 1.23.2
+Date: 2020-04-26
 Depends: R (>= 3.2.0)
 Imports: methods
 Suggests: parallel, knitr, gdsfmt, SNPRelate, SeqArray, ggplot2, reshape2
@@ -10,9 +10,9 @@ Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu", comment=c(ORCID="0000-0002-1390-0708")),
     person("Bruce", "Weir", role=c("ctb", "ths"),
     email="bsweir@u.washington.edu", comment=c(ORCID="0000-0002-4883-1247")))
-Description: Imputing HLA classical alleles with GWAS SNP data, and it relies on a
-    training set of HLA and SNP genotypes. HIBAG can be used
-    by researchers with published parameter estimates instead of requiring
+Description: Imputes HLA classical alleles using GWAS SNP data, and it relies
+    on a training set of HLA and SNP genotypes. HIBAG can be used by
+    researchers with published parameter estimates instead of requiring
     access to large training sample datasets. It combines the concepts of
     attribute bagging, an ensemble classifier method, with haplotype inference
     for SNPs and HLA types. Attribute bagging is a technique which improves

@@ -1,8 +1,8 @@
 CHANGES IN VERSION 1.22.0
 -------------------------
 
-    o change the file name "vignettes/HIBAG_Tutorial.Rmd" to "vignettes/HIBAG.Rmd",
-      so `vignette("HIBAG")` can work directly
+    o change the file name "vignettes/HIBAG_Tutorial.Rmd" to
+      "vignettes/HIBAG.Rmd", so `vignette("HIBAG")` can work directly
 
 
 CHANGES IN VERSION 1.18.0
