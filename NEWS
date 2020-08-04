@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.24.0
+-------------------------
+
+    o fix a Win32 compiler issue
+
+
 CHANGES IN VERSION 1.22.0
 -------------------------
 
