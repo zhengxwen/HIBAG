@@ -39,8 +39,30 @@
 #include <string>
 #include <algorithm>
 
-#include <R.h>
-#include <Rmath.h>
+
+// Streaming SIMD Extensions, SSE, SSE2, SSE4_2 (POPCNT)
+#if (defined(__SSE__) && defined(__SSE2__))
+#   include <xmmintrin.h>  // SSE
+#   include <emmintrin.h>  // SSE2
+#   if defined(__SSE4_2__) || defined(__POPCNT__)
+#       define HIBAG_HARDWARE_POPCNT
+#       include <nmmintrin.h>  // SSE4_2, for POPCNT
+#   endif
+#   define HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+#else
+#   ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+#       undef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
+#   endif
+#endif
+
+// 32-bit or 64-bit registers
+#ifdef __LP64__
+#   define HIBAG_REG_BIT64
+#else
+#   ifdef HIBAG_REG_BIT64
+#      undef HIBAG_REG_BIT64
+#   endif
+#endif
 
 
 namespace HLA_LIB
@@ -52,6 +74,7 @@ namespace HLA_LIB
 
 	/// Define unsigned integers
 	typedef uint8_t     UINT8;
+	typedef uint64_t    UINT64;
 
 	/// The max number of SNP markers in an individual classifier.
 	//  Don't modify this value since the code is optimized for this value!!!
@@ -710,7 +733,7 @@ namespace HLA_LIB
 		clock_t OldTime;  //< the old time point
 	};
 
-	/// The progression information
+	/// Progress information
 	extern CdProgression Progress;
 
 
@@ -743,7 +766,7 @@ namespace HLA_LIB
 
 	// ===================================================================== //
 
-	/// Pointer to the structure of functions using GPU
+	/// the data structure of functions using GPU
 	struct TypeGPUExtProc
 	{
 		/// initialize the internal structure for building a model
@@ -773,7 +796,7 @@ namespace HLA_LIB
 			double out_prob[], double out_match[]);
 	};
 
-	/// 
+	/// Pointer to the structure of functions using GPU
 	extern TypeGPUExtProc *GPUExtProcPtr;
 }
 

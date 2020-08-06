@@ -119,11 +119,8 @@ Supported by Streaming SIMD Extensions (SSE2 + POPCNT)
 
 ### GPU with OpenCL
 
-* Install [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu) from Github (for developers/testers only):
-```R
-library("devtools")
-install_github("zhengxwen/HIBAG.gpu")
-```
+* Install HIBAG.gpu
+
 Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and prediction.
 
 

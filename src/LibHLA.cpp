@@ -26,48 +26,20 @@
 // ===============================================================
 
 
-// Streaming SIMD Extensions, SSE, SSE2, SSE4_2 (POPCNT)
+#include "LibHLA.h"
+#include <R.h>
+#include <Rmath.h>
 
-#if (defined(__SSE__) && defined(__SSE2__))
-
-#   include <xmmintrin.h>  // SSE
-#   include <emmintrin.h>  // SSE2
-
-#   if defined(__SSE4_2__) || defined(__POPCNT__)
-#       define HIBAG_HARDWARE_POPCNT
-#       include <nmmintrin.h>  // SSE4_2, for POPCNT
-#   endif
-
-#   define HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-
+// Streaming SIMD Extensions
+#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
 #   define M128_I32_0(x)    _mm_cvtsi128_si32(x)
 #   define M128_I32_1(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 4))
 #   define M128_I32_2(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 8))
 #   define M128_I32_3(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 12))
 #   define M128_I64_0(x)    _mm_cvtsi128_si64(x) 
 #   define M128_I64_1(x)    _mm_cvtsi128_si64(_mm_unpackhi_epi64(x, x))
-
-#else
-
-#   ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-#       undef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-#   endif
-
 #endif
 
-
-// 32-bit or 64-bit registers
-
-#ifdef __LP64__
-#   define HIBAG_REG_BIT64
-#else
-#   ifdef HIBAG_REG_BIT64
-#      undef HIBAG_REG_BIT64
-#   endif
-#endif
-
-
-#include "LibHLA.h"
 
 // disable timing
 // #define HIBAG_ENABLE_TIMING
