@@ -28,6 +28,42 @@
 #ifndef LIBHLA_H_
 #define LIBHLA_H_
 
+
+// Detect whether x86 microprocessor architecture or not
+#if defined(__i386__) || defined(__X86__) || defined(_M_IX86) || defined(__I86__) || defined(__INTEL__) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64)
+#   define HIBAG_CPU_ARCH_X86
+#endif
+
+// 32-bit or 64-bit registers
+#ifdef __LP64__
+#   define HIBAG_CPU_LP64
+#else
+#   ifdef HIBAG_CPU_LP64
+#      undef HIBAG_CPU_LP64
+#   endif
+#endif
+
+// Function multi-versioning (requiring target_clones)
+#if defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
+#   define HIBAG_HAVE_TARGET_CLONES
+#   define HIBAG_TARGET_CLONES    \
+        __attribute__((target_clones("default","sse2","sse3","popcnt","avx","avx2")))
+#else
+#   define HIBAG_TARGET_CLONES
+#endif
+
+// Always inline function
+#ifndef ALWAYS_INLINE
+#   ifdef _MSC_VER
+#       define ALWAYS_INLINE    __forceinline
+#   elif defined(__GNUC__)
+#       define ALWAYS_INLINE    inline __attribute__((always_inline))
+#   else
+#       define ALWAYS_INLINE    inline
+#   endif
+#endif
+
+
 #include <stdint.h>
 #include <cstdlib>
 #include <cstring>
@@ -40,31 +76,6 @@
 #include <algorithm>
 
 
-// Streaming SIMD Extensions, SSE, SSE2, SSE4_2 (POPCNT)
-#if (defined(__SSE__) && defined(__SSE2__))
-#   include <xmmintrin.h>  // SSE
-#   include <emmintrin.h>  // SSE2
-#   if defined(__SSE4_2__) || defined(__POPCNT__)
-#       define HIBAG_HARDWARE_POPCNT
-#       include <nmmintrin.h>  // SSE4_2, for POPCNT
-#   endif
-#   define HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-#else
-#   ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-#       undef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-#   endif
-#endif
-
-// 32-bit or 64-bit registers
-#ifdef __LP64__
-#   define HIBAG_REG_BIT64
-#else
-#   ifdef HIBAG_REG_BIT64
-#      undef HIBAG_REG_BIT64
-#   endif
-#endif
-
-
 namespace HLA_LIB
 {
 	using namespace std;
@@ -72,9 +83,8 @@ namespace HLA_LIB
 	/// Kernel Version, Major Number (0x01) / Minor Number (0x04)
 	#define HIBAG_KERNEL_VERSION    0x0104
 
-	/// Define unsigned integers
+	/// Define 8-bit unsigned integer
 	typedef uint8_t     UINT8;
-	typedef uint64_t    UINT64;
 
 	/// The max number of SNP markers in an individual classifier.
 	//  Don't modify this value since the code is optimized for this value!!!
@@ -257,13 +267,13 @@ namespace HLA_LIB
 		void IntToSNP(size_t Length, const int InBase[], const int Index[]);
 
 		/// compute the Hamming distance between SNPs and H1+H2
-		int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
+		HIBAG_TARGET_CLONES int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
 
 	protected:
 		/// set SNP genotype (0, 1, 2) without checking
 		void _SetSNP(size_t idx, int val);
 		/// compute the Hamming distance between SNPs and H1+H2 without checking
-		inline int _HamDist(size_t Length, const THaplotype &H1,
+		ALWAYS_INLINE int _HamDist(size_t Length, const THaplotype &H1,
 			const THaplotype &H2) const;
 	};
 
@@ -798,6 +808,9 @@ namespace HLA_LIB
 
 	/// Pointer to the structure of functions using GPU
 	extern TypeGPUExtProc *GPUExtProcPtr;
+
+	/// Get CPU information
+	extern const char *CPU_Info();
 }
 
 #endif /* LIBHLA_H_ */

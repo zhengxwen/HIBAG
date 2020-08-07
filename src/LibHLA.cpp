@@ -26,24 +26,30 @@
 // ===============================================================
 
 
+// Optimization level
+#ifndef HIBAG_NO_COMPILER_OPTIMIZE
+#if defined(__clang__) && !defined(__APPLE__)
+    #pragma clang optimize on
+#endif
+#if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=4))
+    #pragma GCC optimize("O3")
+#endif
+#endif
+
+
 #include "LibHLA.h"
 #include <R.h>
 #include <Rmath.h>
 
-// Streaming SIMD Extensions
-#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-#   define M128_I32_0(x)    _mm_cvtsi128_si32(x)
-#   define M128_I32_1(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 4))
-#   define M128_I32_2(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 8))
-#   define M128_I32_3(x)    _mm_cvtsi128_si32(_mm_srli_si128(x, 12))
-#   define M128_I64_0(x)    _mm_cvtsi128_si64(x) 
-#   define M128_I64_1(x)    _mm_cvtsi128_si64(_mm_unpackhi_epi64(x, x))
+#ifdef HIBAG_CPU_ARCH_X86
+#   include <xmmintrin.h>  // SSE
+#   include <emmintrin.h>  // SSE2
+#   include <immintrin.h>  // AVX, AVX2
 #endif
 
 
 // disable timing
 // #define HIBAG_ENABLE_TIMING
-
 #ifdef HIBAG_ENABLE_TIMING
 #   include <time.h>
 #endif
@@ -52,6 +58,50 @@
 using namespace std;
 using namespace HLA_LIB;
 
+
+/// Get CPU information
+const char *HLA_LIB::CPU_Info()
+{
+	static char buffer[128];
+	char *s = buffer;
+#ifdef HIBAG_CPU_LP64
+	strcpy(s, "64-bit");
+#else
+	strcpy(s, "32-bit");
+#endif
+	s += 6;
+#ifdef HIBAG_HAVE_TARGET_CLONES
+	strcpy(s, ",FMV"); s += 4;
+	__builtin_cpu_init();
+	if (__builtin_cpu_supports("avx2"))
+	{
+		strcpy(s, ",AVX2"); s += 5;
+	} else if (__builtin_cpu_supports("avx"))
+	{
+		strcpy(s, ",AVX"); s += 4;
+	} else if (__builtin_cpu_supports("sse2"))
+	{
+		strcpy(s, ",SSE2"); s += 5;
+	}
+	if (__builtin_cpu_supports("popcnt"))
+	{
+		strcpy(s, ",POPCNT"); s += 7;
+	}
+#else
+#   if defined(__AVX2__)
+		strcpy(s, ",AVX2"); s += 5;
+#   elif defined(__AVX__)
+		strcpy(s, ",AVX"); s += 4;
+#   elif defined(__SSE2__)
+		strcpy(s, ",SSE2"); s += 5;
+#   endif
+#   if defined(__POPCNT__)
+		strcpy(s, ",POPCNT"); s += 7;
+#   endif
+#endif
+	*s = 0;
+	return buffer;
+}
 
 
 // ========================================================================= //
@@ -659,7 +709,7 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 		*pM++ = 0;
 }
 
-int TGenotype::HammingDistance(size_t Length,
+HIBAG_TARGET_CLONES int TGenotype::HammingDistance(size_t Length,
 	const THaplotype &H1, const THaplotype &H2) const
 {
 	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
@@ -668,145 +718,127 @@ int TGenotype::HammingDistance(size_t Length,
 }
 
 
-// compute the Hamming distance between SNPs and H1+H2 without checking
+// --------------------------------
+// Compute the Hamming distance between SNPs and H1+H2 without checking
 
-#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-
-	// signed integer for initializing XMM
-	typedef int64_t UTYPE;
-	#ifndef HIBAG_HARDWARE_POPCNT
-	static const __m128i Z05 = _mm_set1_epi8(0x55);
-	static const __m128i Z03 = _mm_set1_epi8(0x33);
-	static const __m128i Z0F = _mm_set1_epi8(0x0F);
-	#endif
-
-#else
-	#ifdef HIBAG_REG_BIT64
-		typedef uint64_t UTYPE;
-	#else
-		typedef uint32_t UTYPE;
-	#endif
+#if !defined(HIBAG_HAVE_TARGET_CLONES) && !defined(__POPCNT__) && defined(__SSE2__)
+#   define HIBAG_NEED_SSE2_POPCNT
 #endif
 
-static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
+#ifdef HIBAG_CPU_ARCH_X86
+	typedef int64_t UTYPE;
+#   define U_POPCOUNT     __builtin_popcountll
+#   define U_I32_SHUFFLE  __builtin_ia32_pshufd
+#else
+#   ifdef HIBAG_CPU_LP64
+		typedef uint64_t UTYPE;
+#   else
+		typedef uint32_t UTYPE;
+#   endif
+	static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
+#endif
 
-inline int TGenotype::_HamDist(size_t Length,
-	const THaplotype &H1, const THaplotype &H2) const
+#ifdef HIBAG_NEED_SSE2_POPCNT
+	static const __m128i Z55 = _mm_set1_epi8(0x55);
+	static const __m128i Z33 = _mm_set1_epi8(0x33);
+	static const __m128i Z0F = _mm_set1_epi8(0x0F);
+#   define SSE2_POPCOUNT_128B(x, cnt)    { \
+		x = _mm_sub_epi64(x, _mm_srli_epi64(x, 1) & Z55); \
+		x = _mm_add_epi64(x & Z33, _mm_srli_epi64(x, 2) & Z33); \
+		x = _mm_add_epi64(x, _mm_srli_epi64(x, 4)) & Z0F; \
+		cnt = ((uint64_t(x[0]) * 0x0101010101010101LLU) >> 56) + \
+			((uint64_t(x[1]) * 0x0101010101010101LLU) >> 56); \
+	}
+#endif
+
+#ifndef U_POPCOUNT
+#define U_POPCOUNT  u_popcount
+static ALWAYS_INLINE int u_popcount(uint64_t v)
 {
-	size_t ans = 0;
+	v -= ((v >> 1) & 0x5555555555555555LLU);
+	v = (v & 0x3333333333333333LLU) + ((v >> 2) & 0x3333333333333333LLU);
+	return (((v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) *
+		0x0101010101010101LLU) >> 56;
+}
+static ALWAYS_INLINE int u_popcount(uint32_t v)
+{
+	v -= ((v >> 1) & 0x55555555);
+	v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+	return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+#endif
 
+ALWAYS_INLINE int TGenotype::_HamDist(size_t Length, const THaplotype &H1,
+	const THaplotype &H2) const
+{
 	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
 	const UTYPE *h2 = (const UTYPE*)&H2.PackedHaplo[0];
 	const UTYPE *s1 = (const UTYPE*)&PackedSNP1[0];
 	const UTYPE *s2 = (const UTYPE*)&PackedSNP2[0];
 	const UTYPE *sM = (const UTYPE*)&PackedMissing[0];
 
-#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-
-	// for-loop
-	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
+#ifdef HIBAG_CPU_ARCH_X86
+	// here, UTYPE = int64_t
+	if (Length <= 64)
 	{
-		__m128i H  = _mm_set_epi64x(*h2++, *h1++);  // *h1, *h2
-		__m128i S1 = _mm_set_epi64x(*s2++, *s1++);  // *s1, *s2
-		__m128i S2 = _mm_shuffle_epi32(S1, _MM_SHUFFLE(1,0,3,2)); // *s2, *s1
-
-		__m128i mask1 = _mm_xor_si128(H, S2);
-		__m128i mask2 = _mm_shuffle_epi32(mask1, _MM_SHUFFLE(1,0,3,2));
-
+		__m128i H  = { *h1, *h2 };  // two haplotypes
+		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
+		__m128i mask1 = H ^ S2;
+		__m128i mask2 = { mask1[1], mask1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		__m128i M = _mm_set1_epi64x(*sM++);
-		__m128i MASK = _mm_and_si128(_mm_or_si128(mask1, mask2), M);
-
-		// val = '(H1 ^ S1) & MASK' / '(H2 ^ S2) & MASK'
-		__m128i val = _mm_and_si128(_mm_xor_si128(H, S1), MASK);
-
-		// popcount for val
-
-	#ifdef HIBAG_HARDWARE_POPCNT
-
-    #   ifdef HIBAG_REG_BIT64
-			ans += _mm_popcnt_u64(M128_I64_0(val)) + _mm_popcnt_u64(M128_I64_1(val));
-	#   else
-			ans += _mm_popcnt_u32(M128_I32_0(val)) + _mm_popcnt_u32(M128_I32_1(val)) +
-				_mm_popcnt_u32(M128_I32_2(val)) + _mm_popcnt_u32(M128_I32_3(val));
-	#   endif
-
+		__m128i M = { *sM, *sM };  // missing values
+		__m128i MASK = (mask1 | mask2) & M;
+		// val = '(H1 ^ S1) & MASK', '(H2 ^ S2) & MASK'
+		__m128i val = (H ^ S1) & MASK;
+	#ifdef HIBAG_NEED_SSE2_POPCNT
+		int cnt;
+		SSE2_POPCOUNT_128B(val, cnt)
+		return cnt;
 	#else
-
-		// two 64-bit integers
-		// suggested by
-		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-
-		// val -= ((val >> 1) & 0x5555555555555555);
-		val = _mm_sub_epi64(val, _mm_and_si128(_mm_srli_epi64(val, 1), Z05));
-		// val = (val & 0x3333333333333333) + ((val >> 2) & 0x3333333333333333);
-		val = _mm_add_epi64(_mm_and_si128(val, Z03),
-			_mm_and_si128(_mm_srli_epi64(val, 2), Z03));
-		// val = (val + (val >> 4)) & 0x0F0F0F0F0F0F0F0F
-		val = _mm_and_si128(_mm_add_epi64(val, _mm_srli_epi64(val, 4)), Z0F);
-
-		// ans += (val * 0x0101010101010101LLU) >> 56;
-		uint64_t r[2];
-		_mm_storeu_si128((__m128i*)r, val);
-		ans += ((r[0] * 0x0101010101010101LLU) >> 56) +
-			((r[1] * 0x0101010101010101LLU) >> 56);
-
+		// popcount
+		return U_POPCOUNT(val[0]) + U_POPCOUNT(val[1]);
+	#endif
+	} else {
+		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
+		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
+		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
+		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
+		__m256i mask1 = H ^ S2;
+		__m256i mask2 = { mask1[2], mask1[3], mask1[0], mask1[1] };
+		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
+		__m256i M = { sM[0], sM[1], sM[0], sM[1] };  // missing values
+		__m256i MASK = (mask1 | mask2) & M;
+		// val = '(H1 ^ S1) & MASK', '(H2 ^ S2) & MASK'
+		__m256i val = (H ^ S1) & MASK;
+	#ifdef HIBAG_NEED_SSE2_POPCNT
+		int cnt1, cnt2;
+		__m128i v1 = { val[0], val[1] }, v2 = { val[2], val[3] };
+		SSE2_POPCOUNT_128B(v1, cnt1);
+		SSE2_POPCOUNT_128B(v2, cnt2);
+		return cnt1 + cnt2;
+	#else
+		// popcount
+		return U_POPCOUNT(val[0]) + U_POPCOUNT(val[1]) +
+			U_POPCOUNT(val[2]) + U_POPCOUNT(val[3]);
 	#endif
 	}
-
 #else
-
-	// for-loop
+	size_t ans = 0;
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
-		UTYPE H1 = *h1++;
-		UTYPE H2 = *h2++;
-		UTYPE S1 = *s1++;
-		UTYPE S2 = *s2++;
-
+		UTYPE H1 = *h1++, H2 = *h2++;  // two haplotypes
+		UTYPE S1 = *s1++, S2 = *s2++;  // genotypes
 		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		UTYPE M  = *sM++;  // missing value
+		UTYPE M = *sM++;  // missing value
 		UTYPE MASK = ((H1 ^ S2) | (H2 ^ S1)) & M;
-
-		// popcount for '(H1 ^ S1) & MASK'
-		// suggested by
-		// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-
-		UTYPE v1 = (H1 ^ S1) & MASK;
-	#ifdef HIBAG_REG_BIT64
-		// 64-bit integers
-		v1 -= ((v1 >> 1) & 0x5555555555555555LLU);
-		v1 = (v1 & 0x3333333333333333LLU) + ((v1 >> 2) & 0x3333333333333333LLU);
-		ans += (((v1 + (v1 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) *
-			0x0101010101010101LLU) >> 56;
-	#else
-		// 32-bit integers
-		v1 -= ((v1 >> 1) & 0x55555555);
-		v1 = (v1 & 0x33333333) + ((v1 >> 2) & 0x33333333);
-		ans += (((v1 + (v1 >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-	#endif
-
-		// popcount for '(H2 ^ S2) & MASK'
-		UTYPE v2 = (H2 ^ S2) & MASK;
-	#ifdef HIBAG_REG_BIT64
-		// 64-bit integers
-		v2 -= ((v2 >> 1) & 0x5555555555555555LLU);
-		v2 = (v2 & 0x3333333333333333LLU) + ((v2 >> 2) & 0x3333333333333333LLU);
-		ans += (((v2 + (v2 >> 4)) & 0x0F0F0F0F0F0F0F0FLLU) *
-			0x0101010101010101LLU) >> 56;
-	#else
-		// 32-bit integers
-		v2 -= ((v2 >> 1) & 0x55555555);
-		v2 = (v2 & 0x33333333) + ((v2 >> 2) & 0x33333333);
-		ans += (((v2 + (v2 >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-	#endif
+		// popcount
+		ans += U_POPCOUNT((H1 ^ S1) & MASK) + U_POPCOUNT((H2 ^ S2) & MASK);
 	}
-
-#endif
-
 	return ans;
+#endif
 }
 
+// --------------------------------
 
 
 // -------------------------------------------------------------------------
@@ -988,7 +1020,7 @@ int &CSamplingWithoutReplace::operator[] (int idx)
 
 CAlg_EM::CAlg_EM() {}
 
-void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
+HIBAG_TARGET_CLONES void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
 	CHaplotypeList &NextHaplo)
 {
@@ -1275,8 +1307,8 @@ double &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
 	return _SumPostProb[H2 + H1*(2*_nHLA-H1-1)/2];
 }
 
-void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
-	const TGenotype &Geno, double &SumProb)
+HIBAG_TARGET_CLONES void CAlg_Prediction::PredictPostProb(
+	const CHaplotypeList &Haplo, const TGenotype &Geno, double &SumProb)
 {
 	THaplotype *I1, *I2;
 	double *pProb = &_PostProb[0];
@@ -1335,8 +1367,8 @@ void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 	for (size_t n = _PostProb.size(); n > 0; n--) *p++ *= sum;
 }
 
-THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
-	const TGenotype &Geno)
+HIBAG_TARGET_CLONES THLAType CAlg_Prediction::_PredBestGuess(
+	const CHaplotypeList &Haplo, const TGenotype &Geno)
 {
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
@@ -1398,8 +1430,8 @@ THLAType CAlg_Prediction::_PredBestGuess(const CHaplotypeList &Haplo,
 	return rv;
 }
 
-double CAlg_Prediction::_PredPostProb(const CHaplotypeList &Haplo,
-	const TGenotype &Geno, const THLAType &HLA)
+HIBAG_TARGET_CLONES double CAlg_Prediction::_PredPostProb(
+	const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA)
 {
 	int H1=HLA.Allele1, H2=HLA.Allele2;
 	if (H1 > H2) std::swap(H1, H2);
@@ -1585,9 +1617,7 @@ void CVariableSelection::_Init_EvalAcc(CHaplotypeList &Haplo,
 }
 
 void CVariableSelection::_Done_EvalAcc()
-{
-
-}
+{ }
 
 int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {

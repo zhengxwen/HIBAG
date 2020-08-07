@@ -1108,27 +1108,15 @@ SEXP HIBAG_ErrMsg()
 **/
 SEXP HIBAG_Kernel_Version()
 {
-	SEXP ans = NEW_INTEGER(4);
-
-	INTEGER(ans)[0] = HIBAG_KERNEL_VERSION >> 8;
-	INTEGER(ans)[1] = HIBAG_KERNEL_VERSION & 0xFF;
-
-	#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-	#   ifdef HIBAG_HARDWARE_POPCNT
-		INTEGER(ans)[2] = 2;
-	#   else
-		INTEGER(ans)[2] = 1;
-	#   endif
-	#else
-		INTEGER(ans)[2] = 0;
-	#endif
-
-	#ifdef HIBAG_REG_BIT64
-		INTEGER(ans)[3] = 64;
-	#else
-		INTEGER(ans)[3] = 0;
-	#endif
-
+	SEXP ans = PROTECT(NEW_LIST(2));
+	// version
+	SEXP I = NEW_INTEGER(2);
+	SET_ELEMENT(ans, 0, I);
+	INTEGER(I)[0] = HIBAG_KERNEL_VERSION >> 8;
+	INTEGER(I)[1] = HIBAG_KERNEL_VERSION & 0xFF;
+	// CPU information
+	SET_ELEMENT(ans, 1, mkString(CPU_Info()));
+	// output
 	return ans;
 }
 

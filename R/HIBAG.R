@@ -1632,23 +1632,14 @@ hlaErrMsg <- function()
 
 .onAttach <- function(lib, pkg)
 {
-    # get version and SSE2 information
-    Version <- .Call(HIBAG_Kernel_Version)
+    # get version and CPU information
+    info <- .Call(HIBAG_Kernel_Version)
 
     # information
     packageStartupMessage(
         "HIBAG (HLA Genotype Imputation with Attribute Bagging)")
     packageStartupMessage(
-        sprintf("Kernel Version: v%d.%d", Version[1L], Version[2L]))
-    if (Version[3L] == 1L)
-        s <- "Supported by Streaming SIMD Extensions (SSE2)"
-    else if (Version[3L] == 2L)
-        s <- "Supported by Streaming SIMD Extensions (SSE2 + POPCNT)"
-    else
-        s <- ""
-    if ((Version[4L] > 0L) & (s != ""))
-        s <- paste0(s, " [", Version[4L], "-bit]")
-    if (s != "") packageStartupMessage(s)
-
+        sprintf("Kernel Version: v%d.%d (%s)", info[[1L]][1L], info[[1L]][2L],
+        info[[2L]]))
     TRUE
 }
