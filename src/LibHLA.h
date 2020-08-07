@@ -44,7 +44,7 @@
 #endif
 
 // Function multi-versioning (requiring target_clones)
-#if defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
+#if !defined(HIBAG_NO_TARGET_CLONES) && defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
 #   define HIBAG_HAVE_TARGET_CLONES
 #   define HIBAG_TARGET_CLONES    \
         __attribute__((target_clones("default","sse2","sse3","popcnt","avx","avx2")))
@@ -272,9 +272,6 @@ namespace HLA_LIB
 	protected:
 		/// set SNP genotype (0, 1, 2) without checking
 		void _SetSNP(size_t idx, int val);
-		/// compute the Hamming distance between SNPs and H1+H2 without checking
-		ALWAYS_INLINE int _HamDist(size_t Length, const THaplotype &H1,
-			const THaplotype &H2) const;
 	};
 
 

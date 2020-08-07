@@ -709,15 +709,6 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 		*pM++ = 0;
 }
 
-HIBAG_TARGET_CLONES int TGenotype::HammingDistance(size_t Length,
-	const THaplotype &H1, const THaplotype &H2) const
-{
-	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
-		"THaplotype::HammingDistance, the length is too large.");
-	return _HamDist(Length, H1, H2);
-}
-
-
 // --------------------------------
 // Compute the Hamming distance between SNPs and H1+H2 without checking
 
@@ -768,14 +759,14 @@ static ALWAYS_INLINE int u_popcount(uint32_t v)
 }
 #endif
 
-ALWAYS_INLINE int TGenotype::_HamDist(size_t Length, const THaplotype &H1,
-	const THaplotype &H2) const
+static ALWAYS_INLINE int hamm_dist(size_t Length, const TGenotype &G,
+	const THaplotype &H1, const THaplotype &H2)
 {
 	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
 	const UTYPE *h2 = (const UTYPE*)&H2.PackedHaplo[0];
-	const UTYPE *s1 = (const UTYPE*)&PackedSNP1[0];
-	const UTYPE *s2 = (const UTYPE*)&PackedSNP2[0];
-	const UTYPE *sM = (const UTYPE*)&PackedMissing[0];
+	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
+	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
+	const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
 
 #ifdef HIBAG_CPU_ARCH_X86
 	// here, UTYPE = int64_t
@@ -839,6 +830,14 @@ ALWAYS_INLINE int TGenotype::_HamDist(size_t Length, const THaplotype &H1,
 }
 
 // --------------------------------
+
+HIBAG_TARGET_CLONES int TGenotype::HammingDistance(size_t Length,
+	const THaplotype &H1, const THaplotype &H2) const
+{
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"THaplotype::HammingDistance, the length is too large.");
+	return hamm_dist(Length, *this, H1, H2);
+}
 
 
 // -------------------------------------------------------------------------
@@ -1066,7 +1065,7 @@ HIBAG_TARGET_CLONES void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHap
 					p2 = &NextHaplo.List[pH2_st];
 					for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
 					{
-						int d = *pD++ = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
+						int d = *pD++ = hamm_dist(CurHaplo.Num_SNP, pG, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(p1, p2));
@@ -1099,7 +1098,7 @@ HIBAG_TARGET_CLONES void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHap
 					p2 = p1;
 					for (size_t n2=n1; n2 > 0; n2--, p2++)
 					{
-						int d = *pD++ = pG._HamDist(CurHaplo.Num_SNP, *p1, *p2);
+						int d = *pD++ = hamm_dist(CurHaplo.Num_SNP, pG, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(p1, p2));
@@ -1329,7 +1328,7 @@ HIBAG_TARGET_CLONES void CAlg_Prediction::PredictPostProb(
 			{
 				ADD_FREQ_MUTANT(sum, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
-					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
 		*pProb++ = sum;
@@ -1347,7 +1346,7 @@ HIBAG_TARGET_CLONES void CAlg_Prediction::PredictPostProb(
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
 					ADD_FREQ_MUTANT(sum, 2 * i1->Freq * i2->Freq,
-						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+						hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 				}
 			}
 			*pProb++ = sum;
@@ -1391,7 +1390,7 @@ HIBAG_TARGET_CLONES THLAType CAlg_Prediction::_PredBestGuess(
 			{
 				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
-					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
 		I2 = I1 + n1;
@@ -1413,7 +1412,7 @@ HIBAG_TARGET_CLONES THLAType CAlg_Prediction::_PredBestGuess(
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
 					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
-						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+						hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 				}
 			}
 			I2 += n2;
@@ -1456,7 +1455,7 @@ HIBAG_TARGET_CLONES double CAlg_Prediction::_PredPostProb(
 			{
 				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
-					Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
 		I2 = I1 + n1;
@@ -1475,7 +1474,7 @@ HIBAG_TARGET_CLONES double CAlg_Prediction::_PredPostProb(
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
 					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
-						Geno._HamDist(Haplo.Num_SNP, *i1, *i2));
+						hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 				}
 			}
 			I2 += n2;
