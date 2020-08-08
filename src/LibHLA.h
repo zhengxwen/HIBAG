@@ -44,8 +44,21 @@
 #endif
 
 // Function multi-versioning (requiring target_clones)
-#if !defined(HIBAG_NO_TARGET_CLONES) && defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
-#   define HIBAG_HAVE_TARGET_CLONES
+#if defined(__GNUC__) && defined(__MACH__)
+#   define HIBAG_NO_TARGET_CLONES
+#endif
+#ifndef HIBAG_NO_TARGET_CLONES
+#   ifdef __has_attribute
+#       if __has_attribute(target_clones) && defined(HIBAG_CPU_ARCH_X86)
+#           define HIBAG_HAVE_TARGET_CLONES
+#       endif
+#   else
+#       if defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
+#           define HIBAG_HAVE_TARGET_CLONES
+#       endif
+#   endif
+#endif
+#ifdef HIBAG_HAVE_TARGET_CLONES
 #   define HIBAG_TARGET_CLONES    \
 		__attribute__((target_clones( \
 		"default","sse2","sse3","ssse3","sse4.1","sse4.2","popcnt")))
