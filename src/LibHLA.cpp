@@ -62,7 +62,7 @@ using namespace HLA_LIB;
 /// Get CPU information
 const char *HLA_LIB::CPU_Info()
 {
-	static char buffer[128];
+	static char buffer[256];
 	char *s = buffer;
 #ifdef HIBAG_CPU_LP64
 	strcpy(s, "64-bit");
@@ -71,14 +71,20 @@ const char *HLA_LIB::CPU_Info()
 #endif
 	s += 6;
 #ifdef HIBAG_HAVE_TARGET_CLONES
-	strcpy(s, ",FMV"); s += 4;
+	strcpy(s, "[FMV]"); s += 5;
 	__builtin_cpu_init();
-	if (__builtin_cpu_supports("avx2"))
+	if (__builtin_cpu_supports("sse4.2"))
 	{
-		strcpy(s, ",AVX2"); s += 5;
-	} else if (__builtin_cpu_supports("avx"))
+		strcpy(s, ",SSE4.2"); s += 7;
+	} else if (__builtin_cpu_supports("sse4.1"))
 	{
-		strcpy(s, ",AVX"); s += 4;
+		strcpy(s, ",SSE4.1"); s += 7;
+	} else if (__builtin_cpu_supports("ssse3"))
+	{
+		strcpy(s, ",SSSE3"); s += 6;
+	} else if (__builtin_cpu_supports("sse3"))
+	{
+		strcpy(s, ",SSE3"); s += 5;
 	} else if (__builtin_cpu_supports("sse2"))
 	{
 		strcpy(s, ",SSE2"); s += 5;
@@ -88,16 +94,29 @@ const char *HLA_LIB::CPU_Info()
 		strcpy(s, ",POPCNT"); s += 7;
 	}
 #else
-#   if defined(__AVX2__)
+	#if defined(__AVX2__)
 		strcpy(s, ",AVX2"); s += 5;
-#   elif defined(__AVX__)
+	#elif defined(__AVX__)
 		strcpy(s, ",AVX"); s += 4;
-#   elif defined(__SSE2__)
+	#elif defined(__SSE4_2__)
+		strcpy(s, ",SSE4.2"); s += 7;
+	#elif defined(__SSE4_1__)
+		strcpy(s, ",SSE4.1"); s += 7;
+	#elif defined(__SSSE3__)
+		strcpy(s, ",SSSE3"); s += 6;
+	#elif defined(__SSE3__)
+		strcpy(s, ",SSE3"); s += 5;
+	#elif defined(__SSE2__)
 		strcpy(s, ",SSE2"); s += 5;
-#   endif
-#   if defined(__POPCNT__)
+	#elif defined(__SSE__)
+		strcpy(s, ",SSE"); s += 4;
+	#endif
+	#if defined(__FMA__)
+		strcpy(s, ",FMA"); s += 4;
+	#endif
+	#if defined(__POPCNT__)
 		strcpy(s, ",POPCNT"); s += 7;
-#   endif
+	#endif
 #endif
 	*s = 0;
 	return buffer;
@@ -719,7 +738,6 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 #ifdef HIBAG_CPU_ARCH_X86
 	typedef int64_t UTYPE;
 #   define U_POPCOUNT     __builtin_popcountll
-#   define U_I32_SHUFFLE  __builtin_ia32_pshufd
 #else
 #   ifdef HIBAG_CPU_LP64
 		typedef uint64_t UTYPE;
@@ -733,7 +751,8 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 	static const __m128i Z55 = _mm_set1_epi8(0x55);
 	static const __m128i Z33 = _mm_set1_epi8(0x33);
 	static const __m128i Z0F = _mm_set1_epi8(0x0F);
-#   define SSE2_POPCOUNT_128B(x, cnt)    { \
+#   define SSE2_POPCOUNT_128B(x, cnt)    \
+	{ \
 		x = _mm_sub_epi64(x, _mm_srli_epi64(x, 1) & Z55); \
 		x = _mm_add_epi64(x & Z33, _mm_srli_epi64(x, 2) & Z33); \
 		x = _mm_add_epi64(x, _mm_srli_epi64(x, 4)) & Z0F; \
@@ -774,43 +793,39 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const TGenotype &G,
 	{
 		__m128i H  = { *h1, *h2 };  // two haplotypes
 		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
-		__m128i mask1 = H ^ S2;
-		__m128i mask2 = { mask1[1], mask1[0] };
+		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
 		__m128i M = { *sM, *sM };  // missing values
-		__m128i MASK = (mask1 | mask2) & M;
-		// val = '(H1 ^ S1) & MASK', '(H2 ^ S2) & MASK'
-		__m128i val = (H ^ S1) & MASK;
+		__m128i MASK = (m1 | m2) & M;
+		__m128i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifdef HIBAG_NEED_SSE2_POPCNT
 		int cnt;
-		SSE2_POPCOUNT_128B(val, cnt)
+		SSE2_POPCOUNT_128B(v, cnt)
 		return cnt;
 	#else
 		// popcount
-		return U_POPCOUNT(val[0]) + U_POPCOUNT(val[1]);
+		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]);
 	#endif
 	} else {
 		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
 		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
 		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
 		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
-		__m256i mask1 = H ^ S2;
-		__m256i mask2 = { mask1[2], mask1[3], mask1[0], mask1[1] };
+		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
 		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
 		__m256i M = { sM[0], sM[1], sM[0], sM[1] };  // missing values
-		__m256i MASK = (mask1 | mask2) & M;
-		// val = '(H1 ^ S1) & MASK', '(H2 ^ S2) & MASK'
-		__m256i val = (H ^ S1) & MASK;
+		__m256i MASK = (m1 | m2) & M;
+		__m256i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifdef HIBAG_NEED_SSE2_POPCNT
 		int cnt1, cnt2;
-		__m128i v1 = { val[0], val[1] }, v2 = { val[2], val[3] };
+		__m128i v1 = { v[0], v[1] }, v2 = { v[2], v[3] };
 		SSE2_POPCOUNT_128B(v1, cnt1);
 		SSE2_POPCOUNT_128B(v2, cnt2);
 		return cnt1 + cnt2;
 	#else
 		// popcount
-		return U_POPCOUNT(val[0]) + U_POPCOUNT(val[1]) +
-			U_POPCOUNT(val[2]) + U_POPCOUNT(val[3]);
+		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]) +
+			U_POPCOUNT(v[2]) + U_POPCOUNT(v[3]);
 	#endif
 	}
 #else

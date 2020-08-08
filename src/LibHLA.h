@@ -47,7 +47,8 @@
 #if !defined(HIBAG_NO_TARGET_CLONES) && defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
 #   define HIBAG_HAVE_TARGET_CLONES
 #   define HIBAG_TARGET_CLONES    \
-        __attribute__((target_clones("default","sse2","sse3","popcnt","avx","avx2")))
+		__attribute__((target_clones( \
+		"default","sse2","sse3","ssse3","sse4.1","sse4.2","popcnt")))
 #else
 #   define HIBAG_TARGET_CLONES
 #endif
@@ -267,7 +268,7 @@ namespace HLA_LIB
 		void IntToSNP(size_t Length, const int InBase[], const int Index[]);
 
 		/// compute the Hamming distance between SNPs and H1+H2
-		HIBAG_TARGET_CLONES int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
+		int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
 
 	protected:
 		/// set SNP genotype (0, 1, 2) without checking
