@@ -44,7 +44,7 @@
 #endif
 
 // Function multi-versioning (requiring target_clones)
-#if defined(__GNUC__) && defined(__MACH__)
+#if (defined(__GNUC__) && defined(__MACH__)) || defined(__AVX__)
 #   define HIBAG_NO_TARGET_CLONES
 #endif
 #ifndef HIBAG_NO_TARGET_CLONES

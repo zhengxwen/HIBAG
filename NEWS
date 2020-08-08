@@ -1,3 +1,10 @@
+CHANGES IN VERSION 1.26.0
+-------------------------
+
+    o kernel version: v1.5: generate exactly the same training model as v1.4,
+      but 1.4x ~ 2x faster than the kernel version v1.4, by taking advantage of
+      the GCC Function multi-versioning (FMV) feature (requiring >= GCC_v6.0)
+
 CHANGES IN VERSION 1.24.0
 -------------------------
 
