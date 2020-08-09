@@ -20,7 +20,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Kernel Version : 1.4
+// Kernel Version : 1.5
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Description    : HLA imputation C++ library
 // ===============================================================
@@ -94,8 +94,8 @@ namespace HLA_LIB
 {
 	using namespace std;
 
-	/// Kernel Version, Major Number (0x01) / Minor Number (0x04)
-	#define HIBAG_KERNEL_VERSION    0x0104
+	/// Kernel Version, Major Number (0x01) / Minor Number (0x05)
+	#define HIBAG_KERNEL_VERSION    0x0105
 
 	/// Define 8-bit unsigned integer
 	typedef uint8_t     UINT8;

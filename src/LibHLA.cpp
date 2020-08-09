@@ -20,7 +20,7 @@
 // ===============================================================
 // Name           : LibHLA
 // Author         : Xiuwen Zheng
-// Kernel Version : 1.4
+// Kernel Version : 1.5
 // Copyright      : Xiuwen Zheng (GPL v3)
 // Description    : HLA imputation C++ library
 // ===============================================================
@@ -62,7 +62,7 @@ using namespace HLA_LIB;
 /// Get CPU information
 const char *HLA_LIB::CPU_Info()
 {
-	static char buffer[256];
+	static char buffer[128];
 	char *s = buffer;
 #ifdef HIBAG_CPU_LP64
 	strcpy(s, "64-bit");
