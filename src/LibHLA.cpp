@@ -728,6 +728,7 @@ void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
 		*pM++ = 0;
 }
 
+
 // --------------------------------
 // Compute the Hamming distance between SNPs and H1+H2 without checking
 
@@ -778,25 +779,60 @@ static ALWAYS_INLINE int u_popcount(uint32_t v)
 }
 #endif
 
-static ALWAYS_INLINE int hamm_dist(size_t Length, const TGenotype &G,
+#ifdef HIBAG_CPU_ARCH_X86
+#   define GENO_HAMM_DIST_INIT(Length)    \
+		TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
+#   define GENO_VAR  GenoVar
+#   define GENO_TYPE TGenoHammDist
+#   define GENO_HALF_NBIT  64
+typedef union {
+	__m128i i128;
+	__m256i i256;
+} t_simd;
+typedef struct {
+	t_simd S1, S2;  ///< packed genotypes
+	t_simd M;       ///< packed missing flags
+} TGenoHammDist;
+
+static ALWAYS_INLINE void init_hamm_dist(size_t Length, const TGenotype &G,
+	TGenoHammDist &out)
+{
+	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
+	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
+	const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
+	if (Length <= GENO_HALF_NBIT)
+	{
+		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
+		__m128i M  = { *sM, *sM };  // missing values
+		out.S1.i128 = S1; out.S2.i128 = S2; out.M.i128 = M;
+	} else {
+		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
+		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
+		__m256i M  = { sM[0], sM[1], sM[0], sM[1] };  // missing values
+		out.S1.i256 = S1; out.S2.i256 = S2; out.M.i256 = M;
+	}
+}
+#else
+#   define GENO_HAMM_DIST_INIT(Length)
+#   define GENO_VAR  Geno
+#   define GENO_TYPE TGenotype
+#endif
+
+
+static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 	const THaplotype &H1, const THaplotype &H2)
 {
 	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
 	const UTYPE *h2 = (const UTYPE*)&H2.PackedHaplo[0];
-	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
-	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
-	const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
-
 #ifdef HIBAG_CPU_ARCH_X86
 	// here, UTYPE = int64_t
-	if (Length <= 64)
+	if (Length <= GENO_HALF_NBIT)
 	{
 		__m128i H  = { *h1, *h2 };  // two haplotypes
-		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
+		__m128i S1 = G.S1.i128, S2 = G.S2.i128;  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		__m128i M = { *sM, *sM };  // missing values
-		__m128i MASK = (m1 | m2) & M;
+		__m128i MASK = (m1 | m2) & G.M.i128;
 		__m128i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifdef HIBAG_NEED_SSE2_POPCNT
 		int cnt;
@@ -809,12 +845,10 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const TGenotype &G,
 	} else {
 		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
 		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
-		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
-		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
+		__m256i S1 = G.S1.i256, S2 = G.S2.i256;  // genotypes
 		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
 		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		__m256i M = { sM[0], sM[1], sM[0], sM[1] };  // missing values
-		__m256i MASK = (m1 | m2) & M;
+		__m256i MASK = (m1 | m2) & G.M.i256;
 		__m256i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifdef HIBAG_NEED_SSE2_POPCNT
 		int cnt1, cnt2;
@@ -829,6 +863,9 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const TGenotype &G,
 	#endif
 	}
 #else
+	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
+	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
+	const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
 	size_t ans = 0;
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
@@ -851,7 +888,9 @@ HIBAG_TARGET_CLONES int TGenotype::HammingDistance(size_t Length,
 {
 	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::HammingDistance, the length is too large.");
-	return hamm_dist(Length, *this, H1, H2);
+	const TGenotype &Geno = *this;
+	GENO_HAMM_DIST_INIT(Length);
+	return hamm_dist(Length, GENO_VAR, H1, H2);
 }
 
 
@@ -1056,6 +1095,9 @@ HIBAG_TARGET_CLONES void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHap
 
 		if (pG.BootstrapCount > 0)
 		{
+			const TGenotype &Geno = pG;
+			GENO_HAMM_DIST_INIT(CurHaplo.Num_SNP);
+
 			_SampHaploPair.push_back(THaploPairList());
 			THaploPairList &HP = _SampHaploPair.back();
 			HP.BootstrapCount = pG.BootstrapCount;
@@ -1080,7 +1122,7 @@ HIBAG_TARGET_CLONES void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHap
 					p2 = &NextHaplo.List[pH2_st];
 					for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
 					{
-						int d = *pD++ = hamm_dist(CurHaplo.Num_SNP, pG, *p1, *p2);
+						int d = *pD++ = hamm_dist(CurHaplo.Num_SNP, GENO_VAR, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(p1, p2));
@@ -1113,7 +1155,7 @@ HIBAG_TARGET_CLONES void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHap
 					p2 = p1;
 					for (size_t n2=n1; n2 > 0; n2--, p2++)
 					{
-						int d = *pD++ = hamm_dist(CurHaplo.Num_SNP, pG, *p1, *p2);
+						int d = *pD++ = hamm_dist(CurHaplo.Num_SNP, GENO_VAR, *p1, *p2);
 						if (d < MinDiff) MinDiff = d;
 						if (d == 0)
 							HP.PairList.push_back(THaploPair(p1, p2));
@@ -1327,6 +1369,7 @@ HIBAG_TARGET_CLONES void CAlg_Prediction::PredictPostProb(
 	THaplotype *I1, *I2;
 	double *pProb = &_PostProb[0];
 	double sum;
+	GENO_HAMM_DIST_INIT(Haplo.Num_SNP);
 
 	I1 = Haplo.List;
 	for (int h1=0; h1 < _nHLA; h1++)
@@ -1343,7 +1386,7 @@ HIBAG_TARGET_CLONES void CAlg_Prediction::PredictPostProb(
 			{
 				ADD_FREQ_MUTANT(sum, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
-					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
+					hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 			}
 		}
 		*pProb++ = sum;
@@ -1361,7 +1404,7 @@ HIBAG_TARGET_CLONES void CAlg_Prediction::PredictPostProb(
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
 					ADD_FREQ_MUTANT(sum, 2 * i1->Freq * i2->Freq,
-						hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
+						hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 				}
 			}
 			*pProb++ = sum;
@@ -1387,9 +1430,9 @@ HIBAG_TARGET_CLONES THLAType CAlg_Prediction::_PredBestGuess(
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double max=0, prob;
-
 	THaplotype *I1, *I2;
 	I1 = Haplo.List;
+	GENO_HAMM_DIST_INIT(Haplo.Num_SNP);
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
@@ -1405,7 +1448,7 @@ HIBAG_TARGET_CLONES THLAType CAlg_Prediction::_PredBestGuess(
 			{
 				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
-					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
+					hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 			}
 		}
 		I2 = I1 + n1;
@@ -1427,7 +1470,7 @@ HIBAG_TARGET_CLONES THLAType CAlg_Prediction::_PredBestGuess(
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
 					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
-						hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
+						hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 				}
 			}
 			I2 += n2;
@@ -1451,10 +1494,10 @@ HIBAG_TARGET_CLONES double CAlg_Prediction::_PredPostProb(
 	if (H1 > H2) std::swap(H1, H2);
 	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
 	int idx = 0;
-
 	double sum=0, hlaProb=0, prob;
 	THaplotype *I1, *I2;
 	I1 = Haplo.List;
+	GENO_HAMM_DIST_INIT(Haplo.Num_SNP);
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
@@ -1470,7 +1513,7 @@ HIBAG_TARGET_CLONES double CAlg_Prediction::_PredPostProb(
 			{
 				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
 					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
-					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
+					hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 			}
 		}
 		I2 = I1 + n1;
@@ -1489,7 +1532,7 @@ HIBAG_TARGET_CLONES double CAlg_Prediction::_PredPostProb(
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
 					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
-						hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
+						hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 				}
 			}
 			I2 += n2;
@@ -1816,7 +1859,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			// show ...
 			if (verbose_detail)
 			{
-				 Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
+				Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
 					OutSNPIndex.size(), OutSNPIndex.back()+1,
 					Global_Min_Loss,
 					double(Global_Max_OutOfBagAcc) / NumOOB * 50,
