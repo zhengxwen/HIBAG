@@ -40,6 +40,7 @@
 #include "LibHLA.h"
 #include <R.h>
 #include <Rmath.h>
+#include <Rinternals.h>
 
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE
@@ -230,6 +231,15 @@ TypeGPUExtProc *HLA_LIB::GPUExtProcPtr = NULL;;
 // ========================================================================= //
 // CdProgression
 
+static void check_interrupt_fc(void *p) { R_CheckUserInterrupt(); }
+
+// this will call the above in a top-level context so it won't longjmp-out of your context
+inline void CheckInterrupt()
+{
+	if (R_ToplevelExec(check_interrupt_fc, NULL) == FALSE)
+		throw ErrHLA("User interrupts the progress.");
+}
+
 static char date_buffer[256];
 
 inline static const char *date_text()
@@ -280,6 +290,7 @@ void CdProgression::ShowProgress()
 {
 	Rprintf("%s (%s)\t%d%%\n", Info.c_str(), date_text(),
 		int(fPercent*StepPercent));
+	CheckInterrupt();
 }
 
 
@@ -1864,6 +1875,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 					Global_Min_Loss,
 					double(Global_Max_OutOfBagAcc) / NumOOB * 50,
 					OutHaplo.Num_Haplo);
+				CheckInterrupt();
 			}
 		} else {
 			// only keep "n_tmp - m" predictors
@@ -2041,6 +2053,7 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 				"[%d] %s, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
 				k+1, date_text(), I->OutOfBag_Accuracy()*100, I->nSNP(),
 				I->nHaplo());
+			CheckInterrupt();
 		}
 	}
 
