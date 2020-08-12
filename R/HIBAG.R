@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2019   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2020   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -1629,6 +1629,14 @@ hlaErrMsg <- function()
 #######################################################################
 # Export stardard R library function(s)
 #######################################################################
+
+.set_kernel_target <- function(cpu=c("auto", "avx2", "avx", "sse4", "sse2"))
+{
+	cpu <- match.arg(cpu)
+	if (cpu == "auto") cpu <- ""
+    .Call(HIBAG_Kernel_SetTarget, cpu)
+    .Call(HIBAG_Kernel_Version)[[2L]]
+}
 
 .onAttach <- function(lib, pkg)
 {

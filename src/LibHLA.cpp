@@ -49,127 +49,25 @@
 #endif
 
 
-// disable timing
-// #define HIBAG_ENABLE_TIMING
-#ifdef HIBAG_ENABLE_TIMING
-#   include <time.h>
-#endif
-
-
 using namespace std;
 using namespace HLA_LIB;
 
 
 // whether compile the algorithm with specified targets or not
 extern const bool HIBAG_ALGORITHM_SSE2;
-extern const bool HIBAG_ALGORITHM_SSE4_2;
+extern const bool HIBAG_ALGORITHM_SSE2_POPCNT;
+// extern const bool HIBAG_ALGORITHM_SSE4_POPCNT;
 extern const bool HIBAG_ALGORITHM_AVX;
 extern const bool HIBAG_ALGORITHM_AVX2;
+
+// indicate CPU flags and selection of target-specific functions
+static string HIBAG_CPU_Info;
 
 /// Get CPU information
 const char *HLA_LIB::CPU_Info()
 {
-	static char buffer[128];
-	char *s = buffer;
-#ifdef HIBAG_CPU_LP64
-	strcpy(s, "64-bit");
-#else
-	strcpy(s, "32-bit");
-#endif
-	s += 6;
-#ifdef HIBAG_CPU_ARCH_X86
-	bool popcnt = false;
-	strcpy(s, "[FMV]"); s += 5;
-	__builtin_cpu_init();
-	if (__builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2)
-	{
-		strcpy(s, ",AVX2"); s += 5;
-		popcnt = true;
-	} else if (__builtin_cpu_supports("avx") && HIBAG_ALGORITHM_AVX)
-	{
-		strcpy(s, ",AVX"); s += 4;
-		popcnt = true;
-	} else if (__builtin_cpu_supports("sse4.2") && HIBAG_ALGORITHM_SSE4_2)
-	{
-		strcpy(s, ",SSE4.2"); s += 7;
-		popcnt = true;
-	} else if (__builtin_cpu_supports("sse4.1"))
-	{
-		strcpy(s, ",SSE4.1"); s += 7;
-	} else if (__builtin_cpu_supports("ssse3"))
-	{
-		strcpy(s, ",SSSE3"); s += 6;
-	} else if (__builtin_cpu_supports("sse3"))
-	{
-		strcpy(s, ",SSE3"); s += 5;
-	} else if (__builtin_cpu_supports("sse2"))
-	{
-		strcpy(s, ",SSE2"); s += 5;
-	}
-	if (popcnt)
-	{
-		strcpy(s, ",POPCNT"); s += 7;
-	}
-#else
-	#if defined(__AVX2__)
-		strcpy(s, ",AVX2"); s += 5;
-	#elif defined(__AVX__)
-		strcpy(s, ",AVX"); s += 4;
-	#elif defined(__SSE4_2__)
-		strcpy(s, ",SSE4.2"); s += 7;
-	#elif defined(__SSE4_1__)
-		strcpy(s, ",SSE4.1"); s += 7;
-	#elif defined(__SSSE3__)
-		strcpy(s, ",SSSE3"); s += 6;
-	#elif defined(__SSE3__)
-		strcpy(s, ",SSE3"); s += 5;
-	#elif defined(__SSE2__)
-		strcpy(s, ",SSE2"); s += 5;
-	#elif defined(__SSE__)
-		strcpy(s, ",SSE"); s += 4;
-	#endif
-	#if defined(__FMA__)
-		strcpy(s, ",FMA"); s += 4;
-	#endif
-	#if defined(__POPCNT__)
-		strcpy(s, ",POPCNT"); s += 7;
-	#endif
-#endif
-	*s = 0;
-	return buffer;
+	return HIBAG_CPU_Info.c_str();
 }
-
-
-// ========================================================================= //
-
-#ifdef HIBAG_ENABLE_TIMING
-
-static clock_t timing_array[5];
-
-template<size_t I> struct TTiming
-{
-	clock_t start;
-	inline TTiming() { start = clock(); }
-	inline ~TTiming() { Stop(); }
-	inline void Stop() { timing_array[I] += clock() - start; }
-};
-
-#define HIBAG_TIMING(i)    TTiming<i> tm;
-#define TM_TOTAL      0
-#define TM_ACC_OOB    1
-#define TM_ACC_IB     2
-#define TM_PRE_HAPLO  3
-#define TM_EM_ALG     4
-
-// _OutOfBagAccuracy: 41.00%
-// _InBagLogLik: 54.58%
-//  PrepareHaplotypes: 0.34%
-//  ExpectationMaximization: 3.30%
-
-#else
-#   define HIBAG_TIMING(i)
-#endif
-
 
 
 // ========================================================================= //
@@ -232,7 +130,7 @@ public:
 				EXP_LOG_MIN_RARE_FREQ[i] = 0;
 		}
 		// select CPU target
-		CAlg_Prediction::Init_Target_IFunc();
+		CAlg_Prediction::Init_Target_IFunc(NULL);
 	}
 };
 
@@ -977,7 +875,6 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
 	CHaplotypeList &NextHaplo)
 {
-	HIBAG_TIMING(TM_PRE_HAPLO)
 	HIBAG_CHECKING(GenoList.nSamp() != HLAList.nSamp(),
 		"CAlg_EM::PrepareHaplotypes, GenoList and HLAList should have the same number of samples.");
 
@@ -1133,8 +1030,6 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 
 void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 {
-	HIBAG_TIMING(TM_EM_ALG)
-
 	// the converage tolerance
 	double ConvTol = 0, LogLik = -1e+30;
 
@@ -1202,30 +1097,58 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 // -------------------------------------------------------------------------
 // The algorithm of prediction
 
+// target-specific functions
 static CAlg_Prediction::F_BestGuess fc_BestGuess = NULL;
 static CAlg_Prediction::F_PostProb  fc_PostProb  = NULL;
 static CAlg_Prediction::F_PostProb2 fc_PostProb2 = NULL;
 
 CAlg_Prediction::CAlg_Prediction() { }
 
-void CAlg_Prediction::Init_Target_IFunc()
+void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 {
+	if (!cpu) cpu = "";
+	const bool no_cpu = strlen(cpu) == 0;
+
 	fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
 	fc_PostProb  = &CAlg_Prediction::_PostProb_def;
 	fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
+
+#ifdef HIBAG_CPU_LP64
+	HIBAG_CPU_Info = "64-bit";
+#else
+	HIBAG_CPU_Info = "32-bit";
+#endif
+
 #ifdef HIBAG_CPU_ARCH_X86
 	__builtin_cpu_init();
-	if (__builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2)
+	bool has_popcnt = false;
+	if (strcmp(cpu, "avx2")==0 ||
+		(no_cpu && __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2))
 	{
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx2;
-	} else if (__builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2)
+		HIBAG_CPU_Info.append(", AVX2");
+		has_popcnt = true;
+	} else if (strcmp(cpu, "avx")==0 ||
+		(no_cpu && __builtin_cpu_supports("avx") && HIBAG_ALGORITHM_AVX))
+	{
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_avx;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx;
+		HIBAG_CPU_Info.append(", AVX");
+		has_popcnt = true;
+	} else if (strcmp(cpu, "sse2")==0 ||
+		(no_cpu && __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2))
 	{
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
+		HIBAG_CPU_Info.append(", SSE2");
+		has_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
 	}
+	if (has_popcnt)
+		HIBAG_CPU_Info.append(", POPCNT");
 #endif
 }
 
@@ -1527,11 +1450,9 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 {
 	HIBAG_CHECKING(snpMat.Num_Total_Samp != hlaList.nSamp(),
 		"CVariableSelection::InitSelection, snpMat and hlaList should have the same number of samples.");
-
 	_SNPMat = &snpMat;
 	_HLAList = &hlaList;
-	
-	// initialize genotype list
+		// initialize genotype list
 	_GenoList.List.resize(snpMat.Num_Total_Samp);
 	for (int i=0; i < snpMat.Num_Total_Samp; i++)
 	{
@@ -1547,7 +1468,6 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 	}
 	_GenoList.Num_SNP = 0;
 	_GenoList.SetAllMissing();
-
 	_Predict.InitPrediction(nHLA());
 }
 
@@ -1599,7 +1519,6 @@ void CVariableSelection::_Done_EvalAcc()
 
 int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
-	HIBAG_TIMING(TM_ACC_OOB)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 
@@ -1624,10 +1543,8 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 
 double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 {
-	HIBAG_TIMING(TM_ACC_IB)
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
-
 	double LogLik = 0;
 	if (GPUExtProcPtr)
 	{
@@ -1935,11 +1852,6 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	bool verbose, bool verbose_detail)
 {
-#ifdef HIBAG_ENABLE_TIMING
-	memset(timing_array, 0, sizeof(timing_array));
-	HIBAG_TIMING(TM_TOTAL)
-#endif
-
 	if (verbose)
 		Rprintf("[-] %s\n", date_text());
 
@@ -1969,25 +1881,6 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 
 	if (GPUExtProcPtr)
 		(*GPUExtProcPtr->build_done)();
-
-#ifdef HIBAG_ENABLE_TIMING
-	tm.Stop();
-	Rprintf("It took %0.2f seconds in total:\n"
-			"    _OutOfBagAccuracy(): %0.2f%%, %0.2fs\n"
-			"    _InBagLogLik(): %0.2f%%, %0.2fs\n"
-			"    PrepareHaplotypes(): %0.2f%%, %0.2fs\n"
-			"    ExpectationMaximization(): %0.2f%%, %0.2fs\n",
-		((double)timing_array[TM_TOTAL]) / CLOCKS_PER_SEC,
-		100.0 * timing_array[TM_ACC_OOB] / timing_array[TM_TOTAL],
-		((double)timing_array[TM_ACC_OOB]) / CLOCKS_PER_SEC,
-		100.0 * timing_array[TM_ACC_IB] / timing_array[TM_TOTAL],
-		((double)timing_array[TM_ACC_IB]) / CLOCKS_PER_SEC,
-		100.0 * timing_array[TM_PRE_HAPLO] / timing_array[TM_TOTAL],
-		((double)timing_array[TM_PRE_HAPLO]) / CLOCKS_PER_SEC,
-		100.0 * timing_array[TM_EM_ALG] / timing_array[TM_TOTAL],
-		((double)timing_array[TM_EM_ALG]) / CLOCKS_PER_SEC
-	);
-#endif
 }
 
 void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,

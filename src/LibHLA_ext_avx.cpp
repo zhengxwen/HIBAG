@@ -79,15 +79,17 @@ typedef int64_t UTYPE;
 #define U_POPCOUNT    __builtin_popcountll
 
 
-#   define GENO_HAMM_DIST_INIT(Length)    \
-		TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
-#   define GENO_VAR  GenoVar
-#   define GENO_TYPE TGenoHammDist
-#   define GENO_HALF_NBIT  64
+#define GENO_HAMM_DIST_INIT(Length)    \
+	TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
+#define GENO_VAR  GenoVar
+#define GENO_TYPE TGenoHammDist
+#define GENO_HALF_NBIT  64
+
 typedef union {
 	__m128i i128;
 	__m256i i256;
 } t_simd;
+
 typedef struct {
 	t_simd S1, S2;  ///< packed genotypes
 } TGenoHammDist;

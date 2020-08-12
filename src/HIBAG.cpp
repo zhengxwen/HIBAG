@@ -1124,6 +1124,17 @@ SEXP HIBAG_Kernel_Version()
 /**
  *  Get the version and SSE information
 **/
+SEXP HIBAG_Kernel_SetTarget(SEXP CPU)
+{
+	const char *cpu = CHAR(STRING_ELT(CPU, 0));
+	CAlg_Prediction::Init_Target_IFunc(cpu);
+	return R_NilValue;
+}
+
+
+/**
+ *  Get the version and SSE information
+**/
 SEXP HIBAG_Clear_GPU()
 {
 	GPUExtProcPtr = NULL;

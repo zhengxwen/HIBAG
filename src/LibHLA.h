@@ -408,11 +408,12 @@ namespace HLA_LIB
 	class CAlg_EM
 	{
 	public:
+		/// constructor
 		CAlg_EM();
 
 		// call PrepareHaplotypes first, and then call PrepareNewSNP
 
-		/// 
+		/// prepare a new haplotype list
 		void PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 			const CGenotypeList &GenoList, const CHLATypeList &HLAList,
 			CHaplotypeList &NextHaplo);
@@ -468,8 +469,8 @@ namespace HLA_LIB
 		/// contructor
 		CAlg_Prediction();
 
-		///
-		static void Init_Target_IFunc();
+		/// initialize the internal functions according to the CPU target
+		static void Init_Target_IFunc(const char *cpu);
 
 		/// initialize
 		/** \param n_hla    the number of unique HLA alleles **/

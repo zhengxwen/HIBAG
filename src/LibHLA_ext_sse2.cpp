@@ -65,7 +65,9 @@ typedef int64_t UTYPE;
 
 #if defined(__POPCNT__)
 	#define U_POPCOUNT    __builtin_popcountll
+	extern const bool HIBAG_ALGORITHM_SSE2_POPCNT = true;
 #else
+	extern const bool HIBAG_ALGORITHM_SSE2_POPCNT = false;
 	static const __m128i Z55 = _mm_set1_epi8(0x55);
 	static const __m128i Z33 = _mm_set1_epi8(0x33);
 	static const __m128i Z0F = _mm_set1_epi8(0x0F);
@@ -80,15 +82,17 @@ typedef int64_t UTYPE;
 #endif
 
 
-#   define GENO_HAMM_DIST_INIT(Length)    \
-		TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
-#   define GENO_VAR  GenoVar
-#   define GENO_TYPE TGenoHammDist
-#   define GENO_HALF_NBIT  64
+#define GENO_HAMM_DIST_INIT(Length)    \
+	TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
+#define GENO_VAR  GenoVar
+#define GENO_TYPE TGenoHammDist
+#define GENO_HALF_NBIT  64
+
 typedef union {
 	__m128i i128;
 	__m256i i256;
 } t_simd;
+
 typedef struct {
 	t_simd S1, S2;  ///< packed genotypes
 } TGenoHammDist;
