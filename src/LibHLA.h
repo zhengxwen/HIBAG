@@ -539,12 +539,12 @@ namespace HLA_LIB
 			const THLAType &HLA);
 		void _PostProb2_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
-		/* // SSE4.2 CPU Flags
+		// SSE4.2 CPU Flags
 		THLAType _BestGuess_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		double _PostProb_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
-			double &SumProb); */
+			double &SumProb);
 		// AVX CPU Flags
 		THLAType _BestGuess_avx(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		double _PostProb_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,

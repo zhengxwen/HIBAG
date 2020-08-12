@@ -56,7 +56,7 @@ using namespace HLA_LIB;
 // whether compile the algorithm with specified targets or not
 extern const bool HIBAG_ALGORITHM_SSE2;
 extern const bool HIBAG_ALGORITHM_SSE2_POPCNT;
-// extern const bool HIBAG_ALGORITHM_SSE4_POPCNT;
+extern const bool HIBAG_ALGORITHM_SSE4_2;
 extern const bool HIBAG_ALGORITHM_AVX;
 extern const bool HIBAG_ALGORITHM_AVX2;
 
@@ -1137,6 +1137,15 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx;
 		HIBAG_CPU_Info.append(", AVX");
+		has_popcnt = true;
+	} else if (strcmp(cpu, "sse4")==0 ||
+		(no_cpu && __builtin_cpu_supports("sse4.2") &&
+		__builtin_cpu_supports("popcnt") && HIBAG_ALGORITHM_SSE4_2))
+	{
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse4_2;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_sse4_2;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse4_2;
+		HIBAG_CPU_Info.append(", SSE4.2");
 		has_popcnt = true;
 	} else if (strcmp(cpu, "sse2")==0 ||
 		(no_cpu && __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2))
