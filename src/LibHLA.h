@@ -43,29 +43,6 @@
 #   endif
 #endif
 
-// Function multi-versioning (requiring target_clones)
-#if (defined(__GNUC__) && defined(__MACH__)) || defined(__AVX__)
-#   define HIBAG_NO_TARGET_CLONES
-#endif
-#ifndef HIBAG_NO_TARGET_CLONES
-#   ifdef __has_attribute
-#       if __has_attribute(target_clones) && defined(HIBAG_CPU_ARCH_X86)
-#           define HIBAG_HAVE_TARGET_CLONES
-#       endif
-#   else
-#       if defined(__GNUC__) && (__GNUC__ >= 6) && defined(HIBAG_CPU_ARCH_X86)
-#           define HIBAG_HAVE_TARGET_CLONES
-#       endif
-#   endif
-#endif
-#ifdef HIBAG_HAVE_TARGET_CLONES
-#   define HIBAG_TARGET_CLONES    \
-		__attribute__((target_clones( \
-		"default","sse2","sse3","ssse3","sse4.1","sse4.2","popcnt")))
-#else
-#   define HIBAG_TARGET_CLONES
-#endif
-
 // Always inline function
 #ifndef ALWAYS_INLINE
 #   ifdef _MSC_VER
@@ -369,6 +346,12 @@ namespace HLA_LIB
 	/// The reltol convergence tolerance, sqrt(machine.epsilon) by default, used in EM algorithm
 	extern double EM_FuncRelTol;  // = sqrt(DBL_EPSILON)
 
+	/// Frequency calculation with mutants
+	#define ADD_FREQ_MUTANT(ans, p, cnt)  ans += ((p) * EXP_LOG_MIN_RARE_FREQ[cnt])
+
+	/// Frequency with mutants and errors
+	extern double EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
+
 
 	/// variable sampling
 	class CBaseSampling
@@ -475,7 +458,18 @@ namespace HLA_LIB
 		friend class CVariableSelection;
 		friend class CAttrBag_Model;
 
+		typedef THLAType (CAlg_Prediction::*F_BestGuess)(const CHaplotypeList &,
+			const TGenotype &);
+		typedef double (CAlg_Prediction::*F_PostProb)(const CHaplotypeList &,
+			const TGenotype &, const THLAType &);
+		typedef void (CAlg_Prediction::*F_PostProb2)(const CHaplotypeList &,
+			const TGenotype &, double &);
+
+		/// contructor
 		CAlg_Prediction();
+
+		///
+		static void Init_Target_IFunc();
 
 		/// initialize
 		/** \param n_hla    the number of unique HLA alleles **/
@@ -524,13 +518,45 @@ namespace HLA_LIB
 		/// a vector of posterior probabilities for summing up
 		vector<double> _SumPostProb;
 
+	private:
 		/// the best-guess HLA type based on SNP profiles and haplotype list
 		//    without saving posterior probabilities in '_PostProb'
-		THLAType _PredBestGuess(const CHaplotypeList &Haplo, const TGenotype &Geno);
-		/// the prob of the given HLA type based on SNP profiles and haplotype list
-		//    without saving posterior probabilities in '_PostProb'
-		double _PredPostProb(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		THLAType _BestGuess_def(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		/// the prob of the given HLA type based on SNP profiles and haplotype
+		//    list without saving posterior probabilities in '_PostProb'
+		double _PostProb_def(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
+		/// predict based on SNP profiles and haplotype list, and save posterior
+		//    probabilities in '_PostProb', used in PredictPostProb
+		void _PostProb2_def(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb);
+
+	#ifdef HIBAG_CPU_ARCH_X86
+		// SSE2 CPU Flags
+		THLAType _BestGuess_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		double _PostProb_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			const THLAType &HLA);
+		void _PostProb2_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb);
+		/* // SSE4.2 CPU Flags
+		THLAType _BestGuess_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		double _PostProb_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			const THLAType &HLA);
+		void _PostProb2_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb); */
+		// AVX CPU Flags
+		THLAType _BestGuess_avx(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		double _PostProb_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			const THLAType &HLA);
+		void _PostProb2_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb);
+		// AVX2 CPU Flags
+		THLAType _BestGuess_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		double _PostProb_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			const THLAType &HLA);
+		void _PostProb2_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb);
+	#endif
 	};
 
 
