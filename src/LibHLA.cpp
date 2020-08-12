@@ -607,11 +607,10 @@ int TGenotype::GetSNP(size_t idx) const
 {
 	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::GetSNP, invalid index.");
-	size_t i = idx >> 3, r = idx & 0x07;
-	if ((PackedMissing[i] >> r) & 0x01)
-		return ((PackedSNP1[i] >> r) & 0x01) + ((PackedSNP2[i] >> r) & 0x01);
-	else
-		return -1;
+	const size_t i = idx >> 3, r = idx & 0x07;
+	const int b1 = (PackedSNP1[i] >> r) & 0x01;
+	const int b2 = (PackedSNP2[i] >> r) & 0x01;
+	return (b1==0 && b2==1) ? -1 : b1+b2;
 }
 
 void TGenotype::SetSNP(size_t idx, int val)
@@ -623,23 +622,15 @@ void TGenotype::SetSNP(size_t idx, int val)
 
 void TGenotype::_SetSNP(size_t idx, int val)
 {
-	size_t i = idx >> 3, r = idx & 0x07;
-	UINT8 &S1 = PackedSNP1[i];
-	UINT8 &S2 = PackedSNP2[i];
-	UINT8 &M  = PackedMissing[i];
-	UINT8 SET = (UINT8(0x01) << r);
-	UINT8 CLEAR = ~SET;
-
+	const size_t i = idx >> 3, r = idx & 0x07;
+	const UINT8 SET = (UINT8(0x01) << r), CLEAR = ~SET;
+	UINT8 &S1 = PackedSNP1[i], &S2 = PackedSNP2[i];
 	switch (val)
 	{
-		case 0:
-			S1 &= CLEAR; S2 &= CLEAR; M |= SET; break;
-		case 1:
-			S1 |= SET; S2 &= CLEAR; M |= SET; break;
-		case 2:
-			S1 |= SET; S2 |= SET; M |= SET; break;
-		default:
-			S1 &= CLEAR; S2 &= CLEAR; M &= CLEAR; break;
+		case 0:  S1 &= CLEAR; S2 &= CLEAR; break;
+		case 1:  S1 |= SET;   S2 &= CLEAR; break;
+		case 2:  S1 |= SET;   S2 |= SET;   break;
+		default: S1 &= CLEAR; S2 |= SET;
 	}
 }
 
@@ -681,69 +672,57 @@ void TGenotype::SNPToInt(size_t Length, int OutArray[]) const
 		OutArray[i] = GetSNP(i);
 }
 
-void TGenotype::IntToSNP(size_t Length, const int InBase[], const int Index[])
+static ALWAYS_INLINE size_t geno4(int g)
+{
+	return (0<=g && g<=2) ? g : 3;
+}
+
+void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 {
 	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::IntToSNP, the length is invalid.");
-
 	const static UINT8 P1[4] = { 0, 1, 1, 0 };
-	const static UINT8 P2[4] = { 0, 0, 1, 0 };
-	const static UINT8 PM[4] = { 1, 1, 1, 0 };
-
-	UINT8 *p1 = PackedSNP1;     // --> P1
-	UINT8 *p2 = PackedSNP2;     // --> P2
-	UINT8 *pM = PackedMissing;  // --> PM
-
+	const static UINT8 P2[4] = { 0, 0, 1, 1 };
+	UINT8 *p1 = PackedSNP1;
+	UINT8 *p2 = PackedSNP2;
+	// packed fill
 	for (; Length >= 8; Length -= 8, Index += 8)
 	{
-		unsigned g1 = InBase[Index[0]];
-		size_t i1 = (g1 < 3) ? g1 : 3;
-		unsigned g2 = InBase[Index[1]];
-		size_t i2 = (g2 < 3) ? g2 : 3;
-		unsigned g3 = InBase[Index[2]];
-		size_t i3 = (g3 < 3) ? g3 : 3;
-		unsigned g4 = InBase[Index[3]];
-		size_t i4 = (g4 < 3) ? g4 : 3;
-		unsigned g5 = InBase[Index[4]];
-		size_t i5 = (g5 < 3) ? g5 : 3;
-		unsigned g6 = InBase[Index[5]];
-		size_t i6 = (g6 < 3) ? g6 : 3;
-		unsigned g7 = InBase[Index[6]];
-		size_t i7 = (g7 < 3) ? g7 : 3;
-		unsigned g8 = InBase[Index[7]];
-		size_t i8 = (g8 < 3) ? g8 : 3;
-
-		*p1++ = P1[i1] | (P1[i2] << 1) | (P1[i3] << 2) | (P1[i4] << 3) |
-			(P1[i5] << 4) | (P1[i6] << 5) | (P1[i7] << 6) | (P1[i8] << 7);
-		*p2++ = P2[i1] | (P2[i2] << 1) | (P2[i3] << 2) | (P2[i4] << 3) |
-			(P2[i5] << 4) | (P2[i6] << 5) | (P2[i7] << 6) | (P2[i8] << 7);
-		*pM++ = PM[i1] | (PM[i2] << 1) | (PM[i3] << 2) | (PM[i4] << 3) |
-			(PM[i5] << 4) | (PM[i6] << 5) | (PM[i7] << 6) | (PM[i8] << 7);
+		size_t i0 = geno4(GenoBase[Index[0]]);
+		size_t i1 = geno4(GenoBase[Index[1]]);
+		size_t i2 = geno4(GenoBase[Index[2]]);
+		size_t i3 = geno4(GenoBase[Index[3]]);
+		size_t i4 = geno4(GenoBase[Index[4]]);
+		size_t i5 = geno4(GenoBase[Index[5]]);
+		size_t i6 = geno4(GenoBase[Index[6]]);
+		size_t i7 = geno4(GenoBase[Index[7]]);
+		*p1++ = P1[i0] | (P1[i1] << 1) | (P1[i2] << 2) | (P1[i3] << 3) |
+			(P1[i4] << 4) | (P1[i5] << 5) | (P1[i6] << 6) | (P1[i7] << 7);
+		*p2++ = P2[i0] | (P2[i1] << 1) | (P2[i2] << 2) | (P2[i3] << 3) |
+			(P2[i4] << 4) | (P2[i5] << 5) | (P2[i6] << 6) | (P2[i7] << 7);
 	}
-
 	if (Length > 0)
 	{
-		*p1 = *p2 = *pM = 0;
+		*p1 = 0; *p2 = 0xFF;
 		for (size_t i=0; i < Length; i++)
 		{
-			unsigned g1 = InBase[*Index++];
-			size_t i1 = (g1 < 3) ? g1 : 3;
-			*p1 |= (P1[i1] << i);
-			*p2 |= (P2[i1] << i);
-			*pM |= (PM[i1] << i);
+			size_t ii = geno4(GenoBase[*Index++]);
+			*p1 = (*p1) | (P1[ii] << i);
+			*p2 = ((*p2) & ~(1 << i)) | (P2[ii] << i);
 		}
-		pM ++;
+		p1++; p2++;
 	}
 
-	for (UINT8 *pEnd=PackedMissing+sizeof(PackedMissing); pM < pEnd; )
-		*pM++ = 0;
+	// fill the remaining bytes
+	for (UINT8 *pE=PackedSNP1+sizeof(PackedSNP1); p1 < pE; ) *p1++ = 0;
+	for (UINT8 *pE=PackedSNP2+sizeof(PackedSNP2); p2 < pE; ) *p2++ = 0xFF;
 }
 
 
 // --------------------------------
 // Compute the Hamming distance between SNPs and H1+H2 without checking
 
-#if !defined(HIBAG_HAVE_TARGET_CLONES) && !defined(__POPCNT__) && defined(__SSE2__)
+#if !defined(HIBAG_HAVE_TARGET_CLONES) && defined(HIBAG_CPU_ARCH_X86) && !defined(__POPCNT__) && defined(__SSE2__)
 #   define HIBAG_NEED_SSE2_POPCNT
 #endif
 
@@ -802,7 +781,6 @@ typedef union {
 } t_simd;
 typedef struct {
 	t_simd S1, S2;  ///< packed genotypes
-	t_simd M;       ///< packed missing flags
 } TGenoHammDist;
 
 static ALWAYS_INLINE void init_hamm_dist(size_t Length, const TGenotype &G,
@@ -810,17 +788,14 @@ static ALWAYS_INLINE void init_hamm_dist(size_t Length, const TGenotype &G,
 {
 	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
 	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
-	const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
 	if (Length <= GENO_HALF_NBIT)
 	{
 		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
-		__m128i M  = { *sM, *sM };  // missing values
-		out.S1.i128 = S1; out.S2.i128 = S2; out.M.i128 = M;
+		out.S1.i128 = S1; out.S2.i128 = S2;
 	} else {
 		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
 		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
-		__m256i M  = { sM[0], sM[1], sM[0], sM[1] };  // missing values
-		out.S1.i256 = S1; out.S2.i256 = S2; out.M.i256 = M;
+		out.S1.i256 = S1; out.S2.i256 = S2;
 	}
 }
 #else
@@ -842,8 +817,10 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 		__m128i H  = { *h1, *h2 };  // two haplotypes
 		__m128i S1 = G.S1.i128, S2 = G.S2.i128;  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
-		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		__m128i MASK = (m1 | m2) & G.M.i128;
+		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
+		__m128i M = S2 & ~S1;  // missing value, 1 is missing
+		__m128i M2 = { M[0], M[0] };
+		__m128i MASK = (m1 | m2) & ~M2;
 		__m128i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifdef HIBAG_NEED_SSE2_POPCNT
 		int cnt;
@@ -858,8 +835,10 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
 		__m256i S1 = G.S1.i256, S2 = G.S2.i256;  // genotypes
 		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
-		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		__m256i MASK = (m1 | m2) & G.M.i256;
+		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
+		__m256i M = S2 & ~S1;  // missing value, 1 is missing
+		__m256i M2 = { M[0], M[1], M[0], M[1] };
+		__m256i MASK = (m1 | m2) & ~M2;
 		__m256i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifdef HIBAG_NEED_SSE2_POPCNT
 		int cnt1, cnt2;
@@ -876,15 +855,15 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 #else
 	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
 	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
-	const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
+	// const UTYPE *sM = (const UTYPE*)&G.PackedMissing[0];
 	size_t ans = 0;
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
 		UTYPE H1 = *h1++, H2 = *h2++;  // two haplotypes
 		UTYPE S1 = *s1++, S2 = *s2++;  // genotypes
-		// worry about n < UTYPE_BIT_NUM? unused bits have been set to zero
-		UTYPE M = *sM++;  // missing value
-		UTYPE MASK = ((H1 ^ S2) | (H2 ^ S1)) & M;
+		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
+		UTYPE M = S2 & ~S1;  // missing value, 1 is missing
+		UTYPE MASK = ((H1 ^ S2) | (H2 ^ S1)) & ~M;
 		// popcount
 		ans += U_POPCOUNT((H1 ^ S1) & MASK) + U_POPCOUNT((H2 ^ S2) & MASK);
 	}
@@ -939,7 +918,6 @@ void CGenotypeList::AddSNP(int IdxSNP, const CSNPGenoMatrix &SNPMat)
 		"CGenotypeList::AddSNP, SNPMat should have the same number of samples.");
 	HIBAG_CHECKING(Num_SNP >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"CGenotypeList::AddSNP, there are too many SNP markers.");
-	
 	const int *pG = SNPMat.pGeno + IdxSNP;
 	for (int i=0; i < SNPMat.Num_Total_Samp; i++)
 	{
@@ -960,30 +938,22 @@ void CGenotypeList::ReduceSNP()
 void CGenotypeList::SetAllMissing()
 {
 	size_t n = List.size();
-#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-	// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
-	__m128i zero = _mm_setzero_si128();
-#endif
-	for (TGenotype *p = &List[0]; n > 0; n--)
+	for (TGenotype *p = &List[0]; n > 0; n--, p++)
 	{
-	#ifdef HIBAG_SIMD_OPTIMIZE_HAMMING_DISTANCE
-		_mm_storeu_si128((__m128i*)p->PackedMissing, zero);
-	#else
-		memset(p->PackedMissing, 0, sizeof(p->PackedMissing));
-	#endif
-		p ++;
+		memset(p->PackedSNP1, 0, sizeof(p->PackedSNP1));
+		memset(p->PackedSNP2, -1, sizeof(p->PackedSNP2));
 	}
 }
 
 void CGenotypeList::SetMissing(int idx)
 {
-	size_t i = idx >> 3, r = idx & 0x07;
-	UINT8 CLEAR = ~(UINT8(0x01) << r);
+	const size_t i = idx >> 3, r = idx & 0x07;
+	const UINT8 SET = (UINT8(0x01) << r), CLEAR = ~SET;
 	size_t n = List.size();
-	for (TGenotype *p = &List[0]; n > 0; n--)
+	for (TGenotype *p = &List[0]; n > 0; n--, p++)
 	{
-		p->PackedMissing[i] &= CLEAR;
-		p ++;
+		p->PackedSNP1[i] &= CLEAR;
+		p->PackedSNP2[i] |= SET;
 	}
 }
 

@@ -138,7 +138,7 @@ namespace HLA_LIB
 	//                   1 (AB) -- (s1_1=1 s2_1=0 s3_1=1),
 	//                   2 (AA) -- (s1_1=1 s2_1=1 s3_1=1),
 	//                   -1 or other value (missing)
-	//                          -- (s1_1=0 s2_1=0 s3_1=0)
+	//                          -- (s1_1=0 s2_1=1 s3_1=0)
 	//
 	// ========                                                     ========
 	// ===================================================================== //
@@ -253,8 +253,6 @@ namespace HLA_LIB
 		UINT8 PackedSNP1[HIBAG_PACKED_UTYPE_MAXNUM];
 		/// packed SNP genotypes, allele 2
 		UINT8 PackedSNP2[HIBAG_PACKED_UTYPE_MAXNUM];
-		/// packed SNP genotypes, missing flag
-		UINT8 PackedMissing[HIBAG_PACKED_UTYPE_MAXNUM];
 
 		/// the count in the bootstrapped data
 		int BootstrapCount;
@@ -277,8 +275,8 @@ namespace HLA_LIB
 		void StringToSNP(const string &str);
 		/// export SNPs to a vector of integers
 		void SNPToInt(size_t Length, int OutArray[]) const;
-		/// import SNPs from an integer vector 'InBase' with 'Index'
-		void IntToSNP(size_t Length, const int InBase[], const int Index[]);
+		/// import SNPs from an integer vector 'GenoBase' with 'Index'
+		void IntToSNP(size_t Length, const int GenoBase[], const int Index[]);
 
 		/// compute the Hamming distance between SNPs and H1+H2
 		int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
