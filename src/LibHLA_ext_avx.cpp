@@ -68,9 +68,14 @@ extern const bool HIBAG_ALGORITHM_AVX = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX, AVX2
-#   ifndef __AVX__
+#   if !defined(__AVX__) && !defined(__clang__)
 		#pragma GCC target("avx")
 #   endif
+
+#if defined(__clang__)
+#   undef SIMD_NAME
+#   define SIMD_NAME(NAME)  __attribute__((target("avx"))) NAME ## _avx
+#endif
 
 
 typedef int64_t UTYPE;

@@ -44,9 +44,9 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
+//#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
 #   define HIBAG_CPU_ARCH_X86_SSE4_2
-#endif
+//#endif
 
 #if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_SSE4_2)
 #   define HIBAG_CPU_ARCH_X86_SSE4_2
@@ -68,12 +68,17 @@ extern const bool HIBAG_ALGORITHM_SSE4_2 = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX, AVX2
-#   ifndef __POPCNT__
-		#pragma GCC target("popcnt")
+#   if !defined(__POPCNT__) && !defined(__clang__)
+	#pragma GCC target("popcnt")
 #   endif
-#   ifndef __SSE4_2__
-		#pragma GCC target("sse4.2")
+#   if !defined(__SSE4_2__) && !defined(__clang__)
+	#pragma GCC target("sse4.2")
 #   endif
+
+#if defined(__clang__)
+#   undef SIMD_NAME
+#   define SIMD_NAME(NAME)  __attribute__((target("sse4.2"))) NAME ## _sse4_2
+#endif
 
 
 typedef int64_t UTYPE;

@@ -48,6 +48,10 @@ using namespace HLA_LIB;
 #   define HIBAG_CPU_ARCH_X86_AVX2
 #endif
 
+#if defined(HIBAG_CPU_ARCH_X86) && defined(__clang__)
+#   define HIBAG_CPU_ARCH_X86_AVX2
+#endif
+
 #if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_AVX2)
 #   define HIBAG_CPU_ARCH_X86_AVX2
 #endif
@@ -68,9 +72,14 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX, AVX2
-#   ifndef __AVX2__
+#   if !defined(__AVX2__) && !defined(__clang__)
 		#pragma GCC target("avx2")
 #   endif
+
+#if defined(__clang__)
+#   undef SIMD_NAME
+#   define SIMD_NAME(NAME)  __attribute__((target("avx2"))) NAME ## _avx2
+#endif
 
 
 typedef int64_t UTYPE;
