@@ -67,7 +67,6 @@ extern const bool HIBAG_ALGORITHM_SSE4_2 = false;
 
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
-#   include <immintrin.h>  // AVX, AVX2
 #   if !defined(__POPCNT__) && !defined(__clang__)
 	#pragma GCC target("popcnt")
 #   endif
@@ -94,8 +93,8 @@ typedef int64_t UTYPE;
 #   define GENO_HALF_NBIT  64
 
 typedef struct {
-	__m128i S1_i128, S2_i128;  ///< packed genotypes
-	__m256i S1_i256, S2_i256;  ///< packed genotypes
+	__m128i S1a, S2a;  ///< packed genotypes
+	__m128i S1b, S2b;  ///< packed genotypes
 } TGenoHammDist;
 
 
@@ -107,11 +106,12 @@ static ALWAYS_INLINE void init_hamm_dist(size_t Length, const TGenotype &G,
 	if (Length <= GENO_HALF_NBIT)
 	{
 		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
-		out.S1_i128 = S1; out.S2_i128 = S2;
+		out.S1a = S1; out.S2a = S2;
 	} else {
-		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
-		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
-		out.S1_i256 = S1; out.S2_i256 = S2;
+		__m128i S1a = { s1[0], s1[1] }, S1b = { s2[0], s2[1] };  // genotypes
+		__m128i S2a = { s2[0], s2[1] }, S2b = { s1[0], s1[1] };  // genotypes
+		out.S1a = S1a; out.S2a = S2a;
+		out.S1b = S1b; out.S2b = S2b;
 	}
 }
 
@@ -125,7 +125,7 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 	if (Length <= GENO_HALF_NBIT)
 	{
 		__m128i H  = { *h1, *h2 };  // two haplotypes
-		__m128i S1 = G.S1_i128, S2 = G.S2_i128;  // genotypes
+		__m128i S1 = G.S1a, S2 = G.S2a;  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
 		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
@@ -136,17 +136,20 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]);
 	} else {
 		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
-		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
-		__m256i S1 = G.S1_i256, S2 = G.S2_i256;  // genotypes
-		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
+		__m128i Ha = { h1[0], h1[1] }, Hb = { h2[0], h2[1] };  // two haplotypes
+		__m128i S1a = G.S1a, S1b = G.S1b;
+		__m128i S2a = G.S2a, S2b = G.S2b;
+		__m128i m1a = Ha ^ S2a, m1b = Hb ^ S2b;
+		__m128i m2a = m1b, m2b = m1a;
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
-		__m256i M = S2 & ~S1;  // missing value, 1 is missing
-		__m256i M2 = { M[0], M[1], M[0], M[1] };
-		__m256i MASK = (m1 | m2) & ~M2;
-		__m256i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
+		__m128i M2 = _mm_andnot_si128(S1a, S2a);  // missing value, 1 is missing
+		__m128i MASKa = _mm_andnot_si128(M2, m1a | m2a);
+		__m128i MASKb = _mm_andnot_si128(M2, m1b | m2b);
+		__m128i va = (Ha ^ S1a) & MASKa;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
+		__m128i vb = (Hb ^ S1b) & MASKb;
 		// popcount
-		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]) +
-			U_POPCOUNT(v[2]) + U_POPCOUNT(v[3]);
+		return U_POPCOUNT(va[0]) + U_POPCOUNT(va[1]) +
+			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
 	}
 }
 
