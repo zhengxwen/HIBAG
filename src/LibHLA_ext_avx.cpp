@@ -44,7 +44,7 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8)) && !defined(__MINGW32__)
+#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
 #   define HIBAG_CPU_ARCH_X86_AVX
 #endif
 
