@@ -67,9 +67,9 @@ typedef int64_t UTYPE;
 	extern const bool HIBAG_ALGORITHM_SSE2_POPCNT = true;
 #else
 	extern const bool HIBAG_ALGORITHM_SSE2_POPCNT = false;
-	static const __m128i Z55 = _mm_set1_epi8(0x55);
-	static const __m128i Z33 = _mm_set1_epi8(0x33);
-	static const __m128i Z0F = _mm_set1_epi8(0x0F);
+	static const __m128i Z55 = { 0x5555555555555555LL, 0x5555555555555555LL };
+	static const __m128i Z33 = { 0x3333333333333333LL, 0x3333333333333333LL };
+	static const __m128i Z0F = { 0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
 	#define SSE2_POPCOUNT_128B(x, cnt)    \
 	{ \
 		x = _mm_sub_epi64(x, _mm_srli_epi64(x, 1) & Z55); \
