@@ -88,13 +88,9 @@ typedef int64_t UTYPE;
 #define GENO_TYPE TGenoHammDist
 #define GENO_HALF_NBIT  64
 
-typedef union {
-	__m128i i128;
-	__m256i i256;
-} t_simd;
-
 typedef struct {
-	t_simd S1, S2;  ///< packed genotypes
+	__m128i S1_i128, S2_i128;  ///< packed genotypes
+	__m256i S1_i256, S2_i256;  ///< packed genotypes
 } TGenoHammDist;
 
 
@@ -106,11 +102,11 @@ static ALWAYS_INLINE void init_hamm_dist(size_t Length, const TGenotype &G,
 	if (Length <= GENO_HALF_NBIT)
 	{
 		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
-		out.S1.i128 = S1; out.S2.i128 = S2;
+		out.S1_i128 = S1; out.S2_i128 = S2;
 	} else {
 		__m256i S1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
 		__m256i S2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
-		out.S1.i256 = S1; out.S2.i256 = S2;
+		out.S1_i256 = S1; out.S2_i256 = S2;
 	}
 }
 
@@ -124,12 +120,12 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 	if (Length <= GENO_HALF_NBIT)
 	{
 		__m128i H  = { *h1, *h2 };  // two haplotypes
-		__m128i S1 = G.S1.i128, S2 = G.S2.i128;  // genotypes
+		__m128i S1 = G.S1_i128, S2 = G.S2_i128;  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
-		__m128i M = S2 & ~S1;  // missing value, 1 is missing
+		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
 		__m128i M2 = { M[0], M[0] };
-		__m128i MASK = (m1 | m2) & ~M2;
+		__m128i MASK = _mm_andnot_si128(M2, m1 | m2);
 		__m128i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 	#ifndef U_POPCOUNT
 		int cnt;
@@ -142,7 +138,7 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 	} else {
 		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
 		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
-		__m256i S1 = G.S1.i256, S2 = G.S2.i256;  // genotypes
+		__m256i S1 = G.S1_i256, S2 = G.S2_i256;  // genotypes
 		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
 		__m256i M = S2 & ~S1;  // missing value, 1 is missing
