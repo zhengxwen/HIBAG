@@ -29,7 +29,6 @@ Release Version: 1.22.0
 
 * Kernel Version: v1.4
 * Modify the kernel to support the GPU extension
-* Develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
 * The kernel v1.4 outputs exactly the same parameter estimates as v1.3, and the model training with v1.4 is 1.2 times faster than v1.3.
 
 
@@ -119,7 +118,7 @@ Supported by Streaming SIMD Extensions (SSE2 + POPCNT)
 
 ### GPU with OpenCL
 
-* Install [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu) from Github (for developers/testers only):
+* Install HIBAG.gpu (for developers/testers only):
 ```R
 library("devtools")
 install_github("zhengxwen/HIBAG.gpu")
