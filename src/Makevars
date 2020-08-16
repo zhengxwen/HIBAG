@@ -1,3 +1,4 @@
 # to set flags for the linker
+NOT_WORK
 PKG_LIBS = $(shell ${R_HOME}/bin/Rscript -e \
 	"if (grepl(intToUtf8(c(94,103,92,43,92,43)), basename('$(CXX)'))) cat('-lgcc')")
