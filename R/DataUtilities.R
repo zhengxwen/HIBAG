@@ -971,6 +971,12 @@ summary.hlaSNPGenoClass <- function(object, show=TRUE, ...)
 }
 
 
+print.hlaSNPGenoClass <- function(x, ...)
+{
+    summary(x)
+    invisible()
+}
+
 
 
 #######################################################################
@@ -1815,6 +1821,13 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
 
     # return
     invisible(rv)
+}
+
+
+print.hlaAlleleClass <- function(x, ...)
+{
+    str(x)
+    invisible()
 }
 
 

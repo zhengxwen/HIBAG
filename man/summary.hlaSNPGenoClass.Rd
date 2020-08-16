@@ -1,5 +1,6 @@
 \name{summary.hlaSNPGenoClass}
 \alias{summary.hlaSNPGenoClass}
+\alias{print.hlaSNPGenoClass}
 \title{
     Summarize a SNP dataset
 }
@@ -8,9 +9,11 @@
 }
 \usage{
 \method{summary}{hlaSNPGenoClass}(object, show=TRUE, ...)
+\method{print}{hlaSNPGenoClass}(x, ...)
 }
 \arguments{
     \item{object}{a genotype object of \code{\link{hlaSNPGenoClass}}}
+    \item{x}{a genotype object of \code{\link{hlaSNPGenoClass}}}
     \item{show}{if TRUE, print information}
     \item{...}{further arguments passed to or from other methods}
 }

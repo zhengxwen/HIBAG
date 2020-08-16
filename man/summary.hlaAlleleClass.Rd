@@ -1,5 +1,6 @@
 \name{summary.hlaAlleleClass}
 \alias{summary.hlaAlleleClass}
+\alias{print.hlaAlleleClass}
 \alias{summary.hlaAASeqClass}
 \title{
     Summarize a ``hlaAlleleClass'' or ``hlaAASeqClass'' object
@@ -12,9 +13,12 @@
 \method{summary}{hlaAlleleClass}(object, verbose=TRUE, ...)
 \method{summary}{hlaAASeqClass}(object, poly.only=TRUE, head=0L,
     verbose=TRUE, ...)
+\method{print}{hlaAlleleClass}(x, ...)
 }
 \arguments{
     \item{object}{an object of \code{\link{hlaAlleleClass}} or
+        \code{\link{hlaAASeqClass}}}
+    \item{x}{an object of \code{\link{hlaAlleleClass}} or
         \code{\link{hlaAASeqClass}}}
     \item{poly.only}{if TRUE, only show the amino acid positions with
         polymorphism; otherwise, show all sequences}

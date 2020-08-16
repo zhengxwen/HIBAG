@@ -184,6 +184,7 @@ void CdProgression::Init(long TotalCnt, bool ShowInit)
 bool CdProgression::Forward(long step, bool Show)
 {
 	fCurrent += step;
+	CheckInterrupt();
 	int p = int(double(TotalPercent)*fCurrent / fTotal);
 	if ((p != fPercent) || (p == TotalPercent))
 	{
@@ -203,7 +204,6 @@ void CdProgression::ShowProgress()
 {
 	Rprintf("%s (%s)\t%d%%\n", Info.c_str(), date_text(),
 		int(fPercent*StepPercent));
-	CheckInterrupt();
 }
 
 
@@ -646,7 +646,9 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 	#endif
 #endif
 
+#if !(defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__))
 static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
+#endif
 
 #ifndef U_POPCOUNT
 #   define U_POPCOUNT  u_popcount
