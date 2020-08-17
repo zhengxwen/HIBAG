@@ -42,7 +42,7 @@ Release Version: 1.22.0
 
 ## Package Author & Maintainer
 
-Dr. Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
+Dr. Xiuwen Zheng
 
 
 ## Pre-fit Model Download
