@@ -29,7 +29,6 @@ Release Version: 1.24.0
 
 * Kernel Version: v1.4
 * Modify the kernel to support the GPU extension
-* Develop a complementary R package ([HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu)) for GPU computing
 * The kernel v1.4 outputs exactly the same parameter estimates as v1.3, and the model training with v1.4 is 1.2 times faster than v1.3.
 
 
@@ -43,7 +42,7 @@ Release Version: 1.24.0
 
 ## Package Author & Maintainer
 
-Dr. Xiuwen Zheng ([zhengx@u.washington.edu](zhengx@u.washington.edu))
+Dr. Xiuwen Zheng
 
 
 ## Pre-fit Model Download
