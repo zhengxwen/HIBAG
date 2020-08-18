@@ -179,7 +179,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
-		size_t n1 = Haplo.LenPerHLA[h1];
+		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
 		prob = 0;
@@ -204,7 +204,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 		// off-diagonal
 		for (int h2=h1+1; h2 < _nHLA; h2++)
 		{
-			size_t n2 = Haplo.LenPerHLA[h2];
+			const size_t n2 = Haplo.LenPerHLA[h2];
 			prob = 0;
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
@@ -242,7 +242,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
-		size_t n1 = Haplo.LenPerHLA[h1];
+		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
 		prob = 0;
@@ -264,7 +264,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 		// off-diagonal
 		for (int h2=h1+1; h2 < _nHLA; h2++)
 		{
-			size_t n2 = Haplo.LenPerHLA[h2];
+			const size_t n2 = Haplo.LenPerHLA[h2];
 			prob = 0;
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
@@ -295,7 +295,7 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
-		size_t n1 = Haplo.LenPerHLA[h1];
+		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
 		sum = 0;
@@ -316,7 +316,7 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 		// off-diagonal
 		for (int h2=h1+1; h2 < _nHLA; h2++)
 		{
-			size_t n2 = Haplo.LenPerHLA[h2];
+			const size_t n2 = Haplo.LenPerHLA[h2];
 			sum = 0;
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
