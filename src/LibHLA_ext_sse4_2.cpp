@@ -187,10 +187,10 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
-				const double i1f2 = 2 * i1->Freq;
+				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
-					ADD_FREQ_MUTANT(prob, i1f2 * i2->Freq, hamm_d(GS, *i1, *i2));
+					ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 			}
 			I2 += n2;
 			if (max < prob)
