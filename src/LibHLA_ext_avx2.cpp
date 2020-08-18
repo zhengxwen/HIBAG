@@ -98,7 +98,7 @@ struct TGenoStruct
 {
 public:
 	__m128i S1, S2;  ///< packed genotypes
-	__m256i S1_4, S2_4;
+	__m256i S1_0, S2_0, S1_1, S2_1;
 	bool Low64b;     ///< whether length <= 64 or not
 	/// constructor
 	TGenoStruct(size_t Length, const TGenotype &G)
@@ -112,10 +112,16 @@ public:
 			S1 = I1; S2 = I2;
 			__m256i J1 = { s1[0], s1[0], s1[0], s1[0] };
 			__m256i J2 = { s2[0], s2[0], s2[0], s2[0] };
-			S1_4 = J1; S2_4 = J2;
+			S1_0 = J1; S2_0 = J2;
 		} else {
 			__m128i I1 = { s1[0], s1[1] }, I2 = { s2[0], s2[1] };  // genotypes
 			S1 = I1; S2 = I2;
+			__m256i J1_0 = { s1[0], s1[0], s1[0], s1[0] };
+			__m256i J2_0 = { s2[0], s2[0], s2[0], s2[0] };
+			S1_0 = J1_0; S2_0 = J2_0;
+			__m256i J1_1 = { s1[1], s1[1], s1[1], s1[1] };
+			__m256i J2_1 = { s2[1], s2[1], s2[1], s2[1] };
+			S1_1 = J1_1; S2_1 = J2_1;
 		}
 	}
 };
@@ -164,19 +170,18 @@ static const __m256i pcnt_low_mask = {
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
 
 static ALWAYS_INLINE TARGET_AVX2
-	size_t add_geno_freq(size_t n, const THaplotype *i1, const THaplotype *i2,
+	size_t add_geno_freq4(size_t n, const THaplotype *i1, const THaplotype *i2,
 		const TGenoStruct &GS, double &prob)
 {
 	const double ff = 2 * i1->Freq;
 	const __m256d ff4 = { ff, ff, ff, ff };
-	const __m256i H1 = _mm256_set1_epi64x(U_H0(i1, 0));
 	if (GS.Low64b)
 	{
+		const __m256i H1 = _mm256_set1_epi64x(U_H0(i1, 0));
 		for (; n >= 4; n -= 4, i2 += 4)
 		{
 			__m256i H2 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
-			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
-			__m256i S1 = GS.S1_4, S2 = GS.S2_4;
+			__m256i S1 = GS.S1_0, S2 = GS.S2_0;
 			__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
 			__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
 			__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
@@ -195,10 +200,56 @@ static ALWAYS_INLINE TARGET_AVX2
 			__m256i ii4 = _mm256_sad_epu8(total, _mm256_setzero_si256());
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
+			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
 			f = ff4 * f2 * f;
 			prob += f[0] + f[1] + f[2] + f[3];
 		}
 	} else {
+		const __m256i H1_0 = _mm256_set1_epi64x(U_H0(i1, 0));
+		const __m256i H1_1 = _mm256_set1_epi64x(U_H1(i1, 0));
+		for (; n >= 4; n -= 4, i2 += 4)
+		{
+			__m256i H2_0 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
+			__m256i H2_1 = { U_H1(i2,0), U_H1(i2,1), U_H1(i2,2), U_H1(i2,3) };
+			__m256i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
+			__m256i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
+			__m256i M_0 = SIMD_ANDNOT_I256(S1_0, S2_0);  // missing value, 1 is missing
+			__m256i M_1 = SIMD_ANDNOT_I256(S1_1, S2_1);  // missing value, 1 is missing
+			__m256i MASK_0 = SIMD_ANDNOT_I256(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
+			__m256i MASK_1 = SIMD_ANDNOT_I256(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
+			__m256i va_0 = (H1_0 ^ S1_0) & MASK_0, vb_0 = (H2_0 ^ S2_0) & MASK_0;
+			__m256i va_1 = (H1_1 ^ S1_1) & MASK_1, vb_1 = (H2_1 ^ S2_1) & MASK_1;
+			// popcount for 64b integers
+			__m256i lo_a_0 = va_0 & pcnt_low_mask;
+			__m256i lo_a_1 = va_1 & pcnt_low_mask;
+			__m256i lo_b_0 = vb_0 & pcnt_low_mask;
+			__m256i lo_b_1 = vb_1 & pcnt_low_mask;
+			__m256i hi_a_0 = _mm256_srli_epi32(va_0, 4) & pcnt_low_mask;
+			__m256i hi_a_1 = _mm256_srli_epi32(va_1, 4) & pcnt_low_mask;
+			__m256i hi_b_0 = _mm256_srli_epi32(vb_0, 4) & pcnt_low_mask;
+			__m256i hi_b_1 = _mm256_srli_epi32(vb_1, 4) & pcnt_low_mask;
+			__m256i pc1_a_0 = _mm256_shuffle_epi8(pcnt_lookup, lo_a_0);
+			__m256i pc1_a_1 = _mm256_shuffle_epi8(pcnt_lookup, lo_a_1);
+			__m256i pc1_b_0 = _mm256_shuffle_epi8(pcnt_lookup, lo_b_0);
+			__m256i pc1_b_1 = _mm256_shuffle_epi8(pcnt_lookup, lo_b_1);
+			__m256i pc2_a_0 = _mm256_shuffle_epi8(pcnt_lookup, hi_a_0);
+			__m256i pc2_a_1 = _mm256_shuffle_epi8(pcnt_lookup, hi_a_1);
+			__m256i pc2_b_0 = _mm256_shuffle_epi8(pcnt_lookup, hi_b_0);
+			__m256i pc2_b_1 = _mm256_shuffle_epi8(pcnt_lookup, hi_b_1);
+			__m256i tot_a_0 = _mm256_add_epi8(pc1_a_0, pc2_a_0);
+			__m256i tot_a_1 = _mm256_add_epi8(pc1_a_1, pc2_a_1);
+			__m256i tot_b_0 = _mm256_add_epi8(pc1_b_0, pc2_b_0);
+			__m256i tot_b_1 = _mm256_add_epi8(pc1_b_1, pc2_b_1);
+			__m256i tot_0 = _mm256_add_epi8(tot_a_0, tot_b_0);
+			__m256i tot_1 = _mm256_add_epi8(tot_a_1, tot_b_1);
+			__m256i total = _mm256_add_epi8(tot_0, tot_1);
+			__m256i ii4 = _mm256_sad_epu8(total, _mm256_setzero_si256());
+			// four frequencies
+			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
+			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
+			f = ff4 * f2 * f;
+			prob += f[0] + f[1] + f[2] + f[3];
+		}
 	}
 	return n;
 }
@@ -230,7 +281,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			size_t m2 = m1 - 1;
 			if (m2 >= 4)
 			{
-				m2 = add_geno_freq(m2, i1, i2, GS, prob);
+				m2 = add_geno_freq4(m2, i1, i2, GS, prob);
 				i2 += m1 - 1 - m2;
 			}
 			for (; m2 > 0; m2--, i2++)
@@ -256,7 +307,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 				size_t m2 = n2;
 				if (m2 >= 4)
 				{
-					m2 = add_geno_freq(m2, i1, i2, GS, prob);
+					m2 = add_geno_freq4(m2, i1, i2, GS, prob);
 					i2 += n2 - m2;
 				}
 				for (; m2 > 0; m2--, i2++)
@@ -305,7 +356,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 			size_t m2 = m1 - 1;
 			if (m2 >= 4)
 			{
-				m2 = add_geno_freq(m2, i1, i2, GS, prob);
+				m2 = add_geno_freq4(m2, i1, i2, GS, prob);
 				i2 += m1 - 1 - m2;
 			}
 			for (; m2 > 0; m2--, i2++)
@@ -328,7 +379,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 				size_t m2 = n2;
 				if (m2 >= 4)
 				{
-					m2 = add_geno_freq(m2, i1, i2, GS, prob);
+					m2 = add_geno_freq4(m2, i1, i2, GS, prob);
 					i2 += n2 - m2;
 				}
 				for (; m2 > 0; m2--, i2++)
@@ -367,7 +418,13 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 			// i2 > i1
 			const double ff = 2 * i1->Freq;
 			THaplotype *i2 = i1 + 1;
-			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
+			size_t m2 = m1 - 1;
+			if (m2 >= 4)
+			{
+				m2 = add_geno_freq4(m2, i1, i2, GS, sum);
+				i2 += m1 - 1 - m2;
+			}
+			for (; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(sum, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
 		*pProb++ = sum;
@@ -383,7 +440,13 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 			{
 				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
-				for (size_t m2=n2; m2 > 0; m2--, i2++)
+				size_t m2 = n2;
+				if (m2 >= 4)
+				{
+					m2 = add_geno_freq4(m2, i1, i2, GS, sum);
+					i2 += n2 - m2;
+				}
+				for (; m2 > 0; m2--, i2++)
 					ADD_FREQ_MUTANT(sum, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 			}
 			*pProb++ = sum;
