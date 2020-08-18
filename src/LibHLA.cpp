@@ -1320,11 +1320,13 @@ THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
-			THaplotype *i2 = i1;
-			for (size_t m2=m1; m2 > 0; m2--, i2++)
+			ADD_FREQ_MUTANT(prob, i1->Freq * i1->Freq,
+				hamm_dist(Haplo.Num_SNP, Geno, *i1, *i1));
+			const double i1_freq2 = 2 * i1->Freq;
+			THaplotype *i2 = i1 + 1;
+			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
 			{
-				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
-					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
+				ADD_FREQ_MUTANT(prob, i1_freq2 * i2->Freq,
 					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
@@ -1385,11 +1387,13 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
-			THaplotype *i2 = i1;
-			for (size_t m2=m1; m2 > 0; m2--, i2++)
+			ADD_FREQ_MUTANT(prob, i1->Freq * i1->Freq,
+				hamm_dist(Haplo.Num_SNP, Geno, *i1, *i1));
+			const double i1_freq2 = 2 * i1->Freq;
+			THaplotype *i2 = i1 + 1;
+			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
 			{
-				ADD_FREQ_MUTANT(prob, (i1 != i2) ?
-					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
+				ADD_FREQ_MUTANT(prob, i1_freq2 * i2->Freq,
 					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
@@ -1441,11 +1445,13 @@ void CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
-			THaplotype *i2 = i1;
-			for (size_t m2=m1; m2 > 0; m2--, i2++)
+			ADD_FREQ_MUTANT(sum, i1->Freq * i1->Freq,
+				hamm_dist(Haplo.Num_SNP, Geno, *i1, *i1));
+			const double i1_freq2 = 2 * i1->Freq;
+			THaplotype *i2 = i1 + 1;
+			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
 			{
-				ADD_FREQ_MUTANT(sum, (i1 != i2) ?
-					(2 * i1->Freq * i2->Freq) : (i1->Freq * i2->Freq),
+				ADD_FREQ_MUTANT(sum, i1_freq2 * i2->Freq,
 					hamm_dist(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
