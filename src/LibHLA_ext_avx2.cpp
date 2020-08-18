@@ -96,8 +96,7 @@ typedef int64_t UTYPE;
 struct TGenoStruct
 {
 public:
-	__m128i S1_i128, S2_i128;  ///< packed genotypes
-	__m256i S1_i256, S2_i256;  ///< packed genotypes
+	__m128i S1, S2;  ///< packed genotypes
 	bool Low64b;     ///< whether length <= 64 or not
 	/// constructor
 	TGenoStruct(size_t Length, const TGenotype &G)
@@ -108,11 +107,10 @@ public:
 		if (Low64b)
 		{
 			__m128i I1 = { s1[0], s2[0] }, I2 = { s2[0], s1[0] };  // genotypes
-			S1_i128 = I1; S2_i128 = I2;
+			S1 = I1; S2 = I2;
 		} else {
-			__m256i I1 = { s1[0], s1[1], s2[0], s2[1] };  // genotypes
-			__m256i I2 = { s2[0], s2[1], s1[0], s1[1] };  // genotypes
-			S1_i256 = I1; S2_i256 = I2;
+			__m128i I1 = { s1[0], s1[1] }, I2 = { s2[0], s2[1] };  // genotypes
+			S1 = I1; S2 = I2;
 		}
 	}
 };
@@ -127,7 +125,7 @@ static ALWAYS_INLINE int hamm_d(const TGenoStruct &G, const THaplotype &H1,
 	if (G.Low64b)
 	{
 		__m128i H  = { *h1, *h2 };  // two haplotypes
-		__m128i S1 = G.S1_i128, S2 = G.S2_i128;  // genotypes
+		__m128i S1 = G.S1, S2 = G.S2;  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
 		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
@@ -138,17 +136,16 @@ static ALWAYS_INLINE int hamm_d(const TGenoStruct &G, const THaplotype &H1,
 		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]);
 	} else {
 		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
-		__m256i H  = { h1[0], h1[1], h2[0], h2[1] };  // two haplotypes
-		__m256i S1 = G.S1_i256, S2 = G.S2_i256;  // genotypes
-		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
+		__m128i H1 = { h1[0], h1[1] }, H2 = { h2[0], h2[1] };  // two haplotypes
+		__m128i S1 = G.S1, S2 = G.S2;  // genotypes
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
-		__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
-		__m256i M2 = { M[0], M[1], M[0], M[1] };
-		__m256i MASK = SIMD_ANDNOT_I256(M2, m1 | m2);
-		__m256i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
+		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
+		__m128i MASK = _mm_andnot_si128(M, (H1 ^ S2) | (H2 ^ S1));
+		__m128i va = (H1 ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
+		__m128i vb = (H2 ^ S2) & MASK;
 		// popcount
-		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]) +
-			U_POPCOUNT(v[2]) + U_POPCOUNT(v[3]);
+		return U_POPCOUNT(va[0]) + U_POPCOUNT(va[1]) +
+			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
 	}
 }
 
