@@ -693,17 +693,13 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const TGenotype &G,
 		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]);
 	} else {
 		// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
-		__m128i Ha = { h1[0], h1[1] }, Hb = { h2[0], h2[1] };  // two haplotypes
-		__m128i S1a = { s1[0], s1[1] }, S1b = { s2[0], s2[1] };  // genotypes
-		__m128i S2a = S1b, S2b = S1a;
-		__m128i m1a = Ha ^ S2a, m1b = Hb ^ S2b;
-		__m128i m2a = m1b, m2b = m1a;
+		__m128i H1 = { h1[0], h1[1] }, H2 = { h2[0], h2[1] };  // two haplotypes
+		__m128i S1 = { s1[0], s1[1] }, S2 = { s2[0], s2[1] };  // genotypes
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
-		__m128i M2 = _mm_andnot_si128(S1a, S2a);  // missing value, 1 is missing
-		__m128i MASKa = _mm_andnot_si128(M2, m1a | m2a);
-		__m128i MASKb = _mm_andnot_si128(M2, m1b | m2b);
-		__m128i va = (Ha ^ S1a) & MASKa;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
-		__m128i vb = (Hb ^ S1b) & MASKb;
+		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
+		__m128i MASK = _mm_andnot_si128(M, (H1 ^ S2) | (H2 ^ S1));
+		__m128i va = (H1 ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
+		__m128i vb = (H2 ^ S2) & MASK;
 		// popcount
 		return U_POPCOUNT(va[0]) + U_POPCOUNT(va[1]) +
 			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
