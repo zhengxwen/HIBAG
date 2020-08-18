@@ -219,6 +219,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	return rv;
 }
 
+
 double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
 {
@@ -277,6 +278,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 
 	return hlaProb / sum;
 }
+
 
 void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)

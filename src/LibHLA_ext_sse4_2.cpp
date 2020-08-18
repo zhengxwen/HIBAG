@@ -44,11 +44,15 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-//#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
-#   define HIBAG_CPU_ARCH_X86_SSE4_2
-//#endif
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=3))
+#       define HIBAG_CPU_ARCH_X86_SSE4_2
+#   elif defined(__clang_major__) && (__clang_major__>=3)
+#       define HIBAG_CPU_ARCH_X86_SSE4_2
+#   endif
+#endif
 
-#if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_SSE4_2)
+#if defined(__SSE4_2__) && !defined(HIBAG_CPU_ARCH_X86_SSE4_2)
 #   define HIBAG_CPU_ARCH_X86_SSE4_2
 #endif
 
@@ -196,10 +200,11 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				const double i1_freq2 = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
-					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
+					ADD_FREQ_MUTANT(prob, i1_freq2 * i2->Freq,
 						hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 				}
 			}
@@ -216,6 +221,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 
 	return rv;
 }
+
 
 double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
@@ -258,10 +264,11 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				const double i1_freq2 = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
-					ADD_FREQ_MUTANT(prob, 2 * i1->Freq * i2->Freq,
+					ADD_FREQ_MUTANT(prob, i1_freq2 * i2->Freq,
 						hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 				}
 			}
@@ -275,6 +282,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 
 	return hlaProb / sum;
 }
+
 
 void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
@@ -313,10 +321,11 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				const double i1_freq2 = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 				{
-					ADD_FREQ_MUTANT(sum, 2 * i1->Freq * i2->Freq,
+					ADD_FREQ_MUTANT(sum, i1_freq2 * i2->Freq,
 						hamm_dist(Haplo.Num_SNP, GENO_VAR, *i1, *i2));
 				}
 			}

@@ -48,7 +48,7 @@ using namespace HLA_LIB;
 #   define HIBAG_CPU_ARCH_X86_AVX2
 #endif
 
-#if defined(HIBAG_CPU_ARCH_X86) && defined(__clang__)
+#if defined(HIBAG_CPU_ARCH_X86) && !defined(HIBAG_CPU_ARCH_X86_AVX2) && defined(__clang__)
 #   define HIBAG_CPU_ARCH_X86_AVX2
 #endif
 
@@ -81,6 +81,12 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 #   define SIMD_NAME(NAME)  __attribute__((target("avx2"))) NAME ## _avx2
 #endif
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#   define SIMD_ANDNOT_I256(x1, x2)    _mm256_andnot_si256(x1, x2)
+#else
+#   define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
+#endif
+
 
 typedef int64_t UTYPE;
 
@@ -88,11 +94,11 @@ typedef int64_t UTYPE;
 #define U_POPCOUNT    __builtin_popcountll
 
 
-#   define GENO_HAMM_DIST_INIT(Length)    \
-		TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
-#   define GENO_VAR  GenoVar
-#   define GENO_TYPE TGenoHammDist
-#   define GENO_HALF_NBIT  64
+#define GENO_HAMM_DIST_INIT(Length)    \
+	TGenoHammDist GenoVar; init_hamm_dist(Length, Geno, GenoVar)
+#define GENO_VAR  GenoVar
+#define GENO_TYPE TGenoHammDist
+#define GENO_HALF_NBIT  64
 
 typedef struct {
 	__m128i S1_i128, S2_i128;  ///< packed genotypes
@@ -141,15 +147,9 @@ static ALWAYS_INLINE int hamm_dist(size_t Length, const GENO_TYPE &G,
 		__m256i S1 = G.S1_i256, S2 = G.S2_i256;  // genotypes
 		__m256i m1 = H ^ S2, m2 = { m1[2], m1[3], m1[0], m1[1] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
-	#if defined(__MINGW32__) || defined(__MINGW64__)
-		__m256i M = _mm256_andnot_si256(S1, S2);  // missing value, 1 is missing
+		__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
 		__m256i M2 = { M[0], M[1], M[0], M[1] };
-		__m256i MASK = _mm256_andnot_si256(M2, m1 | m2);
-	#else
-		__m256i M = S2 & ~S1;  // missing value, 1 is missing
-		__m256i M2 = { M[0], M[1], M[0], M[1] };
-		__m256i MASK = (m1 | m2) & ~M2;
-	#endif
+		__m256i MASK = SIMD_ANDNOT_I256(M2, m1 | m2);
 		__m256i v = (H ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 		// popcount
 		return U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]) +
@@ -221,6 +221,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	return rv;
 }
 
+
 double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
 {
@@ -279,6 +280,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 
 	return hlaProb / sum;
 }
+
 
 void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
