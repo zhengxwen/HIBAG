@@ -90,6 +90,8 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 
 typedef int64_t UTYPE;
 #define U_POPCOUNT    __builtin_popcountll
+#define U_H0(x, i)    ((UTYPE*)&x[i].PackedHaplo[0])[0]
+#define U_H1(x, i)    ((UTYPE*)&x[i].PackedHaplo[0])[1]
 
 
 /// Prepare the internal genotype structure
@@ -97,6 +99,7 @@ struct TGenoStruct
 {
 public:
 	__m128i S1, S2;  ///< packed genotypes
+	__m256i S1_4, S2_4;
 	bool Low64b;     ///< whether length <= 64 or not
 	/// constructor
 	TGenoStruct(size_t Length, const TGenotype &G)
@@ -108,6 +111,9 @@ public:
 		{
 			__m128i I1 = { s1[0], s2[0] }, I2 = { s2[0], s1[0] };  // genotypes
 			S1 = I1; S2 = I2;
+			__m256i J1 = { s1[0], s1[0], s1[0], s1[0] };
+			__m256i J2 = { s2[0], s2[0], s2[0], s2[0] };
+			S1_4 = J1; S2_4 = J2;
 		} else {
 			__m128i I1 = { s1[0], s1[1] }, I2 = { s2[0], s2[1] };  // genotypes
 			S1 = I1; S2 = I2;
@@ -191,10 +197,39 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			THaplotype *i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
-				const double i1f2 = 2 * i1->Freq;
+				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
-				for (size_t m2=n2; m2 > 0; m2--, i2++)
-					ADD_FREQ_MUTANT(prob, i1f2 * i2->Freq, hamm_d(GS, *i1, *i2));
+				size_t m2 = n2;
+				if (m2 >= 4)
+				{
+					const __m256d ff4 = { ff, ff, ff, ff };
+					const __m256i H1 = _mm256_set1_epi64x(U_H0(i1, 0));
+					if (GS.Low64b)
+					{
+						for (; m2 >= 4; m2-=4, i2+=4)
+						{
+							__m256i H2 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
+							__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
+							__m256i S1 = GS.S1_4, S2 = GS.S2_4;
+							__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
+							__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
+							__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
+							// popcount
+							__m256i ii = {
+								U_POPCOUNT(va[0]) + U_POPCOUNT(vb[0]),
+								U_POPCOUNT(va[1]) + U_POPCOUNT(vb[1]),
+								U_POPCOUNT(va[2]) + U_POPCOUNT(vb[2]),
+								U_POPCOUNT(va[3]) + U_POPCOUNT(vb[3]) };
+							// frequency
+							__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii, 8);
+							f = ff4 * f2 * f;
+							prob += f[0] + f[1] + f[2] + f[3];
+						}
+					} else {
+					}
+				}
+				for (; m2 > 0; m2--, i2++)
+					ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 			}
 			I2 += n2;
 			if (max < prob)
@@ -253,7 +288,36 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 			{
 				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
-				for (size_t m2=n2; m2 > 0; m2--, i2++)
+				size_t m2 = n2;
+				if (m2 >= 4)
+				{
+					const __m256d ff4 = { ff, ff, ff, ff };
+					const __m256i H1 = _mm256_set1_epi64x(U_H0(i1, 0));
+					if (GS.Low64b)
+					{
+						for (; m2 >= 4; m2-=4, i2+=4)
+						{
+							__m256i H2 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
+							__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
+							__m256i S1 = GS.S1_4, S2 = GS.S2_4;
+							__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
+							__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
+							__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
+							// popcount
+							__m256i ii = {
+								U_POPCOUNT(va[0]) + U_POPCOUNT(vb[0]),
+								U_POPCOUNT(va[1]) + U_POPCOUNT(vb[1]),
+								U_POPCOUNT(va[2]) + U_POPCOUNT(vb[2]),
+								U_POPCOUNT(va[3]) + U_POPCOUNT(vb[3]) };
+							// frequency
+							__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii, 8);
+							f = ff4 * f2 * f;
+							prob += f[0] + f[1] + f[2] + f[3];
+						}
+					} else {
+					}
+				}
+				for (; m2 > 0; m2--, i2++)
 					ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 			}
 			I2 += n2;
