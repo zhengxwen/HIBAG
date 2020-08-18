@@ -156,10 +156,12 @@ static ALWAYS_INLINE TARGET_AVX2
 
 
 // defined for Wojciech Mula algorithm's popcnt in 64-bit integers
-static const __m256i mula_lookup = _mm256_setr_epi8(
-		0, 1, 1, 2, 1, 2, 2, 3,   1, 2, 2, 3, 2, 3, 3, 4,
-		0, 1, 1, 2, 1, 2, 2, 3,   1, 2, 2, 3, 2, 3, 3, 4);
-static const __m256i mula_low_mask = _mm256_set1_epi8(0x0f);
+static const __m256i pcnt_lookup = {
+		0x0302020102010100LL, 0x0403030203020201LL,
+		0x0302020102010100LL, 0x0403030203020201LL };
+static const __m256i pcnt_low_mask = {
+		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
+		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
 
 static ALWAYS_INLINE TARGET_AVX2
 	size_t add_geno_freq(size_t n, const THaplotype *i1, const THaplotype *i2,
@@ -179,14 +181,14 @@ static ALWAYS_INLINE TARGET_AVX2
 			__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
 			__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
 			// popcount for 64b integers
-			__m256i lo_a = va & mula_low_mask;
-			__m256i lo_b = vb & mula_low_mask;
-			__m256i hi_a = _mm256_srli_epi32(va, 4) & mula_low_mask;
-			__m256i hi_b = _mm256_srli_epi32(vb, 4) & mula_low_mask;
-			__m256i pc1_a = _mm256_shuffle_epi8(mula_lookup, lo_a);
-			__m256i pc1_b = _mm256_shuffle_epi8(mula_lookup, lo_b);
-			__m256i pc2_a = _mm256_shuffle_epi8(mula_lookup, hi_a);
-			__m256i pc2_b = _mm256_shuffle_epi8(mula_lookup, hi_b);
+			__m256i lo_a = va & pcnt_low_mask;
+			__m256i lo_b = vb & pcnt_low_mask;
+			__m256i hi_a = _mm256_srli_epi32(va, 4) & pcnt_low_mask;
+			__m256i hi_b = _mm256_srli_epi32(vb, 4) & pcnt_low_mask;
+			__m256i pc1_a = _mm256_shuffle_epi8(pcnt_lookup, lo_a);
+			__m256i pc1_b = _mm256_shuffle_epi8(pcnt_lookup, lo_b);
+			__m256i pc2_a = _mm256_shuffle_epi8(pcnt_lookup, hi_a);
+			__m256i pc2_b = _mm256_shuffle_epi8(pcnt_lookup, hi_b);
 			__m256i tot_a = _mm256_add_epi8(pc1_a, pc2_a);
 			__m256i tot_b = _mm256_add_epi8(pc1_b, pc2_b);
 			__m256i total = _mm256_add_epi8(tot_a, tot_b);
@@ -225,7 +227,13 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			// i2 > i1
 			const double ff = 2 * i1->Freq;
 			THaplotype *i2 = i1 + 1;
-			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
+			size_t m2 = m1 - 1;
+			if (m2 >= 4)
+			{
+				m2 = add_geno_freq(m2, i1, i2, GS, prob);
+				i2 += m1 - 1 - m2;
+			}
+			for (; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
 		I2 = I1 + n1;
@@ -294,7 +302,13 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 			// i2 > i1
 			const double ff = 2 * i1->Freq;
 			THaplotype *i2 = i1 + 1;
-			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
+			size_t m2 = m1 - 1;
+			if (m2 >= 4)
+			{
+				m2 = add_geno_freq(m2, i1, i2, GS, prob);
+				i2 += m1 - 1 - m2;
+			}
+			for (; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
 		I2 = I1 + n1;
