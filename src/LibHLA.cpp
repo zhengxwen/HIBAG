@@ -1156,7 +1156,12 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 #ifdef HIBAG_CPU_ARCH_X86
 	__builtin_cpu_init();
 	bool has_popcnt = false;
-	if (strcmp(cpu, "avx2")==0 ||
+	if (strcmp(cpu, "base")==0)
+	{
+	#ifdef __POPCNT__
+		has_popcnt = true;
+	#endif
+	} else if (strcmp(cpu, "avx2")==0 ||
 		(no_cpu && __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2))
 	{
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx2;

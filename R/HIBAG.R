@@ -1630,7 +1630,7 @@ hlaErrMsg <- function()
 # Export stardard R library function(s)
 #######################################################################
 
-.set_kernel_target <- function(cpu=c("auto", "avx2", "avx", "sse4", "sse2"))
+.set_kernel_target <- function(cpu=c("auto", "avx2", "avx", "sse4", "sse2","base"))
 {
 	cpu <- match.arg(cpu)
 	if (cpu == "auto") cpu <- ""
