@@ -89,8 +89,8 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 
 typedef int64_t UTYPE;
 #define U_POPCOUNT    __builtin_popcountll
-#define U_H0(x, i)    ((UTYPE*)&x[i].PackedHaplo[0])[0]
-#define U_H1(x, i)    ((UTYPE*)&x[i].PackedHaplo[0])[1]
+#define U_H0(x, i)    ((UTYPE*)&(x[i].PackedHaplo[0]))[0]
+#define U_H1(x, i)    ((UTYPE*)&(x[i].PackedHaplo[0]))[1]
 
 
 /// Prepare the internal genotype structure
@@ -169,7 +169,7 @@ static const __m256i pcnt_low_mask = {
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
 
-static ALWAYS_INLINE TARGET_AVX2
+static inline TARGET_AVX2
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, const THaplotype *i2,
 		const TGenoStruct &GS, double &prob)
 {

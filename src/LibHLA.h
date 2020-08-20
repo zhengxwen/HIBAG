@@ -54,6 +54,11 @@
 #   endif
 #endif
 
+// remove HIBAG_CPU_ARCH_X86 if define HIBAG_NO_X86_SIMD
+#if defined(HIBAG_CPU_ARCH_X86) && defined(HIBAG_NO_X86_SIMD)
+#   undef HIBAG_CPU_ARCH_X86
+#endif
+
 
 #include <stdint.h>
 #include <cstdlib>
