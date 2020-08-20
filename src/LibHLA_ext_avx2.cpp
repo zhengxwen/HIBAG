@@ -201,7 +201,8 @@ static inline TARGET_AVX2
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
 			f = ff * f2 * f;
-			prob += f[0] + f[1] + f[2] + f[3];
+			// avoid different behavior due to rounding error of addition
+			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
 		}
 	} else {
 		const __m256i H1_0 = _mm256_set1_epi64x(U_H0(i1, 0));
@@ -247,7 +248,8 @@ static inline TARGET_AVX2
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
 			f = ff * f2 * f;
-			prob += f[0] + f[1] + f[2] + f[3];
+			// avoid different behavior due to rounding error of addition
+			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
 		}
 	}
 	return n;
