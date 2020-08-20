@@ -174,7 +174,6 @@ static ALWAYS_INLINE TARGET_AVX2
 		const TGenoStruct &GS, double &prob)
 {
 	const double ff = 2 * i1->Freq;
-	const __m256d ff4 = { ff, ff, ff, ff };
 	if (GS.Low64b)
 	{
 		const __m256i H1 = _mm256_set1_epi64x(U_H0(i1, 0));
@@ -201,7 +200,7 @@ static ALWAYS_INLINE TARGET_AVX2
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
-			f = ff4 * f2 * f;
+			f = ff * f2 * f;
 			prob += f[0] + f[1] + f[2] + f[3];
 		}
 	} else {
@@ -247,7 +246,7 @@ static ALWAYS_INLINE TARGET_AVX2
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq };
-			f = ff4 * f2 * f;
+			f = ff * f2 * f;
 			prob += f[0] + f[1] + f[2] + f[3];
 		}
 	}
