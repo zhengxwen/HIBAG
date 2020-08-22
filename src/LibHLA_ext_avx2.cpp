@@ -101,7 +101,7 @@ public:
 	__m256i S1_0, S2_0, S1_1, S2_1;
 	bool Low64b;     ///< whether length <= 64 or not
 	/// constructor
-	TGenoStruct(size_t Length, const TGenotype &G)
+	TARGET_AVX2 TGenoStruct(size_t Length, const TGenotype &G)
 	{
 		const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
 		const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
@@ -110,18 +110,15 @@ public:
 		{
 			__m128i I1 = { s1[0], s2[0] }, I2 = { s2[0], s1[0] };  // genotypes
 			S1 = I1; S2 = I2;
-			__m256i J1 = { s1[0], s1[0], s1[0], s1[0] };
-			__m256i J2 = { s2[0], s2[0], s2[0], s2[0] };
-			S1_0 = J1; S2_0 = J2;
+			S1_0 = _mm256_set1_epi64x(s1[0]);
+			S2_0 = _mm256_set1_epi64x(s2[0]);
 		} else {
 			__m128i I1 = { s1[0], s1[1] }, I2 = { s2[0], s2[1] };  // genotypes
 			S1 = I1; S2 = I2;
-			__m256i J1_0 = { s1[0], s1[0], s1[0], s1[0] };
-			__m256i J2_0 = { s2[0], s2[0], s2[0], s2[0] };
-			S1_0 = J1_0; S2_0 = J2_0;
-			__m256i J1_1 = { s1[1], s1[1], s1[1], s1[1] };
-			__m256i J2_1 = { s2[1], s2[1], s2[1], s2[1] };
-			S1_1 = J1_1; S2_1 = J2_1;
+			S1_0 = _mm256_set1_epi64x(s1[0]);
+			S2_0 = _mm256_set1_epi64x(s2[0]);
+			S1_1 = _mm256_set1_epi64x(s1[1]);
+			S2_1 = _mm256_set1_epi64x(s2[1]);
 		}
 	}
 };
