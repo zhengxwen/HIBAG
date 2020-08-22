@@ -18,7 +18,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // ===============================================================
-// Name           : LibHLA
+// Name           : LibHLA_ext_sse4_2
 // Author         : Xiuwen Zheng
 // Kernel Version : 1.5
 // Copyright      : Xiuwen Zheng (GPL v3)
