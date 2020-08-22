@@ -1117,6 +1117,7 @@ SEXP HIBAG_Kernel_Version()
 	// CPU information
 	SET_ELEMENT(ans, 1, mkString(CPU_Info()));
 	// output
+	UNPROTECT(1);
 	return ans;
 }
 

@@ -1133,77 +1133,97 @@ static CAlg_Prediction::F_BestGuess fc_BestGuess = NULL;
 static CAlg_Prediction::F_PostProb  fc_PostProb  = NULL;
 static CAlg_Prediction::F_PostProb2 fc_PostProb2 = NULL;
 
+
 CAlg_Prediction::CAlg_Prediction() { }
 
 void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 {
 	if (!cpu) cpu = "";
+	if (strcmp(cpu, "auto")==0) cpu = "";
 	const bool no_cpu = strlen(cpu) == 0;
-
-	fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
-	fc_PostProb  = &CAlg_Prediction::_PostProb_def;
-	fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
+	string cpu_info;
 
 #ifdef HIBAG_CPU_LP64
-	HIBAG_CPU_Info = "64-bit";
+	cpu_info = "64-bit";
 #else
-	HIBAG_CPU_Info = "32-bit";
+	cpu_info = "32-bit";
 #endif
 
 #ifdef HIBAG_CPU_ARCH_X86
 	__builtin_cpu_init();
+	const bool has_avx512bw = __builtin_cpu_supports("avx512f") &&
+		__builtin_cpu_supports("avx512bw") && HIBAG_ALGORITHM_AVX512BW;
+	const bool has_avx2 = __builtin_cpu_supports("avx2") &&
+		HIBAG_ALGORITHM_AVX2;
+	const bool has_avx  = __builtin_cpu_supports("avx") &&
+		HIBAG_ALGORITHM_AVX;
+	const bool has_sse4 = __builtin_cpu_supports("sse4.2") &&
+		__builtin_cpu_supports("popcnt") && HIBAG_ALGORITHM_SSE4_2;
+	const bool has_sse2 = __builtin_cpu_supports("sse2") &&
+		HIBAG_ALGORITHM_SSE2;
 	bool flag_popcnt = false;
 	if (strcmp(cpu, "base")==0)
 	{
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_def;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
 	#ifdef __POPCNT__
 		flag_popcnt = true;
 	#endif
-	} else if (strcmp(cpu, "avx512bw")==0 ||
-		(no_cpu && __builtin_cpu_supports("avx512f") &&
-		__builtin_cpu_supports("avx512bw") && HIBAG_ALGORITHM_AVX512BW))
+	} else if (strcmp(cpu, "avx512bw")==0 || (no_cpu && has_avx512bw))
 	{
+		if (!has_avx512bw)
+			error("Not support AVX512F+AVX512BW.");
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
-		HIBAG_CPU_Info.append(", AVX512F+AVX512BW");
-		flag_popcnt = false;
-	} else if (strcmp(cpu, "avx2")==0 ||
-		(no_cpu && __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2))
+		cpu_info.append(", AVX512F+AVX512BW");
+	} else if (strcmp(cpu, "avx2")==0 || (no_cpu && has_avx2))
 	{
+		if (!has_avx2)
+			error("Not support AVX2.");
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx2;
-		HIBAG_CPU_Info.append(", AVX2");
-		flag_popcnt = false;
-	} else if (strcmp(cpu, "avx")==0 ||
-		(no_cpu && __builtin_cpu_supports("avx") && HIBAG_ALGORITHM_AVX))
+		cpu_info.append(", AVX2");
+	} else if (strcmp(cpu, "avx")==0 || (no_cpu && has_avx))
 	{
+		if (!has_avx)
+			error("Not support AVX.");
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx;
-		HIBAG_CPU_Info.append(", AVX");
-		flag_popcnt = false;
-	} else if (strcmp(cpu, "sse4")==0 ||
-		(no_cpu && __builtin_cpu_supports("sse4.2") &&
-		__builtin_cpu_supports("popcnt") && HIBAG_ALGORITHM_SSE4_2))
+		cpu_info.append(", AVX");
+	} else if (strcmp(cpu, "sse4")==0 || (no_cpu && has_sse4))
 	{
+		if (!has_sse4)
+			error("Not support SSE4.2.");
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse4_2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse4_2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse4_2;
-		HIBAG_CPU_Info.append(", SSE4.2");
+		cpu_info.append(", SSE4.2");
 		flag_popcnt = true;
-	} else if (strcmp(cpu, "sse2")==0 ||
-		(no_cpu && __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2))
+	} else if (strcmp(cpu, "sse2")==0 || (no_cpu && has_sse2))
 	{
+		if (!has_sse2)
+			error("Not support SSE2.");
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
-		HIBAG_CPU_Info.append(", SSE2");
+		cpu_info.append(", SSE2");
 		flag_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
+	} else {
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_def;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
 	}
 	if (flag_popcnt)
-		HIBAG_CPU_Info.append(", POPCNT");
+		cpu_info.append(", POPCNT");
+#ifdef __FMA__
+	cpu_info.append(", FMA");
 #endif
+#endif
+	HIBAG_CPU_Info = cpu_info;
 }
 
 void CAlg_Prediction::InitPrediction(int n_hla)

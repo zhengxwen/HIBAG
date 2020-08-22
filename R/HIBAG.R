@@ -187,6 +187,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         cat("# of SNPs: ", n.snp, ", # of samples: ", n.samp, "\n", sep="")
         s <- ifelse(!grepl("^KIR", hla$locus), "HLA", "KIR")
         cat("# of unique ", s, " alleles: ", n.hla, "\n", sep="")
+        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]], "\n", sep="")
     }
 
 
@@ -1630,11 +1631,10 @@ hlaErrMsg <- function()
 # Export stardard R library function(s)
 #######################################################################
 
-.set_kernel_target <- function(
-    cpu=c("auto", "avx512bw", "avx2", "avx", "sse4", "sse2","base"))
+hlaSetKernelTarget <- function(
+    cpu=c("auto", "avx512bw", "avx2", "avx", "sse4", "sse2", "base"))
 {
 	cpu <- match.arg(cpu)
-	if (cpu == "auto") cpu <- ""
     .Call(HIBAG_Kernel_SetTarget, cpu)
     .Call(HIBAG_Kernel_Version)[[2L]]
 }
