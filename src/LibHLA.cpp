@@ -1152,11 +1152,11 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 #ifdef HIBAG_CPU_ARCH_X86
 	__builtin_cpu_init();
-	bool has_popcnt = false;
+	bool flag_popcnt = false;
 	if (strcmp(cpu, "base")==0)
 	{
 	#ifdef __POPCNT__
-		has_popcnt = true;
+		flag_popcnt = true;
 	#endif
 	} else if (strcmp(cpu, "avx512bw")==0 ||
 		(no_cpu && __builtin_cpu_supports("avx512f") &&
@@ -1165,8 +1165,8 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
-		HIBAG_CPU_Info.append(", AVX512F, AVX512BW");
-		has_popcnt = true;
+		HIBAG_CPU_Info.append(", AVX512F+AVX512BW");
+		flag_popcnt = false;
 	} else if (strcmp(cpu, "avx2")==0 ||
 		(no_cpu && __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2))
 	{
@@ -1174,7 +1174,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx2;
 		HIBAG_CPU_Info.append(", AVX2");
-		has_popcnt = true;
+		flag_popcnt = false;
 	} else if (strcmp(cpu, "avx")==0 ||
 		(no_cpu && __builtin_cpu_supports("avx") && HIBAG_ALGORITHM_AVX))
 	{
@@ -1182,7 +1182,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx;
 		HIBAG_CPU_Info.append(", AVX");
-		has_popcnt = true;
+		flag_popcnt = false;
 	} else if (strcmp(cpu, "sse4")==0 ||
 		(no_cpu && __builtin_cpu_supports("sse4.2") &&
 		__builtin_cpu_supports("popcnt") && HIBAG_ALGORITHM_SSE4_2))
@@ -1191,7 +1191,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse4_2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse4_2;
 		HIBAG_CPU_Info.append(", SSE4.2");
-		has_popcnt = true;
+		flag_popcnt = true;
 	} else if (strcmp(cpu, "sse2")==0 ||
 		(no_cpu && __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2))
 	{
@@ -1199,9 +1199,9 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
 		HIBAG_CPU_Info.append(", SSE2");
-		has_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
+		flag_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
 	}
-	if (has_popcnt)
+	if (flag_popcnt)
 		HIBAG_CPU_Info.append(", POPCNT");
 #endif
 }

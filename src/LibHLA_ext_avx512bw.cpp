@@ -82,8 +82,10 @@ extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #define SIMD_NAME(NAME)  TARGET_AVX512 NAME ## _avx512bw
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
+#   define SIMD_ANDNOT_I256(x1, x2)    _mm256_andnot_si256(x1, x2)
 #   define SIMD_ANDNOT_I512(x1, x2)    _mm512_andnot_si512(x1, x2)
 #else
+#   define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
 #   define SIMD_ANDNOT_I512(x1, x2)    (x2) & ~(x1)
 #endif
 
@@ -99,10 +101,10 @@ struct TGenoStruct
 {
 public:
 	__m128i S1, S2;  ///< packed genotypes
-	__m256i S1_0, S2_0, S1_1, S2_1;
+	__m512i S1_0, S2_0, S1_1, S2_1;
 	bool Low64b;     ///< whether length <= 64 or not
 	/// constructor
-	TGenoStruct(size_t Length, const TGenotype &G)
+	TARGET_AVX512 TGenoStruct(size_t Length, const TGenotype &G)
 	{
 		const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
 		const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
@@ -111,18 +113,15 @@ public:
 		{
 			__m128i I1 = { s1[0], s2[0] }, I2 = { s2[0], s1[0] };  // genotypes
 			S1 = I1; S2 = I2;
-			__m256i J1 = { s1[0], s1[0], s1[0], s1[0] };
-			__m256i J2 = { s2[0], s2[0], s2[0], s2[0] };
-			S1_0 = J1; S2_0 = J2;
+			S1_0 = _mm512_set1_epi64(s1[0]);
+			S2_0 = _mm512_set1_epi64(s2[0]);
 		} else {
 			__m128i I1 = { s1[0], s1[1] }, I2 = { s2[0], s2[1] };  // genotypes
 			S1 = I1; S2 = I2;
-			__m256i J1_0 = { s1[0], s1[0], s1[0], s1[0] };
-			__m256i J2_0 = { s2[0], s2[0], s2[0], s2[0] };
-			S1_0 = J1_0; S2_0 = J2_0;
-			__m256i J1_1 = { s1[1], s1[1], s1[1], s1[1] };
-			__m256i J2_1 = { s2[1], s2[1], s2[1], s2[1] };
-			S1_1 = J1_1; S2_1 = J2_1;
+			S1_0 = _mm512_set1_epi64(s1[0]);
+			S2_0 = _mm512_set1_epi64(s2[0]);
+			S1_1 = _mm512_set1_epi64(s1[1]);
+			S2_1 = _mm512_set1_epi64(s2[1]);
 		}
 	}
 };
@@ -175,6 +174,7 @@ static const __m512i pcnt_low_mask = {
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
 
+
 static inline TARGET_AVX512
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, const THaplotype *i2,
 		const TGenoStruct &GS, double &prob)
@@ -182,23 +182,57 @@ static inline TARGET_AVX512
 	const double ff = 2 * i1->Freq;
 	if (GS.Low64b)
 	{
-		const __m256i H1 = _mm256_set1_epi64x(U_H0(i1, 0));
-		for (; n >= 4; n -= 4, i2 += 4)
+		const __m512i H1_8 = _mm512_set1_epi64(U_H0(i1, 0));
+		for (; n >= 8; n -= 8, i2 += 8)
 		{
+			__m512i H2_8 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3),
+						U_H0(i2,4), U_H0(i2,5), U_H0(i2,6), U_H0(i2,7) };
+			__m512i S1 = GS.S1_0, S2 = GS.S2_0;
+			__m512i M = SIMD_ANDNOT_I512(S1, S2);  // missing value, 1 is missing
+			__m512i MASK = SIMD_ANDNOT_I512(M, (H1_8 ^ S2) | (H2_8 ^ S1));
+			__m512i va = (H1_8 ^ S1) & MASK, vb = (H2_8 ^ S2) & MASK;
+			// popcount for 64b integers
+			__m512i lo_a = va & pcnt_low_mask;
+			__m512i lo_b = vb & pcnt_low_mask;
+			__m512i hi_a = _mm512_srli_epi32(va, 4) & pcnt_low_mask;
+			__m512i hi_b = _mm512_srli_epi32(vb, 4) & pcnt_low_mask;
+			__m512i pc1_a = _mm512_shuffle_epi8(pcnt_lookup, lo_a);
+			__m512i pc1_b = _mm512_shuffle_epi8(pcnt_lookup, lo_b);
+			__m512i pc2_a = _mm512_shuffle_epi8(pcnt_lookup, hi_a);
+			__m512i pc2_b = _mm512_shuffle_epi8(pcnt_lookup, hi_b);
+			__m512i tot_a = _mm512_add_epi8(pc1_a, pc2_a);
+			__m512i tot_b = _mm512_add_epi8(pc1_b, pc2_b);
+			__m512i total = _mm512_add_epi8(tot_a, tot_b);
+			__m512i ii4 = _mm512_sad_epu8(total, _mm512_setzero_si512());
+			// eight frequencies
+			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
+			__m512d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq,
+					i2[4].Freq, i2[5].Freq, i2[6].Freq, i2[7].Freq };
+			f = ff * f2 * f;
+			// avoid different behavior due to rounding error of addition
+			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
+			prob += f[4]; prob += f[5]; prob += f[6]; prob += f[7];
+		}
+		if (n >= 4)
+		{
+			__m256i H1 = _mm512_castsi512_si256(H1_8);
 			__m256i H2 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
-			__m256i S1 = GS.S1_0, S2 = GS.S2_0;
-			__m256i M = SIMD_ANDNOT_I512(S1, S2);  // missing value, 1 is missing
-			__m256i MASK = SIMD_ANDNOT_I512(M, (H1 ^ S2) | (H2 ^ S1));
+			__m256i S1 = _mm512_castsi512_si256(GS.S1_0);
+			__m256i S2 = _mm512_castsi512_si256(GS.S2_0);
+			__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
+			__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
 			__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
 			// popcount for 64b integers
-			__m256i lo_a = va & pcnt_low_mask;
-			__m256i lo_b = vb & pcnt_low_mask;
-			__m256i hi_a = _mm256_srli_epi32(va, 4) & pcnt_low_mask;
-			__m256i hi_b = _mm256_srli_epi32(vb, 4) & pcnt_low_mask;
-			__m256i pc1_a = _mm256_shuffle_epi8(pcnt_lookup, lo_a);
-			__m256i pc1_b = _mm256_shuffle_epi8(pcnt_lookup, lo_b);
-			__m256i pc2_a = _mm256_shuffle_epi8(pcnt_lookup, hi_a);
-			__m256i pc2_b = _mm256_shuffle_epi8(pcnt_lookup, hi_b);
+			const __m256i pcnt_lookup_256 = _mm512_castsi512_si256(pcnt_lookup);
+			const __m256i pcnt_low_mask_256 = _mm512_castsi512_si256(pcnt_low_mask);
+			__m256i lo_a = va & pcnt_low_mask_256;
+			__m256i lo_b = vb & pcnt_low_mask_256;
+			__m256i hi_a = _mm256_srli_epi32(va, 4) & pcnt_low_mask_256;
+			__m256i hi_b = _mm256_srli_epi32(vb, 4) & pcnt_low_mask_256;
+			__m256i pc1_a = _mm256_shuffle_epi8(pcnt_lookup_256, lo_a);
+			__m256i pc1_b = _mm256_shuffle_epi8(pcnt_lookup_256, lo_b);
+			__m256i pc2_a = _mm256_shuffle_epi8(pcnt_lookup_256, hi_a);
+			__m256i pc2_b = _mm256_shuffle_epi8(pcnt_lookup_256, hi_b);
 			__m256i tot_a = _mm256_add_epi8(pc1_a, pc2_a);
 			__m256i tot_b = _mm256_add_epi8(pc1_b, pc2_b);
 			__m256i total = _mm256_add_epi8(tot_a, tot_b);
@@ -209,39 +243,94 @@ static inline TARGET_AVX512
 			f = ff * f2 * f;
 			// avoid different behavior due to rounding error of addition
 			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
+			n -= 4;
 		}
 	} else {
-		const __m256i H1_0 = _mm256_set1_epi64x(U_H0(i1, 0));
-		const __m256i H1_1 = _mm256_set1_epi64x(U_H1(i1, 0));
-		for (; n >= 4; n -= 4, i2 += 4)
+		const __m512i H1_0_8 = _mm512_set1_epi64(U_H0(i1, 0));
+		const __m512i H1_1_8 = _mm512_set1_epi64(U_H1(i1, 0));
+		for (; n >= 8; n -= 8, i2 += 8)
 		{
+			__m512i H2_0_8 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3),
+					U_H0(i2,4), U_H0(i2,5), U_H0(i2,6), U_H0(i2,7) };
+			__m512i H2_1_8 = { U_H1(i2,0), U_H1(i2,1), U_H1(i2,2), U_H1(i2,3),
+					U_H1(i2,4), U_H1(i2,5), U_H1(i2,6), U_H1(i2,7) };
+			__m512i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
+			__m512i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
+			__m512i M_0 = SIMD_ANDNOT_I512(S1_0, S2_0);  // missing value, 1 is missing
+			__m512i M_1 = SIMD_ANDNOT_I512(S1_1, S2_1);  // missing value, 1 is missing
+			__m512i MASK_0 = SIMD_ANDNOT_I512(M_0, (H1_0_8 ^ S2_0) | (H2_0_8 ^ S1_0));
+			__m512i MASK_1 = SIMD_ANDNOT_I512(M_1, (H1_1_8 ^ S2_1) | (H2_1_8 ^ S1_1));
+			__m512i va_0 = (H1_0_8 ^ S1_0) & MASK_0, vb_0 = (H2_0_8 ^ S2_0) & MASK_0;
+			__m512i va_1 = (H1_1_8 ^ S1_1) & MASK_1, vb_1 = (H2_1_8 ^ S2_1) & MASK_1;
+			// popcount for 64b integers
+			__m512i lo_a_0 = va_0 & pcnt_low_mask;
+			__m512i lo_a_1 = va_1 & pcnt_low_mask;
+			__m512i lo_b_0 = vb_0 & pcnt_low_mask;
+			__m512i lo_b_1 = vb_1 & pcnt_low_mask;
+			__m512i hi_a_0 = _mm512_srli_epi32(va_0, 4) & pcnt_low_mask;
+			__m512i hi_a_1 = _mm512_srli_epi32(va_1, 4) & pcnt_low_mask;
+			__m512i hi_b_0 = _mm512_srli_epi32(vb_0, 4) & pcnt_low_mask;
+			__m512i hi_b_1 = _mm512_srli_epi32(vb_1, 4) & pcnt_low_mask;
+			__m512i pc1_a_0 = _mm512_shuffle_epi8(pcnt_lookup, lo_a_0);
+			__m512i pc1_a_1 = _mm512_shuffle_epi8(pcnt_lookup, lo_a_1);
+			__m512i pc1_b_0 = _mm512_shuffle_epi8(pcnt_lookup, lo_b_0);
+			__m512i pc1_b_1 = _mm512_shuffle_epi8(pcnt_lookup, lo_b_1);
+			__m512i pc2_a_0 = _mm512_shuffle_epi8(pcnt_lookup, hi_a_0);
+			__m512i pc2_a_1 = _mm512_shuffle_epi8(pcnt_lookup, hi_a_1);
+			__m512i pc2_b_0 = _mm512_shuffle_epi8(pcnt_lookup, hi_b_0);
+			__m512i pc2_b_1 = _mm512_shuffle_epi8(pcnt_lookup, hi_b_1);
+			__m512i tot_a_0 = _mm512_add_epi8(pc1_a_0, pc2_a_0);
+			__m512i tot_a_1 = _mm512_add_epi8(pc1_a_1, pc2_a_1);
+			__m512i tot_b_0 = _mm512_add_epi8(pc1_b_0, pc2_b_0);
+			__m512i tot_b_1 = _mm512_add_epi8(pc1_b_1, pc2_b_1);
+			__m512i tot_0 = _mm512_add_epi8(tot_a_0, tot_b_0);
+			__m512i tot_1 = _mm512_add_epi8(tot_a_1, tot_b_1);
+			__m512i total = _mm512_add_epi8(tot_0, tot_1);
+			__m512i ii4 = _mm512_sad_epu8(total, _mm512_setzero_si512());
+			// eight frequencies
+			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
+			__m512d f2 = { i2[0].Freq, i2[1].Freq, i2[2].Freq, i2[3].Freq,
+					i2[4].Freq, i2[5].Freq, i2[6].Freq, i2[7].Freq };
+			f = ff * f2 * f;
+			// avoid different behavior due to rounding error of addition
+			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
+			prob += f[4]; prob += f[5]; prob += f[6]; prob += f[7];
+		}
+		if (n >= 4)
+		{
+			__m256i H1_0 = _mm512_castsi512_si256(H1_0_8);
+			__m256i H1_1 = _mm512_castsi512_si256(H1_1_8);
 			__m256i H2_0 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
 			__m256i H2_1 = { U_H1(i2,0), U_H1(i2,1), U_H1(i2,2), U_H1(i2,3) };
-			__m256i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
-			__m256i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
-			__m256i M_0 = SIMD_ANDNOT_I512(S1_0, S2_0);  // missing value, 1 is missing
-			__m256i M_1 = SIMD_ANDNOT_I512(S1_1, S2_1);  // missing value, 1 is missing
+			__m256i S1_0 = _mm512_castsi512_si256(GS.S1_0);
+			__m256i S2_0 = _mm512_castsi512_si256(GS.S2_0);
+			__m256i S1_1 = _mm512_castsi512_si256(GS.S1_1);
+			__m256i S2_1 = _mm512_castsi512_si256(GS.S2_1);
+			__m256i M_0 = SIMD_ANDNOT_I256(S1_0, S2_0);  // missing value, 1 is missing
+			__m256i M_1 = SIMD_ANDNOT_I256(S1_1, S2_1);  // missing value, 1 is missing
 			__m256i MASK_0 = SIMD_ANDNOT_I512(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
 			__m256i MASK_1 = SIMD_ANDNOT_I512(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
 			__m256i va_0 = (H1_0 ^ S1_0) & MASK_0, vb_0 = (H2_0 ^ S2_0) & MASK_0;
 			__m256i va_1 = (H1_1 ^ S1_1) & MASK_1, vb_1 = (H2_1 ^ S2_1) & MASK_1;
 			// popcount for 64b integers
-			__m256i lo_a_0 = va_0 & pcnt_low_mask;
-			__m256i lo_a_1 = va_1 & pcnt_low_mask;
-			__m256i lo_b_0 = vb_0 & pcnt_low_mask;
-			__m256i lo_b_1 = vb_1 & pcnt_low_mask;
-			__m256i hi_a_0 = _mm256_srli_epi32(va_0, 4) & pcnt_low_mask;
-			__m256i hi_a_1 = _mm256_srli_epi32(va_1, 4) & pcnt_low_mask;
-			__m256i hi_b_0 = _mm256_srli_epi32(vb_0, 4) & pcnt_low_mask;
-			__m256i hi_b_1 = _mm256_srli_epi32(vb_1, 4) & pcnt_low_mask;
-			__m256i pc1_a_0 = _mm256_shuffle_epi8(pcnt_lookup, lo_a_0);
-			__m256i pc1_a_1 = _mm256_shuffle_epi8(pcnt_lookup, lo_a_1);
-			__m256i pc1_b_0 = _mm256_shuffle_epi8(pcnt_lookup, lo_b_0);
-			__m256i pc1_b_1 = _mm256_shuffle_epi8(pcnt_lookup, lo_b_1);
-			__m256i pc2_a_0 = _mm256_shuffle_epi8(pcnt_lookup, hi_a_0);
-			__m256i pc2_a_1 = _mm256_shuffle_epi8(pcnt_lookup, hi_a_1);
-			__m256i pc2_b_0 = _mm256_shuffle_epi8(pcnt_lookup, hi_b_0);
-			__m256i pc2_b_1 = _mm256_shuffle_epi8(pcnt_lookup, hi_b_1);
+			const __m256i pcnt_lookup_256 = _mm512_castsi512_si256(pcnt_lookup);
+			const __m256i pcnt_low_mask_256 = _mm512_castsi512_si256(pcnt_low_mask);
+			__m256i lo_a_0 = va_0 & pcnt_low_mask_256;
+			__m256i lo_a_1 = va_1 & pcnt_low_mask_256;
+			__m256i lo_b_0 = vb_0 & pcnt_low_mask_256;
+			__m256i lo_b_1 = vb_1 & pcnt_low_mask_256;
+			__m256i hi_a_0 = _mm256_srli_epi32(va_0, 4) & pcnt_low_mask_256;
+			__m256i hi_a_1 = _mm256_srli_epi32(va_1, 4) & pcnt_low_mask_256;
+			__m256i hi_b_0 = _mm256_srli_epi32(vb_0, 4) & pcnt_low_mask_256;
+			__m256i hi_b_1 = _mm256_srli_epi32(vb_1, 4) & pcnt_low_mask_256;
+			__m256i pc1_a_0 = _mm256_shuffle_epi8(pcnt_lookup_256, lo_a_0);
+			__m256i pc1_a_1 = _mm256_shuffle_epi8(pcnt_lookup_256, lo_a_1);
+			__m256i pc1_b_0 = _mm256_shuffle_epi8(pcnt_lookup_256, lo_b_0);
+			__m256i pc1_b_1 = _mm256_shuffle_epi8(pcnt_lookup_256, lo_b_1);
+			__m256i pc2_a_0 = _mm256_shuffle_epi8(pcnt_lookup_256, hi_a_0);
+			__m256i pc2_a_1 = _mm256_shuffle_epi8(pcnt_lookup_256, hi_a_1);
+			__m256i pc2_b_0 = _mm256_shuffle_epi8(pcnt_lookup_256, hi_b_0);
+			__m256i pc2_b_1 = _mm256_shuffle_epi8(pcnt_lookup_256, hi_b_1);
 			__m256i tot_a_0 = _mm256_add_epi8(pc1_a_0, pc2_a_0);
 			__m256i tot_a_1 = _mm256_add_epi8(pc1_a_1, pc2_a_1);
 			__m256i tot_b_0 = _mm256_add_epi8(pc1_b_0, pc2_b_0);
@@ -256,6 +345,7 @@ static inline TARGET_AVX512
 			f = ff * f2 * f;
 			// avoid different behavior due to rounding error of addition
 			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
+			n -= 4;
 		}
 	}
 	return n;
