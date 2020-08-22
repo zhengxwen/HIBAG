@@ -18,7 +18,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // ===============================================================
-// Name           : LibHLA_ext_avx2
+// Name           : LibHLA_ext_avx512bw
 // Author         : Xiuwen Zheng
 // Kernel Version : 1.5
 // Copyright      : Xiuwen Zheng (GPL v3)
@@ -44,46 +44,47 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
-#   define HIBAG_CPU_ARCH_X86_AVX2
+#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && (__GNUC__>=5)
+#   define HIBAG_CPU_ARCH_X86_AVX512BW
 #endif
 
-#if defined(HIBAG_CPU_ARCH_X86) && !defined(HIBAG_CPU_ARCH_X86_AVX2) && defined(__clang__)
-#   define HIBAG_CPU_ARCH_X86_AVX2
+#if defined(HIBAG_CPU_ARCH_X86) && !defined(HIBAG_CPU_ARCH_X86_AVX512BW) && defined(__clang__)
+#   define HIBAG_CPU_ARCH_X86_AVX512BW
 #endif
 
-#if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_AVX2)
-#   define HIBAG_CPU_ARCH_X86_AVX2
+#if defined(__AVX512BW__) && !defined(HIBAG_CPU_ARCH_X86_AVX512BW)
+#   define HIBAG_CPU_ARCH_X86_AVX512BW
 #endif
 
-#ifdef HIBAG_CPU_ARCH_X86_AVX2
-extern const bool HIBAG_ALGORITHM_AVX2 = true;
+#ifdef HIBAG_CPU_ARCH_X86_AVX512BW
+extern const bool HIBAG_ALGORITHM_AVX512BW = true;
 #else
-extern const bool HIBAG_ALGORITHM_AVX2 = false;
+extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #endif
 
 
-#define SIMD_NAME(NAME)  NAME ## _avx2
-#define THROW_ERROR      throw ErrHLA("No AVX2 support!")
+#define SIMD_NAME(NAME)  NAME ## _avx512bw
+#define THROW_ERROR      throw ErrHLA("No AVX512BW support!")
 
 
-#ifdef HIBAG_CPU_ARCH_X86_AVX2
+#ifdef HIBAG_CPU_ARCH_X86_AVX512BW
 
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
-#   include <immintrin.h>  // AVX, AVX2
-#   if !defined(__AVX2__) && !defined(__clang__)
-		#pragma GCC target("avx2")
+#   include <immintrin.h>  // AVX, AVX2, AVX512F, AVX512BW
+#   if !defined(__AVX512F__) & !defined(__AVX512BW__) && !defined(__clang__)
+		#pragma GCC target("avx512f")
+		#pragma GCC target("avx512bw")
 #   endif
 
-#define TARGET_AVX2    __attribute__((target("avx2")))
+#define TARGET_AVX512    __attribute__((target("avx512bw")))
 #undef SIMD_NAME
-#define SIMD_NAME(NAME)  TARGET_AVX2 NAME ## _avx2
+#define SIMD_NAME(NAME)  TARGET_AVX512 NAME ## _avx512bw
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
-#   define SIMD_ANDNOT_I256(x1, x2)    _mm256_andnot_si256(x1, x2)
+#   define SIMD_ANDNOT_I512(x1, x2)    _mm512_andnot_si512(x1, x2)
 #else
-#   define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
+#   define SIMD_ANDNOT_I512(x1, x2)    (x2) & ~(x1)
 #endif
 
 
@@ -127,7 +128,7 @@ public:
 };
 
 
-static ALWAYS_INLINE TARGET_AVX2
+static ALWAYS_INLINE TARGET_AVX512
 	int hamm_d(const TGenoStruct &G, const THaplotype &H1, const THaplotype &H2)
 {
 	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
@@ -163,14 +164,18 @@ static ALWAYS_INLINE TARGET_AVX2
 
 
 // defined for Wojciech Mula algorithm's popcnt in 64-bit integers
-static const __m256i pcnt_lookup = {
+static const __m512i pcnt_lookup = {
+		0x0302020102010100LL, 0x0403030203020201LL,
+		0x0302020102010100LL, 0x0403030203020201LL,
 		0x0302020102010100LL, 0x0403030203020201LL,
 		0x0302020102010100LL, 0x0403030203020201LL };
-static const __m256i pcnt_low_mask = {
+static const __m512i pcnt_low_mask = {
+		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
+		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
 		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
 
-static inline TARGET_AVX2
+static inline TARGET_AVX512
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, const THaplotype *i2,
 		const TGenoStruct &GS, double &prob)
 {
@@ -182,8 +187,8 @@ static inline TARGET_AVX2
 		{
 			__m256i H2 = { U_H0(i2,0), U_H0(i2,1), U_H0(i2,2), U_H0(i2,3) };
 			__m256i S1 = GS.S1_0, S2 = GS.S2_0;
-			__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
-			__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
+			__m256i M = SIMD_ANDNOT_I512(S1, S2);  // missing value, 1 is missing
+			__m256i MASK = SIMD_ANDNOT_I512(M, (H1 ^ S2) | (H2 ^ S1));
 			__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
 			// popcount for 64b integers
 			__m256i lo_a = va & pcnt_low_mask;
@@ -214,10 +219,10 @@ static inline TARGET_AVX2
 			__m256i H2_1 = { U_H1(i2,0), U_H1(i2,1), U_H1(i2,2), U_H1(i2,3) };
 			__m256i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
 			__m256i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
-			__m256i M_0 = SIMD_ANDNOT_I256(S1_0, S2_0);  // missing value, 1 is missing
-			__m256i M_1 = SIMD_ANDNOT_I256(S1_1, S2_1);  // missing value, 1 is missing
-			__m256i MASK_0 = SIMD_ANDNOT_I256(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
-			__m256i MASK_1 = SIMD_ANDNOT_I256(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
+			__m256i M_0 = SIMD_ANDNOT_I512(S1_0, S2_0);  // missing value, 1 is missing
+			__m256i M_1 = SIMD_ANDNOT_I512(S1_1, S2_1);  // missing value, 1 is missing
+			__m256i MASK_0 = SIMD_ANDNOT_I512(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
+			__m256i MASK_1 = SIMD_ANDNOT_I512(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
 			__m256i va_0 = (H1_0 ^ S1_0) & MASK_0, vb_0 = (H2_0 ^ S2_0) & MASK_0;
 			__m256i va_1 = (H1_1 ^ S1_1) & MASK_1, vb_1 = (H2_1 ^ S2_1) & MASK_1;
 			// popcount for 64b integers

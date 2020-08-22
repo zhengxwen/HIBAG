@@ -58,6 +58,7 @@ extern const bool HIBAG_ALGORITHM_SSE2_POPCNT;
 extern const bool HIBAG_ALGORITHM_SSE4_2;
 extern const bool HIBAG_ALGORITHM_AVX;
 extern const bool HIBAG_ALGORITHM_AVX2;
+extern const bool HIBAG_ALGORITHM_AVX512BW;
 
 // indicate CPU flags and selection of target-specific functions
 static string HIBAG_CPU_Info;
@@ -1157,6 +1158,15 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	#ifdef __POPCNT__
 		has_popcnt = true;
 	#endif
+	} else if (strcmp(cpu, "avx512bw")==0 ||
+		(no_cpu && __builtin_cpu_supports("avx512f") &&
+		__builtin_cpu_supports("avx512bw") && HIBAG_ALGORITHM_AVX512BW))
+	{
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
+		HIBAG_CPU_Info.append(", AVX512F, AVX512BW");
+		has_popcnt = true;
 	} else if (strcmp(cpu, "avx2")==0 ||
 		(no_cpu && __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2))
 	{

@@ -539,28 +539,39 @@ namespace HLA_LIB
 
 	#ifdef HIBAG_CPU_ARCH_X86
 		// SSE2 CPU Flags
-		THLAType _BestGuess_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		THLAType _BestGuess_sse2(const CHaplotypeList &Haplo,
+			const TGenotype &Geno);
 		double _PostProb_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 		// SSE4.2 CPU Flags
-		THLAType _BestGuess_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		THLAType _BestGuess_sse4_2(const CHaplotypeList &Haplo,
+			const TGenotype &Geno);
 		double _PostProb_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 		// AVX CPU Flags
-		THLAType _BestGuess_avx(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		THLAType _BestGuess_avx(const CHaplotypeList &Haplo,
+			const TGenotype &Geno);
 		double _PostProb_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 		// AVX2 CPU Flags
-		THLAType _BestGuess_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		THLAType _BestGuess_avx2(const CHaplotypeList &Haplo,
+			const TGenotype &Geno);
 		double _PostProb_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			double &SumProb);
+		// AVX512BW CPU Flags
+		THLAType _BestGuess_avx512bw(const CHaplotypeList &Haplo,
+			const TGenotype &Geno);
+		double _PostProb_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno,
+			const THLAType &HLA);
+		void _PostProb2_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 	#endif
 	};
