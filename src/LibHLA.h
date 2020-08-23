@@ -190,7 +190,7 @@ namespace HLA_LIB
 		/// scale the haplotype frequencies by a factor
 		void ScaleFrequency(double scale);
 
-		/// the number of haplotypes
+		/// the total number of haplotypes
 		size_t Num_Haplo;
 		/// the number of SNP markers
 		size_t Num_SNP;
@@ -199,18 +199,26 @@ namespace HLA_LIB
 		/// the number of SNP  haplotypes per HLA allele
 		vector<size_t> LenPerHLA;
 
+		/// the auxiliary haplotypes created in SetHaploAux()
+		int64_t *aux_haplo;
+		/// the auxiliary frequencies created in SetHaploAux()
+		double *aux_freq;
+
 		/// the start index of an HLA allele
 		size_t StartHaploHLA(int hla) const;
 		/// the total number of unique HLA alleles
 		inline size_t nHLA() const { return LenPerHLA.size(); }
 
-		/// set the auxiliary variable aux.Freq_f32 and aux.HLA_allele
-		void SetHaploAux();
+		/// create the auxiliary variables avx2 and avx512f implementation
+		void SetHaploAux(int64_t buf_haplo[], double buf_freq[]);
+		/// set the auxiliary variable aux.Freq_f32 and aux.HLA_allele for GPU implementation
+		void SetHaploAux_GPU();
 
 	private:
-		size_t reserve_size;
-		void *base_ptr;
+		size_t reserve_size;  //< the total size reserved
+		void *base_ptr;       //< the pointer to the memory buffer
 
+		/// allocate 32-aligned memory internally
 		inline void alloc_mem(size_t num);
 	};
 
@@ -611,6 +619,10 @@ namespace HLA_LIB
 		/// the prediction algorithm
 		CAlg_Prediction _Predict;
 
+		/// auxiliary
+		vector<int64_t> aux_haplo;
+		vector<double> aux_freq;
+
 		/// initialize the haplotype list
 		void _InitHaplotype(CHaplotypeList &Haplo);
 
@@ -752,6 +764,8 @@ namespace HLA_LIB
 		void _Done_PredictHLA();
 
 	private:
+		vector<int64_t> aux_haplo;
+		vector<double> aux_freq;
 		vector<TGenotype> gpu_geno_buf;
 		vector<int> gpu_num_haplo;
 	};
