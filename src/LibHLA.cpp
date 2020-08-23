@@ -1170,14 +1170,6 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	#ifdef __POPCNT__
 		flag_popcnt = true;
 	#endif
-	} else if (strcmp(cpu, "avx512bw")==0 || (no_cpu && has_avx512bw))
-	{
-		if (!has_avx512bw)
-			error("Not support AVX512F+AVX512BW.");
-		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
-		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
-		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
-		cpu_info.append(", AVX512F+AVX512BW");
 	} else if (strcmp(cpu, "avx2")==0 || (no_cpu && has_avx2))
 	{
 		if (!has_avx2)
@@ -1212,6 +1204,14 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
 		cpu_info.append(", SSE2");
 		flag_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
+	} else if (strcmp(cpu, "avx512bw")==0 || (no_cpu && has_avx512bw))
+	{
+		if (!has_avx512bw)
+			error("Not support AVX512F+AVX512BW.");
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
+		cpu_info.append(", AVX512F+AVX512BW");
 	} else {
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_def;

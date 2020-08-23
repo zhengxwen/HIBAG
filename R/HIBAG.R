@@ -1632,7 +1632,7 @@ hlaErrMsg <- function()
 #######################################################################
 
 hlaSetKernelTarget <- function(
-    cpu=c("auto", "avx512bw", "avx2", "avx", "sse4", "sse2", "base"))
+    cpu=c("auto", "avx2", "avx", "sse4", "sse2", "base", "avx512bw"))
 {
 	cpu <- match.arg(cpu)
     .Call(HIBAG_Kernel_SetTarget, cpu)
