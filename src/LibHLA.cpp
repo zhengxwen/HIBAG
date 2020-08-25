@@ -1201,11 +1201,14 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 #endif
 
 #ifdef HIBAG_CPU_ARCH_X86
+
+#ifdef HIBAG_BUILTIN_CPU
 	__builtin_cpu_init();
+#endif
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 	const bool has_avx512bw = true;
-#elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_AVX512BW)
+#elif defined(HIBAG_BUILTIN_CPU_AVX512BW)
 	const bool has_avx512bw = __builtin_cpu_supports("avx512f") &&
 		__builtin_cpu_supports("avx512bw") && HIBAG_ALGORITHM_AVX512BW;
 #else
@@ -1214,7 +1217,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 #if defined(__AVX2__)
 	const bool has_avx2 = true;
-#elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_AVX2)
+#elif defined(HIBAG_BUILTIN_CPU_AVX2)
 	const bool has_avx2 = __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2;
 #else
 	const bool has_avx2 = false;
@@ -1234,7 +1237,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 #if defined(__SSE2__)
 	const bool has_sse2 = true;
-#elif defined(HIBAG_BUILTIN_CPU)
+#elif defined(HIBAG_BUILTIN_CPU_SSE2)
 	const bool has_sse2 = __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2;
 #else
 	const bool has_sse2 = false;

@@ -63,8 +63,25 @@
 // whether has __builtin_cpu_supports or not
 #if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
 #   define HIBAG_BUILTIN_CPU
+#elif defined(__clang__) && defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=7))
+#   define HIBAG_BUILTIN_CPU
 #endif
 
+
+// SSE2
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && ((__GNUC__>3) || (__GNUC__==3 && __GNUC_MINOR__>=1))
+#       define HIBAG_CPU_ARCH_X86_SSE2
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=3))
+#       define HIBAG_CPU_ARCH_X86_SSE2
+#   endif
+#   ifdef HIBAG_BUILTIN_CPU
+#       define HIBAG_BUILTIN_CPU_SSE2
+#   endif
+#endif
+#if defined(__SSE2__) && !defined(HIBAG_CPU_ARCH_X86_SSE2)
+#   define HIBAG_CPU_ARCH_X86_SSE2
+#endif
 
 // SSE4.2
 #ifdef HIBAG_CPU_ARCH_X86
@@ -72,6 +89,9 @@
 #       define HIBAG_CPU_ARCH_X86_SSE4_2
 #   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=3))
 #       define HIBAG_CPU_ARCH_X86_SSE4_2
+#   endif
+#   ifdef HIBAG_BUILTIN_CPU
+#       define HIBAG_BUILTIN_CPU_SSE4_2
 #   endif
 #endif
 #if defined(__SSE4_2__) && !defined(HIBAG_CPU_ARCH_X86_SSE4_2)
@@ -85,6 +105,9 @@
 #   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=7))
 #       define HIBAG_CPU_ARCH_X86_AVX2
 #   endif
+#   ifdef HIBAG_BUILTIN_CPU
+#       define HIBAG_BUILTIN_CPU_AVX2
+#   endif
 #endif
 #if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_AVX2)
 #   define HIBAG_CPU_ARCH_X86_AVX2
@@ -96,6 +119,11 @@
 #       define HIBAG_CPU_ARCH_X86_AVX512BW
 #   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
 #       define HIBAG_CPU_ARCH_X86_AVX512BW
+#   endif
+#   if defined(__GNUC__) && (__GNUC__>=6)
+#       define HIBAG_BUILTIN_CPU_AVX512BW
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#       define HIBAG_BUILTIN_CPU_AVX512BW
 #   endif
 #endif
 #if defined(__AVX512BW__) && !defined(HIBAG_CPU_ARCH_X86_AVX512BW)
