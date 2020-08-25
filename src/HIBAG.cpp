@@ -29,6 +29,8 @@
 #include <R.h>
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
+#include <RcppParallel.h>
+#include <tbb/parallel_for.h>
 
 
 using namespace std;
@@ -1108,7 +1110,7 @@ SEXP HIBAG_ErrMsg()
 **/
 SEXP HIBAG_Kernel_Version()
 {
-	SEXP ans = PROTECT(NEW_LIST(2));
+	SEXP ans = PROTECT(NEW_LIST(3));
 	// version
 	SEXP I = NEW_INTEGER(2);
 	SET_ELEMENT(ans, 0, I);
@@ -1116,6 +1118,12 @@ SEXP HIBAG_Kernel_Version()
 	INTEGER(I)[1] = HIBAG_KERNEL_VERSION & 0xFF;
 	// CPU information
 	SET_ELEMENT(ans, 1, mkString(CPU_Info()));
+	// using Intel TBB or not
+#if RCPP_PARALLEL_USE_TBB
+	SET_ELEMENT(ans, 2, ScalarLogical(1));
+#else
+	SET_ELEMENT(ans, 2, ScalarLogical(0));
+#endif
 	// output
 	UNPROTECT(1);
 	return ans;

@@ -1662,5 +1662,7 @@ hlaSetKernelTarget <- function(
     packageStartupMessage(
         sprintf("Kernel Version: v%d.%d (%s)", info[[1L]][1L], info[[1L]][2L],
         info[[2L]]))
+    if (!info[[3L]])
+        packageStartupMessage("No Intel Threading Building Blocks (TBB)")
     TRUE
 }
