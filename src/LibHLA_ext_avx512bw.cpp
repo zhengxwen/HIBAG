@@ -212,9 +212,11 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			f = ff * f2 * f;
-			// avoid different behavior due to rounding error of addition
-			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
-			prob += f[4]; prob += f[5]; prob += f[6]; prob += f[7];
+			// maybe different behavior due to rounding error of addition
+			// not use _mm512_reduce_add_pd since some compilers do not support
+			__m256d a = _mm512_castpd512_pd256(f) + _mm512_extractf64x4_pd(f,1);
+			__m128d b = _mm256_castpd256_pd128(a) + _mm256_extractf128_pd(a,1);
+			prob += _mm_hadd_pd(b, b)[0];
 		}
 		if (n >= 4)
 		{
@@ -244,8 +246,9 @@ static inline TARGET_AVX512
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
 			f = ff * f2 * f;
-			// avoid different behavior due to rounding error of addition
-			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
+			// maybe different behavior due to rounding error of addition
+			__m128d b = _mm256_castpd256_pd128(f) + _mm256_extractf128_pd(f,1);
+			prob += _mm_hadd_pd(b, b)[0];
 			n -= 4;
 		}
 	} else {
@@ -292,9 +295,11 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			f = ff * f2 * f;
-			// avoid different behavior due to rounding error of addition
-			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
-			prob += f[4]; prob += f[5]; prob += f[6]; prob += f[7];
+			// maybe different behavior due to rounding error of addition
+			// not use _mm512_reduce_add_pd since some compilers do not support
+			__m256d a = _mm512_castpd512_pd256(f) + _mm512_extractf64x4_pd(f,1);
+			__m128d b = _mm256_castpd256_pd128(a) + _mm256_extractf128_pd(a,1);
+			prob += _mm_hadd_pd(b, b)[0];
 		}
 		if (n >= 4)
 		{
@@ -343,8 +348,9 @@ static inline TARGET_AVX512
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
 			f = ff * f2 * f;
-			// avoid different behavior due to rounding error of addition
-			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
+			// maybe different behavior due to rounding error of addition
+			__m128d b = _mm256_castpd256_pd128(f) + _mm256_extractf128_pd(f,1);
+			prob += _mm_hadd_pd(b, b)[0];
 			n -= 4;
 		}
 	}
