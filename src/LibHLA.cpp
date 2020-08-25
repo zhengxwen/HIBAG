@@ -1202,16 +1202,44 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 #ifdef HIBAG_CPU_ARCH_X86
 	__builtin_cpu_init();
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+	const bool has_avx512bw = true;
+#elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_AVX512BW)
 	const bool has_avx512bw = __builtin_cpu_supports("avx512f") &&
 		__builtin_cpu_supports("avx512bw") && HIBAG_ALGORITHM_AVX512BW;
-	const bool has_avx2 = __builtin_cpu_supports("avx2") &&
-		HIBAG_ALGORITHM_AVX2;
+#else
+	const bool has_avx512bw = false;
+#endif
+
+#if defined(__AVX2__)
+	const bool has_avx2 = true;
+#elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_AVX2)
+	const bool has_avx2 = __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2;
+#else
+	const bool has_avx2 = false;
+#endif
+
 	const bool has_avx  = __builtin_cpu_supports("avx") &&
 		HIBAG_ALGORITHM_AVX;
+
+#if defined(__SSE4_2__)
+	const bool has_sse4 = true;
+#elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_SSE4_2)
 	const bool has_sse4 = __builtin_cpu_supports("sse4.2") &&
 		__builtin_cpu_supports("popcnt") && HIBAG_ALGORITHM_SSE4_2;
-	const bool has_sse2 = __builtin_cpu_supports("sse2") &&
-		HIBAG_ALGORITHM_SSE2;
+#else
+	const bool has_sse4 = false;
+#endif
+
+#if defined(__SSE2__)
+	const bool has_sse2 = true;
+#elif defined(HIBAG_BUILTIN_CPU)
+	const bool has_sse2 = __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2;
+#else
+	const bool has_sse2 = false;
+#endif
+
 	bool flag_popcnt = false;
 	if (strcmp(cpu, "base")==0)
 	{

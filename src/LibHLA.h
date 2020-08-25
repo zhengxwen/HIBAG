@@ -54,9 +54,52 @@
 #   endif
 #endif
 
+
 // remove HIBAG_CPU_ARCH_X86 if define HIBAG_NO_X86_SIMD
 #if defined(HIBAG_CPU_ARCH_X86) && defined(HIBAG_NO_X86_SIMD)
 #   undef HIBAG_CPU_ARCH_X86
+#endif
+
+// whether has __builtin_cpu_supports or not
+#if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
+#   define HIBAG_BUILTIN_CPU
+#endif
+
+
+// SSE4.2
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=3))
+#       define HIBAG_CPU_ARCH_X86_SSE4_2
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=3))
+#       define HIBAG_CPU_ARCH_X86_SSE4_2
+#   endif
+#endif
+#if defined(__SSE4_2__) && !defined(HIBAG_CPU_ARCH_X86_SSE4_2)
+#   define HIBAG_CPU_ARCH_X86_SSE4_2
+#endif
+
+// AVX2
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=7))
+#       define HIBAG_CPU_ARCH_X86_AVX2
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=7))
+#       define HIBAG_CPU_ARCH_X86_AVX2
+#   endif
+#endif
+#if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_AVX2)
+#   define HIBAG_CPU_ARCH_X86_AVX2
+#endif
+
+// AVX512F
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && (__GNUC__>=5)
+#       define HIBAG_CPU_ARCH_X86_AVX512BW
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#       define HIBAG_CPU_ARCH_X86_AVX512BW
+#   endif
+#endif
+#if defined(__AVX512BW__) && !defined(HIBAG_CPU_ARCH_X86_AVX512BW)
+#   define HIBAG_CPU_ARCH_X86_AVX512BW
 #endif
 
 

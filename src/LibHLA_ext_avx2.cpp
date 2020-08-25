@@ -44,18 +44,6 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=8))
-#   define HIBAG_CPU_ARCH_X86_AVX2
-#endif
-
-#if defined(HIBAG_CPU_ARCH_X86) && !defined(HIBAG_CPU_ARCH_X86_AVX2) && defined(__clang__)
-#   define HIBAG_CPU_ARCH_X86_AVX2
-#endif
-
-#if defined(__AVX2__) && !defined(HIBAG_CPU_ARCH_X86_AVX2)
-#   define HIBAG_CPU_ARCH_X86_AVX2
-#endif
-
 #ifdef HIBAG_CPU_ARCH_X86_AVX2
 extern const bool HIBAG_ALGORITHM_AVX2 = true;
 #else

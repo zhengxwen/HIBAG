@@ -44,18 +44,6 @@ using namespace std;
 using namespace HLA_LIB;
 
 
-#ifdef HIBAG_CPU_ARCH_X86
-#   if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=3))
-#       define HIBAG_CPU_ARCH_X86_SSE4_2
-#   elif defined(__clang_major__) && (__clang_major__>=3)
-#       define HIBAG_CPU_ARCH_X86_SSE4_2
-#   endif
-#endif
-
-#if defined(__SSE4_2__) && !defined(HIBAG_CPU_ARCH_X86_SSE4_2)
-#   define HIBAG_CPU_ARCH_X86_SSE4_2
-#endif
-
 #ifdef HIBAG_CPU_ARCH_X86_SSE4_2
 extern const bool HIBAG_ALGORITHM_SSE4_2 = true;
 #else
