@@ -47,7 +47,7 @@
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE, mono.rm=TRUE,
-    nthread=1L, verbose=TRUE, verbose.detail=FALSE)
+    nthread=NA, verbose=TRUE, verbose.detail=FALSE)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass"))
@@ -193,14 +193,17 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     }
 
     # set the number of threads
-    if (!is.na(nthread))
-    {
-        if (nthread < 1L) nthread <- 1L
-        setThreadOptions(nthread)
-        on.exit(setThreadOptions(1L))
-    }
+    old_nthread <- .Call(HIBAG_Kernel_Version)[[3L]]
+    if (is.na(old_nthread)) old_nthread <- 1L
+    if (is.na(nthread)) nthread <- defaultNumThreads()
+    if (nthread < 1L) nthread <- 1L
+    setThreadOptions(nthread)
+    on.exit(setThreadOptions(old_nthread))
     if (verbose)
-        cat("# of threads: ", nthread, "\n", sep="")
+    {
+        n <- .Call(HIBAG_Kernel_Version)[[3L]]
+        cat("# of threads: ", n, "\n", sep="")
+    }
 
 
     ###################################################################
@@ -1662,7 +1665,7 @@ hlaSetKernelTarget <- function(
     packageStartupMessage(
         sprintf("Kernel Version: v%d.%d (%s)", info[[1L]][1L], info[[1L]][2L],
         info[[2L]]))
-    if (!info[[3L]])
+    if (is.na(info[[3L]]))
         packageStartupMessage("No Intel Threading Building Blocks (TBB)")
     TRUE
 }

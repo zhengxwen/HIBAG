@@ -15,7 +15,7 @@ export(.onAttach)
 
 # Imports
 import(methods)
-importFrom(RcppParallel, RcppParallelLibs, setThreadOptions)
+importFrom(RcppParallel, RcppParallelLibs, setThreadOptions, defaultNumThreads)
 import(stats)
 importFrom(graphics, abline, plot, text)
 importFrom(utils, read.table, write.table, str)

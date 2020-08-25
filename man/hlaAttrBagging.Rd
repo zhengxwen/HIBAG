@@ -8,7 +8,7 @@
 }
 \usage{
 hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
-    prune=TRUE, na.rm=TRUE, mono.rm=TRUE, nthread=1L, verbose=TRUE,
+    prune=TRUE, na.rm=TRUE, mono.rm=TRUE, nthread=NA, verbose=TRUE,
     verbose.detail=FALSE)
 }
 \arguments{
@@ -23,9 +23,10 @@ hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
         otherwise, exhaustive forward variable selection. See details}
     \item{na.rm}{if TRUE, remove the samples with missing HLA types}
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
-    \item{nthread}{specify the number of threads used in building the model;
-        if \code{NA}, use the number of threads set in the RcppParallel
-        package}
+    \item{nthread}{specify the number of threads used in the model building;
+        if \code{NA}, use the number of threads returned from
+        \code{RcppParallel::defaultNumThreads()} (by default all available
+        threads)}
     \item{verbose}{if TRUE, show information}
     \item{verbose.detail}{if TRUE, show more information}
 }

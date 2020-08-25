@@ -1120,9 +1120,10 @@ SEXP HIBAG_Kernel_Version()
 	SET_ELEMENT(ans, 1, mkString(CPU_Info()));
 	// using Intel TBB or not
 #if RCPP_PARALLEL_USE_TBB
-	SET_ELEMENT(ans, 2, ScalarLogical(1));
+	int ntot = tbb::this_task_arena::max_concurrency();
+	SET_ELEMENT(ans, 2, ScalarInteger(ntot));
 #else
-	SET_ELEMENT(ans, 2, ScalarLogical(0));
+	SET_ELEMENT(ans, 2, ScalarInteger(NA_INTEGER));
 #endif
 	// output
 	UNPROTECT(1);

@@ -46,7 +46,6 @@
 #endif
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
-#include <atomic>
 
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE
@@ -1683,16 +1682,31 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 	if (!GPUExtProcPtr)
 	{
-		std::atomic<int> CorrectCnt(0);
+	#if RCPP_PARALLEL_USE_TBB
+		const int ntot_thread = tbb::this_task_arena::max_concurrency();
+		vector<int> cnt_thread(ntot_thread, 0);
+	#else
+		int cnt_thread[1] = { 0 };
+	#endif
 		PARALLEL_FOR(i, idx_outbag.size())
 		{
+		#if RCPP_PARALLEL_USE_TBB
+			const int k = tbb::this_task_arena::current_thread_index();
+		#else
+			const int k = 0;
+		#endif
 			TGenotype &p = _GenoList.List[idx_outbag[i]];
 			THLAType g = (_Predict.*fc_BestGuess)(Haplo, p);
-			int cnt = CHLATypeList::Compare(g, p.aux_hla_type);
-			CorrectCnt.fetch_add(cnt);
+			cnt_thread[k] += CHLATypeList::Compare(g, p.aux_hla_type);
 		}
 		PARALLEL_END
+	#if RCPP_PARALLEL_USE_TBB
+		int CorrectCnt = 0;
+		for (int i=0; i < ntot_thread; i++) CorrectCnt += cnt_thread[i];
 		return CorrectCnt;
+	#else
+		return cnt_thread[0];
+	#endif
 	} else {
 		return (*GPUExtProcPtr->build_acc_oob)();
 	}
