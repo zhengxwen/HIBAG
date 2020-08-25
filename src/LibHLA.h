@@ -145,6 +145,7 @@ namespace HLA_LIB
 			} a2;
 		} aux;
 
+		/// constructor
 		THaplotype();
 		THaplotype(double _freq);
 		THaplotype(const char *str, double _freq);
@@ -168,6 +169,7 @@ namespace HLA_LIB
 	class CHaplotypeList
 	{
 	public:	
+		/// constructor
 		CHaplotypeList();
 		CHaplotypeList(const CHaplotypeList &src);
 		CHaplotypeList(size_t reserve_num);  // reserve memory for haplotypes
@@ -178,7 +180,6 @@ namespace HLA_LIB
 
 		/// resize the number of haplotypes, no initialization
 		void ResizeHaplo(size_t num);
-
 		/// initialize haplotypes for EM algorithm
 		void DoubleHaplos(CHaplotypeList &OutHaplos) const;
 		/// initialize haplotypes for EM algorithm with the allele frequency of the new SNP
@@ -243,7 +244,6 @@ namespace HLA_LIB
 		UINT8 PackedSNP1[HIBAG_PACKED_UTYPE_MAXNUM];
 		/// packed SNP genotypes, allele 2
 		UINT8 PackedSNP2[HIBAG_PACKED_UTYPE_MAXNUM];
-
 		/// the count in the bootstrapped data
 		int BootstrapCount;
 
@@ -254,7 +254,6 @@ namespace HLA_LIB
 
 		/// constructor
 		TGenotype();
-
 		/// get SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
 		int GetSNP(size_t idx) const;
 		/// set SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
@@ -267,7 +266,6 @@ namespace HLA_LIB
 		void SNPToInt(size_t Length, int OutArray[]) const;
 		/// import SNPs from an integer vector 'GenoBase' with 'Index'
 		void IntToSNP(size_t Length, const int GenoBase[], const int Index[]);
-
 		/// compute the Hamming distance between SNPs and H1+H2
 		int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
 
@@ -281,8 +279,8 @@ namespace HLA_LIB
 	class CSNPGenoMatrix
 	{
 	public:
+		/// constructor
 		CSNPGenoMatrix();
-
 		/// get SNP genotype of 'IdxSamp' individual and 'IdxSNP' SNP
 		const int Get(const int IdxSamp, const int IdxSNP) const;
 		/// get the pointer to SNP genotypes of 'IdxSamp' individual
@@ -303,18 +301,16 @@ namespace HLA_LIB
 	public:
 		friend class CVariableSelection;
 
+		/// constructor
 		CGenotypeList();
-
 		/// add a new SNP
 		void AddSNP(int IdxSNP, const CSNPGenoMatrix &SNPMat);
 		/// remove the last SNP
 		void ReduceSNP();
-
 		/// set all SNPs to missing
 		void SetAllMissing();
 		/// set missing SNP at a specified position
 		void SetMissing(int IdxSNP);
-
 		/// return the total number of samples
 		inline int nSamp() const { return List.size(); }
 
@@ -329,14 +325,13 @@ namespace HLA_LIB
 	class CHLATypeList
 	{
 	public:
+		/// constructor
 		CHLATypeList();
-
 		/// return the total number of samples
 		inline int nSamp() const { return List.size(); }
 		/// return the total number of HLA alleles
 		inline int Num_HLA_Allele() const { return Str_HLA_Allele.size(); }
-		
-		/// return how many alleles are the same
+				/// return how many alleles are the same
 		static int Compare(const THLAType &H1, const THLAType &H2);
 
 		/// a list of HLA types
@@ -611,7 +606,6 @@ namespace HLA_LIB
 		CSNPGenoMatrix *_SNPMat;
 		/// a list of HLA types
 		CHLATypeList *_HLAList;
-		
 		/// a list of genotypes
 		CGenotypeList _GenoList;
 		/// EM algorithm
@@ -620,12 +614,14 @@ namespace HLA_LIB
 		CAlg_Prediction _Predict;
 
 		/// auxiliary
-		vector<int64_t> aux_haplo;
-		vector<double> aux_freq;
+		vector<int> idx_inbag;      //< indices for in-bag samples
+		vector<int> idx_outbag;     //< indices for out-of-bag samples
+		vector<double> log_inbag;   //< LogLik of in-bag samples for multi-threading to avoid rounding error of addition
+		vector<int64_t> aux_haplo;  //< packed haplotype data for AVX, AVX2, AVX512F
+		vector<double> aux_freq;    //< packed haplotype frequencies for AVX, AVX2, AVX512F
 
 		/// initialize the haplotype list
 		void _InitHaplotype(CHaplotypeList &Haplo);
-
 		/// initialize the evaluation of in-bag and out-of-bag accuracy
 		void _Init_EvalAcc(CHaplotypeList &Haplo, CGenotypeList& Geno);
 		/// finalize the evaluation of in-bag and out-of-bag accuracy
@@ -697,6 +693,7 @@ namespace HLA_LIB
 	public:
 		friend class CAttrBag_Classifier;
 
+		/// constructor
 		CAttrBag_Model();
 
 		/// initialize the training model

@@ -1,6 +1,6 @@
-\name{predict.hlaAttrBagClass}
-\alias{predict.hlaAttrBagClass}
+\name{hlaPredict}
 \alias{hlaPredict}
+\alias{predict.hlaAttrBagClass}
 \title{
     HIBAG model prediction (in parallel)
 }
@@ -22,7 +22,8 @@ hlaPredict(object, snp, cl=NULL,
     \item{snp}{a genotypic object of \code{\link{hlaSNPGenoClass}}}
     \item{cl}{if a cluster object, created by the package
         \link{parallel-package}; if \code{NULL}, serial implementation will
-        be performed; if numeric, specify the number of cores}
+        be performed; if numeric, specify the number of cores in
+        multi-threading}
     \item{type}{"response": return the best-guess type plus its posterior
         probability; "prob": return all posterior probabilities;
         "response+prob": return the best-guess and all posterior probabilities}

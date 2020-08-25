@@ -41,6 +41,12 @@
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
+#ifdef length
+#   undef length
+#endif
+#include <RcppParallel.h>
+#include <tbb/parallel_for.h>
+#include <atomic>
 
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE
@@ -106,6 +112,29 @@ static inline int RandomNum(int n)
 	if (v >= n) v = n - 1;
 	return v;
 }
+
+
+// ========================================================================= //
+// Define Intel TBB Macro, requiring C++11
+
+#if RCPP_PARALLEL_USE_TBB
+
+#define PARALLEL_FOR(i, SIZE)    \
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, SIZE),  \
+		[&](const tbb::blocked_range<size_t> &rng)  \
+	{  \
+		for (size_t i=rng.begin(); i < rng.end(); i++)
+
+#define PARALLEL_END    });
+
+#else
+
+#define PARALLEL_FOR(i, SIZE)    \
+	{  \
+		for (size_t i=0; i < SIZE; i++)
+#define PARALLEL_END    }
+
+#endif
 
 
 
@@ -1565,8 +1594,14 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 		"CVariableSelection::InitSelection, snpMat and hlaList should have the same number of samples.");
 	_SNPMat = &snpMat;
 	_HLAList = &hlaList;
-		// initialize genotype list
+	// initialize genotype list
 	_GenoList.List.resize(snpMat.Num_Total_Samp);
+	log_inbag.resize(snpMat.Num_Total_Samp);
+	idx_inbag.clear();
+	idx_outbag.clear();
+	idx_inbag.reserve(snpMat.Num_Total_Samp);
+	idx_outbag.reserve(snpMat.Num_Total_Samp);
+	// for-loop
 	for (int i=0; i < snpMat.Num_Total_Samp; i++)
 	{
 		TGenotype &g = _GenoList.List[i];
@@ -1578,6 +1613,11 @@ void CVariableSelection::InitSelection(CSNPGenoMatrix &snpMat,
 			g.aux_hla_type.Allele2 = g.aux_hla_type.Allele1;
 			g.aux_hla_type.Allele1 = w;
 		}
+		// push back indices
+		if (_BootstrapCnt[i] > 0)
+			idx_inbag.push_back(i);
+		else
+			idx_outbag.push_back(i);
 	}
 	_GenoList.Num_SNP = 0;
 	_GenoList.SetAllMissing();
@@ -1641,45 +1681,45 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
-	int CorrectCnt=0;
 	if (!GPUExtProcPtr)
 	{
-		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
-		for (; p != _GenoList.List.end(); p++)
+		std::atomic<int> CorrectCnt(0);
+		PARALLEL_FOR(i, idx_outbag.size())
 		{
-			if (p->BootstrapCount <= 0)
-			{
-				THLAType g = (_Predict.*fc_BestGuess)(Haplo, *p);
-				CorrectCnt += CHLATypeList::Compare(g, p->aux_hla_type);
-			}
+			TGenotype &p = _GenoList.List[idx_outbag[i]];
+			THLAType g = (_Predict.*fc_BestGuess)(Haplo, p);
+			int cnt = CHLATypeList::Compare(g, p.aux_hla_type);
+			CorrectCnt.fetch_add(cnt);
 		}
+		PARALLEL_END
+		return CorrectCnt;
 	} else {
-		CorrectCnt = (*GPUExtProcPtr->build_acc_oob)();
+		return (*GPUExtProcPtr->build_acc_oob)();
 	}
-	return CorrectCnt;
 }
 
 double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 {
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
-	double LogLik = 0;
 	if (!GPUExtProcPtr)
 	{
-		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
-		for (; p != _GenoList.List.end(); p++)
+		const size_t n = idx_inbag.size();
+		PARALLEL_FOR(i, n)
 		{
-			if (p->BootstrapCount > 0)
-			{
-				LogLik += p->BootstrapCount *
-					log((_Predict.*fc_PostProb)(Haplo, *p, p->aux_hla_type));
-			}
+			TGenotype &p = _GenoList.List[idx_inbag[i]];
+			log_inbag[i] = p.BootstrapCount *
+				log((_Predict.*fc_PostProb)(Haplo, p, p.aux_hla_type));
 		}
+		PARALLEL_END
+		// reduce sum
+		double LogLik = 0;
+		for (size_t i=0; i < n; i++) LogLik += log_inbag[i];
 		LogLik *= -2;
+		return LogLik;
 	} else {
-		LogLik = (*GPUExtProcPtr->build_acc_ib)();
+		return (*GPUExtProcPtr->build_acc_ib)();
 	}
-	return LogLik;
 }
 
 void CVariableSelection::Search(CBaseSampling &VarSampling,

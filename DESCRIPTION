@@ -4,8 +4,9 @@ Title: HLA Genotype Imputation with Attribute Bagging
 Version: 1.25.4
 Date: 2020-08-22
 Depends: R (>= 3.2.0)
-Imports: methods
+Imports: methods, RcppParallel
 Suggests: parallel, knitr, gdsfmt, SNPRelate, SeqArray, ggplot2, reshape2
+LinkingTo: RcppParallel
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu", comment=c(ORCID="0000-0002-1390-0708")),
     person("Bruce", "Weir", role=c("ctb", "ths"),
@@ -21,7 +22,7 @@ Description: Imputes HLA classical alleles using GWAS SNP data, and it relies
 License: GPL-3
 LazyData: yes
 VignetteBuilder: knitr
-SystemRequirements: GNU make
+SystemRequirements: C++11, GNU make
 ByteCompile: TRUE
 biocViews: Genetics, StatisticalMethod
 URL: http://github.com/zhengxwen/HIBAG,

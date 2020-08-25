@@ -47,7 +47,7 @@
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE, mono.rm=TRUE,
-    verbose=TRUE, verbose.detail=FALSE)
+    nthread=1L, verbose=TRUE, verbose.detail=FALSE)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass"))
@@ -57,6 +57,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
+    if (identical(nthread, NA)) nthread <- NA_integer_
+    stopifnot(is.numeric(nthread), length(nthread)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
     if (verbose.detail) verbose <- TRUE
@@ -189,6 +191,16 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         cat("# of unique ", s, " alleles: ", n.hla, "\n", sep="")
         cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]], "\n", sep="")
     }
+
+    # set the number of threads
+    if (!is.na(nthread))
+    {
+        if (nthread < 1L) nthread <- 1L
+        setThreadOptions(nthread)
+        on.exit(setThreadOptions(1L))
+    }
+    if (verbose)
+        cat("# of threads: ", nthread, "\n", sep="")
 
 
     ###################################################################
@@ -413,20 +425,20 @@ hlaClose <- function(model)
 # Predict HLA types from unphased SNP data
 #
 
-hlaPredict <- function(object, snp, cl=NULL,
-    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE)
-{
-    stopifnot(inherits(object, "hlaAttrBagClass"))
-    predict(object, snp, cl, type, vote, allele.check, match.type,
-        same.strand, verbose)
-}
-
 predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
+{
+    stopifnot(inherits(object, "hlaAttrBagClass"))
+    hlaPredict(object, snp, cl, type, vote, allele.check, match.type,
+        same.strand, verbose)
+}
+
+hlaPredict <- function(object, snp, cl=NULL,
+    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
+    same.strand=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(inherits(object, "hlaAttrBagClass"))
@@ -635,10 +647,10 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                         "be gained:\n",
                         sprintf("\t%0.1f%% by matching RefSNP IDs only, ",
                             100*mcnt.id/length(s1)),
-                        "call 'predict(..., match.type=\"RefSNP\")'\n",
+                        "call 'hlaPredict(..., match.type=\"RefSNP\")'\n",
                         sprintf("\t%0.1f%% by matching positions only, ",
                             100*mcnt.pos/length(s1)),
-                        "call 'predict(..., match.type=\"Position\")'\n",
+                        "call 'hlaPredict(..., match.type=\"Position\")'\n",
                         "Any concern about SNP mismatching should be emailed ",
                         "to the genotyping platform provider.")
 
@@ -687,7 +699,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     if (is.null(cl))
     {
         # pointer to functions for an extensible component
-		pm <- list(...)
+		pm <- list()
 		pm <- pm$proc_ptr
 
         # to predict HLA types
@@ -818,7 +830,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
         {
             stop("The object(s) passed to 'hlaPredMerge' should have ",
                 "a field of 'postprob' returned from ",
-                "'predict(..., type=\"response+prob\", vote=\"majority\")'.")
+                "'hlaPredict(..., type=\"response+prob\", vote=\"majority\")'.")
         }
     }
 
@@ -1286,7 +1298,7 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 
         tmp.model <- hlaModelFromObj(mx)
         tmp.geno <- geno[, s == 0L]
-        v <- predict(tmp.model, tmp.geno, verbose=FALSE)
+        v <- hlaPredict(tmp.model, tmp.geno, verbose=FALSE)
         hlaClose(tmp.model)
         v$value$sample.id <- mx$sample.id[s == 0L]
         pam <- hlaCompareAllele(hla, v, allele.limit=mx,
