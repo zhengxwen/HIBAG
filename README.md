@@ -25,11 +25,15 @@ Release Version: 1.24.0
 [http://www.bioconductor.org/packages/HIBAG/](http://www.bioconductor.org/packages/HIBAG/)
 
 
+### Changes in Bioconductor Version (since v1.26.0, Y2020):
+
+
+
 ### Changes in Bioconductor Version (since v1.14.0, Y2017):
 
 * Kernel Version: v1.4
-* Modify the kernel to support the GPU extension
 * The kernel v1.4 outputs exactly the same parameter estimates as v1.3, and the model training with v1.4 is 1.2 times faster than v1.3.
+* Modify the kernel to support the GPU extension
 
 
 ### Changes in Bioconductor Version (since v1.3.0, Y2013):

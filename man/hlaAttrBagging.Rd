@@ -21,12 +21,11 @@ hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
         randomly sampled as candidates for each selection. See details}
     \item{prune}{if TRUE, to perform a parsimonious forward variable selection,
         otherwise, exhaustive forward variable selection. See details}
-    \item{na.rm}{if TRUE, remove the samples with missing HLA types}
+    \item{na.rm}{if TRUE, remove the samples with missing HLA alleles}
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
     \item{nthread}{specify the number of threads used in the model building;
-        if \code{NA}, use the number of threads returned from
-        \code{RcppParallel::defaultNumThreads()} (by default all available
-        threads)}
+        if \code{TRUE}, use the number of threads returned from
+        \code{RcppParallel::defaultNumThreads()} (by default using all threads)}
     \item{verbose}{if TRUE, show information}
     \item{verbose.detail}{if TRUE, show more information}
 }

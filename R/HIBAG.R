@@ -57,8 +57,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
-    if (identical(nthread, NA)) nthread <- NA_integer_
-    stopifnot(is.numeric(nthread), length(nthread)==1L)
+    stopifnot(is.numeric(nthread) | is.logical(nthread), length(nthread)==1L,
+        !is.na(nthread))
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
     if (verbose.detail) verbose <- TRUE
@@ -193,7 +193,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     }
 
     # set the number of threads (initialized in HIBAG_NewClassifiers)
-    if (is.na(nthread)) nthread <- defaultNumThreads()
+    if (isTRUE(nthread)) nthread <- defaultNumThreads()
     if (nthread < 1L) nthread <- 1L
 
 
