@@ -8,7 +8,7 @@
 }
 \usage{
 hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
-    prune=TRUE, na.rm=TRUE, mono.rm=TRUE, nthread=NA, verbose=TRUE,
+    prune=TRUE, na.rm=TRUE, mono.rm=TRUE, nthread=1L, verbose=TRUE,
     verbose.detail=FALSE)
 }
 \arguments{
