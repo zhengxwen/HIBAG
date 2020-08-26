@@ -67,12 +67,7 @@ extern const bool HIBAG_ALGORITHM_AVX = false;
 #define TARGET_AVX    __attribute__((target("avx")))
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX NAME ## _avx
-
-#if defined(__MINGW32__) || defined(__MINGW64__)
-#   define SIMD_ANDNOT_I256(x1, x2)    _mm256_andnot_si256(x1, x2)
-#else
-#   define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
-#endif
+#define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
 
 
 typedef int64_t UTYPE;
