@@ -78,10 +78,7 @@ extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #endif
 
 
-typedef int64_t UTYPE;
 #define U_POPCOUNT    __builtin_popcountll
-#define U_H0(x, i)    ((UTYPE*)&(x[i].PackedHaplo[0]))[0]
-#define U_H1(x, i)    ((UTYPE*)&(x[i].PackedHaplo[0]))[1]
 
 
 /// Prepare the internal genotype structure
@@ -96,8 +93,7 @@ public:
 	/// constructor
 	TARGET_AVX512 TGenoStruct(const CHaplotypeList &Haplo, const TGenotype &G)
 	{
-		const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
-		const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
+		const INT64 *s1 = G.PackedSNP1, *s2 = G.PackedSNP2;
 		Low64b = (Haplo.Num_SNP <= 64);
 		if (Low64b)
 		{
@@ -123,12 +119,11 @@ public:
 static ALWAYS_INLINE TARGET_AVX512
 	int hamm_d(const TGenoStruct &G, const THaplotype &H1, const THaplotype &H2)
 {
-	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
-	const UTYPE *h2 = (const UTYPE*)&H2.PackedHaplo[0];
+	const INT64 *h1 = H1.PackedHaplo, *h2 = H2.PackedHaplo;
 	// here, UTYPE = int64_t
 	if (G.Low64b)
 	{
-		__m128i H  = { *h1, *h2 };  // two haplotypes
+		__m128i H  = { h1[0], h2[0] };  // two haplotypes
 		__m128i S1 = G.S1, S2 = G.S2;  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
@@ -175,7 +170,7 @@ static inline TARGET_AVX512
 	const double ff = 2 * i1->Freq;
 	if (GS.Low64b)
 	{
-		const __m512i H1_8 = _mm512_set1_epi64(U_H0(i1, 0));
+		const __m512i H1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
 			__m512i H2_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_0 + i2));
@@ -240,8 +235,8 @@ static inline TARGET_AVX512
 			n -= 4;
 		}
 	} else {
-		const __m512i H1_0_8 = _mm512_set1_epi64(U_H0(i1, 0));
-		const __m512i H1_1_8 = _mm512_set1_epi64(U_H1(i1, 0));
+		const __m512i H1_0_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
+		const __m512i H1_1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[1]);
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
 			__m512i H2_0_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_0 + i2));

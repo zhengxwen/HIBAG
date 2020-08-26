@@ -266,7 +266,8 @@ UINT8 THaplotype::GetAllele(size_t idx) const
 {
 	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::GetAllele, invalid index.");
-	return (PackedHaplo[idx >> 3] >> (idx & 0x07)) & 0x01;
+	const UINT8 *p = (const UINT8*)PackedHaplo;
+	return (p[idx >> 3] >> (idx & 0x07)) & 0x01;
 }
 
 void THaplotype::SetAllele(size_t idx, UINT8 val)
@@ -309,7 +310,7 @@ inline void THaplotype::_SetAllele(size_t idx, UINT8 val)
 {
 	size_t r = idx & 0x07;
 	UINT8 mask = ~(0x01 << r);
-	UINT8 &ch = PackedHaplo[idx >> 3];
+	UINT8 &ch = ((UINT8*)PackedHaplo)[idx >> 3];
 	ch = (ch & mask) | (val << r);
 }
 
@@ -528,15 +529,15 @@ void CHaplotypeList::SetHaploAux(int64_t buf_haplo[], double buf_freq[])
 	{
 		for (size_t i=0; i < Num_Haplo; i++)
 		{
-			buf_haplo[i] = *((int64_t*)&List[i].PackedHaplo[0]);
+			buf_haplo[i] = List[i].PackedHaplo[0];
 			buf_freq[i] = List[i].Freq;
 		}
 	} else {
 		int64_t *buf_haplo2 = buf_haplo + Num_Haplo;
 		for (size_t i=0; i < Num_Haplo; i++)
 		{
-			buf_haplo[i] = *((int64_t*)&List[i].PackedHaplo[0]);
-			buf_haplo2[i] = *((int64_t*)&List[i].PackedHaplo[8]);
+			buf_haplo[i] = List[i].PackedHaplo[0];
+			buf_haplo2[i] = List[i].PackedHaplo[1];
 			buf_freq[i] = List[i].Freq;
 		}
 	}
@@ -572,8 +573,10 @@ int TGenotype::GetSNP(size_t idx) const
 	HIBAG_CHECKING(idx >= HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::GetSNP, invalid index.");
 	const size_t i = idx >> 3, r = idx & 0x07;
-	const int b1 = (PackedSNP1[i] >> r) & 0x01;
-	const int b2 = (PackedSNP2[i] >> r) & 0x01;
+	const UINT8 *S1 = (const UINT8*)PackedSNP1;
+	const UINT8 *S2 = (const UINT8*)PackedSNP2;
+	const int b1 = (S1[i] >> r) & 0x01;
+	const int b2 = (S2[i] >> r) & 0x01;
 	return (b1==0 && b2==1) ? -1 : b1+b2;
 }
 
@@ -588,7 +591,8 @@ void TGenotype::_SetSNP(size_t idx, int val)
 {
 	const size_t i = idx >> 3, r = idx & 0x07;
 	const UINT8 SET = (UINT8(0x01) << r), CLEAR = ~SET;
-	UINT8 &S1 = PackedSNP1[i], &S2 = PackedSNP2[i];
+	UINT8 &S1 = ((UINT8*)PackedSNP1)[i];
+	UINT8 &S2 = ((UINT8*)PackedSNP2)[i];
 	switch (val)
 	{
 		case 0:  S1 &= CLEAR; S2 &= CLEAR; break;
@@ -647,8 +651,8 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 		"TGenotype::IntToSNP, the length is invalid.");
 	const static UINT8 P1[4] = { 0, 1, 1, 0 };
 	const static UINT8 P2[4] = { 0, 0, 1, 1 };
-	UINT8 *p1 = PackedSNP1;
-	UINT8 *p2 = PackedSNP2;
+	UINT8 *p1 = (UINT8*)PackedSNP1;
+	UINT8 *p2 = (UINT8*)PackedSNP2;
 	// packed fill
 	for (; Length >= 8; Length -= 8, Index += 8)
 	{
@@ -678,8 +682,10 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 	}
 
 	// fill the remaining bytes
-	for (UINT8 *pE=PackedSNP1+sizeof(PackedSNP1); p1 < pE; ) *p1++ = 0;
-	for (UINT8 *pE=PackedSNP2+sizeof(PackedSNP2); p2 < pE; ) *p2++ = 0xFF;
+	for (UINT8 *pE=((UINT8*)PackedSNP1)+sizeof(PackedSNP1); p1 < pE; )
+		*p1++ = 0;
+	for (UINT8 *pE=((UINT8*)PackedSNP2)+sizeof(PackedSNP2); p2 < pE; )
+		*p2++ = 0xFF;
 }
 
 
@@ -724,16 +730,16 @@ static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
 static ALWAYS_INLINE int hamm_d(size_t Length, const TGenotype &G,
 	const THaplotype &H1, const THaplotype &H2)
 {
-	const UTYPE *h1 = (const UTYPE*)&H1.PackedHaplo[0];
-	const UTYPE *h2 = (const UTYPE*)&H2.PackedHaplo[0];
-	const UTYPE *s1 = (const UTYPE*)&G.PackedSNP1[0];
-	const UTYPE *s2 = (const UTYPE*)&G.PackedSNP2[0];
+	const UTYPE *h1 = (const UTYPE*)H1.PackedHaplo;
+	const UTYPE *h2 = (const UTYPE*)H2.PackedHaplo;
+	const UTYPE *s1 = (const UTYPE*)G.PackedSNP1;
+	const UTYPE *s2 = (const UTYPE*)G.PackedSNP2;
 #if defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__)
 	// here, UTYPE = int64_t
 	if (Length <= 64)
 	{
-		__m128i H  = { *h1, *h2 };  // two haplotypes
-		__m128i S1 = { *s1, *s2 }, S2 = { *s2, *s1 };  // genotypes
+		__m128i H  = { h1[0], h2[0] };  // two haplotypes
+		__m128i S1 = { s1[0], s2[0] }, S2 = { s2[0], s1[0] };  // genotypes
 		__m128i m1 = H ^ S2, m2 = { m1[1], m1[0] };
 		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
 		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
@@ -850,8 +856,8 @@ void CGenotypeList::SetMissing(int idx)
 	size_t n = List.size();
 	for (TGenotype *p = &List[0]; n > 0; n--, p++)
 	{
-		p->PackedSNP1[i] &= CLEAR;
-		p->PackedSNP2[i] |= SET;
+		((UINT8*)p->PackedSNP1)[i] &= CLEAR;
+		((UINT8*)p->PackedSNP2)[i] |= SET;
 	}
 }
 

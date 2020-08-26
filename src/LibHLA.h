@@ -165,16 +165,17 @@ namespace HLA_LIB
 	/// Kernel Version, Major Number (0x01) / Minor Number (0x05)
 	#define HIBAG_KERNEL_VERSION    0x0105
 
-	/// Define 8-bit unsigned integer
+	/// Define 8-bit and 64-bit integers
 	typedef uint8_t     UINT8;
+	typedef int64_t     INT64;
 
 	/// The max number of SNP markers in an individual classifier.
 	//  Don't modify this value since the code is optimized for this value!!!
 	const size_t HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128;
 
-	/// The max number of UTYPE for packed SNP genotypes.
-	const size_t HIBAG_PACKED_UTYPE_MAXNUM =
-		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(UINT8));
+	/// The max number of INT64 for packed SNP genotypes.
+	const size_t HIBAG_PACKED_INT64_MAXNUM =
+		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(INT64));
 
 
 	// ===================================================================== //
@@ -218,7 +219,7 @@ namespace HLA_LIB
 		friend class CHaplotypeList;
 
 		/// packed SNP alleles
-		UINT8 PackedHaplo[HIBAG_PACKED_UTYPE_MAXNUM];
+		INT64 PackedHaplo[HIBAG_PACKED_INT64_MAXNUM];
 		/// haplotype frequency
 		double Freq;
 		/// auxiliary variables, sizeof(THaplotype)=32
@@ -327,9 +328,9 @@ namespace HLA_LIB
 		friend class CAlg_Prediction;
 
 		/// packed SNP genotypes, allele 1
-		UINT8 PackedSNP1[HIBAG_PACKED_UTYPE_MAXNUM];
+		INT64 PackedSNP1[HIBAG_PACKED_INT64_MAXNUM];
 		/// packed SNP genotypes, allele 2
-		UINT8 PackedSNP2[HIBAG_PACKED_UTYPE_MAXNUM];
+		INT64 PackedSNP2[HIBAG_PACKED_INT64_MAXNUM];
 		/// the count in the bootstrapped data
 		int BootstrapCount;
 
