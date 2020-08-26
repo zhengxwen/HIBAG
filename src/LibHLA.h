@@ -98,6 +98,21 @@
 #   define HIBAG_CPU_ARCH_X86_SSE4_2
 #endif
 
+// AVX
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=4))
+#       define HIBAG_CPU_ARCH_X86_AVX
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=3))
+#       define HIBAG_CPU_ARCH_X86_AVX
+#   endif
+#   ifdef HIBAG_BUILTIN_CPU
+#       define HIBAG_BUILTIN_CPU_AVX
+#   endif
+#endif
+#if defined(__AVX__) && !defined(HIBAG_CPU_ARCH_X86_AVX)
+#   define HIBAG_CPU_ARCH_X86_AVX
+#endif
+
 // AVX2
 #ifdef HIBAG_CPU_ARCH_X86
 #   if defined(__GNUC__) && ((__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=7))

@@ -1223,8 +1223,13 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_avx2 = false;
 #endif
 
-	const bool has_avx  = __builtin_cpu_supports("avx") &&
-		HIBAG_ALGORITHM_AVX;
+#if defined(__AVX__)
+	const bool has_avx = true;
+#elif defined(HIBAG_BUILTIN_CPU_AVX)
+	const bool has_avx  = __builtin_cpu_supports("avx") && HIBAG_ALGORITHM_AVX;
+#else
+	const bool has_avx = false;
+#endif
 
 #if defined(__SSE4_2__)
 	const bool has_sse4 = true;
