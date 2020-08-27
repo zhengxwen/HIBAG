@@ -2079,6 +2079,17 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		VarSampling.Init(nSNP());
 
 		CAttrBag_Classifier *I = NewClassifierBootstrap();
+		if (verbose)
+		{
+			const vector<int> &bc = I->BootstrapCount();
+			int nOOB = 0;
+			for (size_t i=0; i < bc.size(); i++) if (bc[i] == 0) nOOB++;
+			Rprintf(
+				"    building individual classifier %d, out-of-bag (%d/%.1f%%)\n",
+				k+1, nOOB, 100.0*nOOB/bc.size());
+		}
+
+		// initialize bootstrap samples in GPU implementation
 		if (GPUExtProcPtr)
 			(*GPUExtProcPtr->build_set_bootstrap)(&(I->BootstrapCount()[0]));
 
