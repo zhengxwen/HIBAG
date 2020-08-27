@@ -27,6 +27,7 @@ Release Version: 1.24.0
 
 ### Changes in Bioconductor Version (since v1.26.0, Y2020):
 
+* Kernel Version: v1.5
 
 
 ### Changes in Bioconductor Version (since v1.14.0, Y2017):
