@@ -172,7 +172,6 @@ static inline TARGET_AVX512
 	{
 		const __m512i H1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
 		__m512d sum8 = _mm512_setzero_pd();
-		const bool need_sum8 = n >= 8;
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
 			__m512i H2_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_0 + i2));
@@ -199,13 +198,7 @@ static inline TARGET_AVX512
 			// maybe different behavior due to rounding error of addition
 			sum8 += ff * f2 * f;
 		}
-		if (need_sum8)
-		{
-			// not use _mm512_reduce_add_pd since some compilers do not support
-			__m256d a = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
-			__m128d b = _mm256_castpd256_pd128(a) + _mm256_extractf128_pd(a,1);
-			prob += _mm_hadd_pd(b, b)[0];
-		}
+		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
 		{
 			__m256i H1 = _mm512_castsi512_si256(H1_8);
@@ -233,17 +226,16 @@ static inline TARGET_AVX512
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
-			f = ff * f2 * f;
-			// maybe different behavior due to rounding error of addition
-			__m128d b = _mm256_castpd256_pd128(f) + _mm256_extractf128_pd(f,1);
-			prob += _mm_hadd_pd(b, b)[0];
+			sum4 += ff * f2 * f;
 			n -= 4;
 		}
+		// maybe different behavior due to rounding error of addition
+		__m128d a = _mm256_castpd256_pd128(sum4) + _mm256_extractf128_pd(sum4,1);
+		prob += _mm_hadd_pd(a, a)[0];
 	} else {
 		const __m512i H1_0_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
 		const __m512i H1_1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[1]);
 		__m512d sum8 = _mm512_setzero_pd();
-		const bool need_sum8 = n >= 8;
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
 			__m512i H2_0_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_0 + i2));
@@ -288,13 +280,7 @@ static inline TARGET_AVX512
 			// maybe different behavior due to rounding error of addition
 			sum8 += ff * f2 * f;
 		}
-		if (need_sum8)
-		{
-			// not use _mm512_reduce_add_pd since some compilers do not support
-			__m256d a = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
-			__m128d b = _mm256_castpd256_pd128(a) + _mm256_extractf128_pd(a,1);
-			prob += _mm_hadd_pd(b, b)[0];
-		}
+		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
 		{
 			__m256i H1_0 = _mm512_castsi512_si256(H1_0_8);
@@ -341,12 +327,12 @@ static inline TARGET_AVX512
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
-			f = ff * f2 * f;
-			// maybe different behavior due to rounding error of addition
-			__m128d b = _mm256_castpd256_pd128(f) + _mm256_extractf128_pd(f,1);
-			prob += _mm_hadd_pd(b, b)[0];
+			sum4 += ff * f2 * f;
 			n -= 4;
 		}
+		// maybe different behavior due to rounding error of addition
+		__m128d a = _mm256_castpd256_pd128(sum4) + _mm256_extractf128_pd(sum4,1);
+		prob += _mm_hadd_pd(a, a)[0];
 	}
 	return n;
 }
