@@ -45,7 +45,7 @@ using namespace HLA_LIB;
 
 
 #ifdef HIBAG_CPU_ARCH_X86_AVX512BW
-extern const bool HIBAG_ALGORITHM_AVX512BW = true;
+extern const bool HIBAG_ALGORITHM_AVX512BW = false; // true;
 #else
 extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #endif
@@ -196,7 +196,7 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			// maybe different behavior due to rounding error of addition
-			sum8 += ff * f2 * f;
+			sum8 = _mm512_fmadd_pd(f2*ff, f, sum8);
 		}
 		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
@@ -226,12 +226,12 @@ static inline TARGET_AVX512
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
-			sum4 += ff * f2 * f;
+			sum4 += _mm256_set1_pd(ff) * f2 * f;
 			n -= 4;
 		}
 		// maybe different behavior due to rounding error of addition
 		__m128d a = _mm256_castpd256_pd128(sum4) + _mm256_extractf128_pd(sum4,1);
-		prob += _mm_hadd_pd(a, a)[0];
+		prob += a[0] + a[1];
 	} else {
 		const __m512i H1_0_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
 		const __m512i H1_1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[1]);
@@ -276,9 +276,8 @@ static inline TARGET_AVX512
 			// eight frequencies
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
-			f = ff * f2 * f;
 			// maybe different behavior due to rounding error of addition
-			sum8 += ff * f2 * f;
+			sum8 += _mm512_set1_pd(ff) * f2 * f;
 		}
 		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
@@ -327,12 +326,12 @@ static inline TARGET_AVX512
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
-			sum4 += ff * f2 * f;
+			sum4 += _mm256_set1_pd(ff) * f2 * f;
 			n -= 4;
 		}
 		// maybe different behavior due to rounding error of addition
 		__m128d a = _mm256_castpd256_pd128(sum4) + _mm256_extractf128_pd(sum4,1);
-		prob += _mm_hadd_pd(a, a)[0];
+		prob += a[0] + a[1];
 	}
 	return n;
 }
