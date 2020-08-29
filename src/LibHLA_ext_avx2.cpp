@@ -147,18 +147,16 @@ static ALWAYS_INLINE TARGET_AVX2
 }
 
 
-// defined for Wojciech Mula algorithm's popcnt in 64-bit integers
-static const __m256i pcnt_lookup = {
-		0x0302020102010100LL, 0x0403030203020201LL,
-		0x0302020102010100LL, 0x0403030203020201LL };
-static const __m256i pcnt_low_mask = {
-		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
-		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
-
 static inline TARGET_AVX2
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, size_t i2,
 		const TGenoStruct &GS, double &prob)
 {
+	// defined for Wojciech Mula algorithm's popcnt in 64-bit integers
+	static const __m256i pcnt_lookup = {
+		0x0302020102010100LL, 0x0403030203020201LL,
+		0x0302020102010100LL, 0x0403030203020201LL };
+	static const __m256i pcnt_low_mask = _mm256_set1_epi8(0x0F);
+
 	const double ff = 2 * i1->Freq;
 	if (GS.Low64b)
 	{
