@@ -45,7 +45,7 @@ using namespace HLA_LIB;
 
 
 #ifdef HIBAG_CPU_ARCH_X86_AVX512BW
-extern const bool HIBAG_ALGORITHM_AVX512BW = false; // true;
+extern const bool HIBAG_ALGORITHM_AVX512BW = true;
 #else
 extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #endif
@@ -60,12 +60,14 @@ extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX, AVX2, AVX512F, AVX512BW
-#   if !defined(__AVX512F__) & !defined(__AVX512BW__) && !defined(__clang__)
+#   if !defined(__AVX512F__) && !defined(__clang__)
 		#pragma GCC target("avx512f")
+#   endif
+#   if !defined(__AVX512BW__) && !defined(__clang__)
 		#pragma GCC target("avx512bw")
 #   endif
 
-#define TARGET_AVX512    __attribute__((target("avx512bw")))
+#define TARGET_AVX512    __attribute__((target("avx512f,avx512bw")))
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX512 NAME ## _avx512bw
 
@@ -150,23 +152,18 @@ static ALWAYS_INLINE TARGET_AVX512
 }
 
 
-// defined for Wojciech Mula algorithm's popcnt in 64-bit integers
-static const __m512i pcnt_lookup = {
-		0x0302020102010100LL, 0x0403030203020201LL,
-		0x0302020102010100LL, 0x0403030203020201LL,
-		0x0302020102010100LL, 0x0403030203020201LL,
-		0x0302020102010100LL, 0x0403030203020201LL };
-static const __m512i pcnt_low_mask = {
-		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
-		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
-		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL,
-		0x0F0F0F0F0F0F0F0FLL, 0x0F0F0F0F0F0F0F0FLL };
-
-
 static inline TARGET_AVX512
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, size_t i2,
 		const TGenoStruct &GS, double &prob)
 {
+	// defined for Wojciech Mula algorithm's popcnt in 64-bit integers
+	const __m512i pcnt_lookup = {
+		0x0302020102010100LL, 0x0403030203020201LL,
+		0x0302020102010100LL, 0x0403030203020201LL,
+		0x0302020102010100LL, 0x0403030203020201LL,
+		0x0302020102010100LL, 0x0403030203020201LL };
+	const __m512i pcnt_low_mask = _mm512_set1_epi8(0x0F);
+
 	const double ff = 2 * i1->Freq;
 	if (GS.Low64b)
 	{
@@ -174,7 +171,7 @@ static inline TARGET_AVX512
 		__m512d sum8 = _mm512_setzero_pd();
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
-			__m512i H2_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_0 + i2));
+			__m512i H2_8 = _mm512_loadu_si512(GS.p_H_0 + i2);
 			__m512i S1 = GS.S1_0, S2 = GS.S2_0;
 			__m512i M = SIMD_ANDNOT_I512(S1, S2);  // missing value, 1 is missing
 			__m512i MASK = SIMD_ANDNOT_I512(M, (H1_8 ^ S2) | (H2_8 ^ S1));
@@ -196,7 +193,7 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			// maybe different behavior due to rounding error of addition
-			sum8 = _mm512_fmadd_pd(f2*ff, f, sum8);
+			sum8 = _mm512_fmadd_pd(ff*f2, f, sum8);
 		}
 		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
@@ -277,7 +274,7 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			// maybe different behavior due to rounding error of addition
-			sum8 += _mm512_set1_pd(ff) * f2 * f;
+			sum8 = _mm512_fmadd_pd(ff*f2, f, sum8);
 		}
 		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)

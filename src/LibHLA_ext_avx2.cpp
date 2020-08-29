@@ -152,10 +152,10 @@ static inline TARGET_AVX2
 		const TGenoStruct &GS, double &prob)
 {
 	// defined for Wojciech Mula algorithm's popcnt in 64-bit integers
-	static const __m256i pcnt_lookup = {
+	const __m256i pcnt_lookup = {
 		0x0302020102010100LL, 0x0403030203020201LL,
 		0x0302020102010100LL, 0x0403030203020201LL };
-	static const __m256i pcnt_low_mask = _mm256_set1_epi8(0x0F);
+	const __m256i pcnt_low_mask = _mm256_set1_epi8(0x0F);
 
 	const double ff = 2 * i1->Freq;
 	if (GS.Low64b)
