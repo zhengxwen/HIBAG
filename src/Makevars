@@ -4,6 +4,7 @@
 
 # use C++11
 CXX_STD = CXX11
+NOTWOKE
 
 # to set flags for the linker
 PKG_LIBS = \
