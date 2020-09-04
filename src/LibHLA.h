@@ -369,7 +369,7 @@ namespace HLA_LIB
 		/// constructor
 		CSNPGenoMatrix();
 		/// get SNP genotype of 'IdxSamp' individual and 'IdxSNP' SNP
-		const int Get(const int IdxSamp, const int IdxSNP) const;
+		int Get(const int IdxSamp, const int IdxSNP) const;
 		/// get the pointer to SNP genotypes of 'IdxSamp' individual
 		int *Get(const int IdxSamp);
 
@@ -595,14 +595,11 @@ namespace HLA_LIB
 		THLAType BestGuessEnsemble();
 
 		/// get the number of unique HLA alleles
-		inline const int nHLA() const
-			{ return _nHLA; }
+		inline int nHLA() const { return _nHLA; }
 		/// the posterior probabilities for the current classifier
-		inline const vector<double> &PostProb() const
-			{ return _PostProb; }
+		inline const vector<double> &PostProb() const { return _PostProb; }
 		/// the average posterior probabilities for all classifiers
-		inline const vector<double> &SumPostProb() const
-			{ return _SumPostProb; }
+		inline const vector<double> &SumPostProb() const { return _SumPostProb; }
 
 	protected:
 		/// the number of different HLA alleles
@@ -748,11 +745,11 @@ namespace HLA_LIB
 		/// the owner
 		inline CAttrBag_Model &Owner() { return *_Owner; }
 		/// the number of SNPs
-		inline const int nSNP() const { return _SNPIndex.size(); }
+		inline int nSNP() const { return _SNPIndex.size(); }
 		/// the number of haplotyeps
-		inline const int nHaplo() const { return _Haplo.Num_Haplo; }
+		inline int nHaplo() const { return _Haplo.Num_Haplo; }
 		/// the out-of-bag accuracy
-		inline const double OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
+		inline double OutOfBag_Accuracy() const { return _OutOfBag_Accuracy; }
 		/// the SNP selection
 		inline const vector<int> &SNPIndex() const { return _SNPIndex; }
 		/// the bootstrapped individuals

@@ -797,7 +797,7 @@ CSNPGenoMatrix::CSNPGenoMatrix()
 	pGeno = NULL;
 }
 
-const int CSNPGenoMatrix::Get(const int IdxSamp, const int IdxSNP) const
+int CSNPGenoMatrix::Get(const int IdxSamp, const int IdxSNP) const
 {
 	return pGeno[IdxSamp*Num_Total_SNP + IdxSNP];
 }

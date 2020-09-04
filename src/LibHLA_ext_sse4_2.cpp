@@ -59,10 +59,10 @@ extern const bool HIBAG_ALGORITHM_SSE4_2 = false;
 
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
-#   if !defined(__POPCNT__) && !defined(__clang__)
+#   if !defined(__POPCNT__) && !defined(__clang__) && !defined(__ICC)
 	#pragma GCC target("popcnt")
 #   endif
-#   if !defined(__SSE4_2__) && !defined(__clang__)
+#   if !defined(__SSE4_2__) && !defined(__clang__) && !defined(__ICC)
 	#pragma GCC target("sse4.2")
 #   endif
 

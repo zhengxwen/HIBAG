@@ -60,18 +60,24 @@ extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX, AVX2, AVX512F, AVX512BW
+
+#ifdef __ICC
+    #pragma intel optimization_parameter target_arch=CORE-AVX512
+#   define TARGET_AVX512    __attribute__((target("avx512f")))
+#else
 #   if !defined(__AVX512F__) && !defined(__clang__)
 		#pragma GCC target("avx512f")
 #   endif
 #   if !defined(__AVX512BW__) && !defined(__clang__)
 		#pragma GCC target("avx512bw")
 #   endif
+#   define TARGET_AVX512    __attribute__((target("avx512f,avx512bw")))
+#endif
 
-#define TARGET_AVX512    __attribute__((target("avx512f,avx512bw")))
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX512 NAME ## _avx512bw
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__ICC)
 #   define SIMD_ANDNOT_I256(x1, x2)    _mm256_andnot_si256(x1, x2)
 #   define SIMD_ANDNOT_I512(x1, x2)    _mm512_andnot_si512(x1, x2)
 #else
@@ -193,7 +199,7 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			// maybe different behavior due to rounding error of addition
-			sum8 = _mm512_fmadd_pd(ff*f2, f, sum8);
+			sum8 = _mm512_fmadd_pd(_mm512_set1_pd(ff)*f2, f, sum8);
 		}
 		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
@@ -274,7 +280,7 @@ static inline TARGET_AVX512
 			__m512d f = _mm512_i64gather_pd(ii4, EXP_LOG_MIN_RARE_FREQ, 8);
 			__m512d f2 = _mm512_loadu_pd(GS.p_Freq + i2);
 			// maybe different behavior due to rounding error of addition
-			sum8 = _mm512_fmadd_pd(ff*f2, f, sum8);
+			sum8 = _mm512_fmadd_pd(_mm512_set1_pd(ff)*f2, f, sum8);
 		}
 		__m256d sum4 = _mm512_castpd512_pd256(sum8) + _mm512_extractf64x4_pd(sum8,1);
 		if (n >= 4)
@@ -289,8 +295,8 @@ static inline TARGET_AVX512
 			__m256i S2_1 = _mm512_castsi512_si256(GS.S2_1);
 			__m256i M_0 = SIMD_ANDNOT_I256(S1_0, S2_0);  // missing value, 1 is missing
 			__m256i M_1 = SIMD_ANDNOT_I256(S1_1, S2_1);  // missing value, 1 is missing
-			__m256i MASK_0 = SIMD_ANDNOT_I512(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
-			__m256i MASK_1 = SIMD_ANDNOT_I512(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
+			__m256i MASK_0 = SIMD_ANDNOT_I256(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
+			__m256i MASK_1 = SIMD_ANDNOT_I256(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
 			__m256i va_0 = (H1_0 ^ S1_0) & MASK_0, vb_0 = (H2_0 ^ S2_0) & MASK_0;
 			__m256i va_1 = (H1_1 ^ S1_1) & MASK_1, vb_1 = (H2_1 ^ S2_1) & MASK_1;
 			// popcount for 64b integers

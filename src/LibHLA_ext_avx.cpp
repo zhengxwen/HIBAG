@@ -60,14 +60,20 @@ extern const bool HIBAG_ALGORITHM_AVX = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX
-#   if !defined(__AVX__) && !defined(__clang__)
+#   if !defined(__AVX__) && !defined(__clang__) && !defined(__ICC)
 		#pragma GCC target("avx")
 #   endif
 
 #define TARGET_AVX    __attribute__((target("avx")))
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX NAME ## _avx
-#define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
+
+#if defined(__ICC)
+#   define SIMD_ANDNOT_I256(x1, x2)    \
+		(__m256i)_mm256_andnot_pd((__m256d)(x1), (__m256d)(x2))
+#else
+#   define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
+#endif
 
 
 #define U_POPCOUNT    __builtin_popcountll
@@ -158,7 +164,7 @@ static inline TARGET_AVX
 			__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
 			__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
 			// popcount for 64b integers
-			__m256d f2 = ff * _mm256_loadu_pd(GS.p_Freq + i2);
+			__m256d f2 = _mm256_set1_pd(ff) * _mm256_loadu_pd(GS.p_Freq + i2);
 			prob += f2[0] *
 				EXP_LOG_MIN_RARE_FREQ[U_POPCOUNT(va[0]) + U_POPCOUNT(vb[0])];
 			prob += f2[1] *
@@ -184,7 +190,7 @@ static inline TARGET_AVX
 			__m256i va_0 = (H1_0 ^ S1_0) & MASK_0, vb_0 = (H2_0 ^ S2_0) & MASK_0;
 			__m256i va_1 = (H1_1 ^ S1_1) & MASK_1, vb_1 = (H2_1 ^ S2_1) & MASK_1;
 			// popcount for 64b integers
-			__m256d f2 = ff * _mm256_loadu_pd(GS.p_Freq + i2);
+			__m256d f2 = _mm256_set1_pd(ff) * _mm256_loadu_pd(GS.p_Freq + i2);
 			prob += f2[0] * EXP_LOG_MIN_RARE_FREQ[ U_POPCOUNT(va_0[0]) +
 				U_POPCOUNT(vb_0[0]) + U_POPCOUNT(va_1[0]) + U_POPCOUNT(vb_1[0]) ];
 			prob += f2[1] * EXP_LOG_MIN_RARE_FREQ[ U_POPCOUNT(va_0[1]) +

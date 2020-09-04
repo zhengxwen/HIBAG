@@ -58,7 +58,7 @@ extern const bool HIBAG_ALGORITHM_SSE2 = false;
 #ifdef HIBAG_CPU_ARCH_X86_SSE2
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
-#   ifndef __SSE2__
+#   if !defined(__SSE2__) && !defined(__clang__) && !defined(__ICC)
 		#pragma GCC target("sse2")
 #   endif
 

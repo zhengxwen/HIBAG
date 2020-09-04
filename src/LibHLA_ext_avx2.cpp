@@ -60,15 +60,18 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX, AVX2
-#   if !defined(__AVX2__) && !defined(__clang__)
-		#pragma GCC target("avx2")
-#   endif
+
+#ifdef __ICC
+    #pragma intel optimization_parameter target_arch=CORE-AVX2
+#elif !defined(__AVX2__) && !defined(__clang__)
+	#pragma GCC target("avx2")
+#endif
 
 #define TARGET_AVX2    __attribute__((target("avx2")))
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX2 NAME ## _avx2
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__ICC)
 #   define SIMD_ANDNOT_I256(x1, x2)    _mm256_andnot_si256(x1, x2)
 #else
 #   define SIMD_ANDNOT_I256(x1, x2)    (x2) & ~(x1)
@@ -184,7 +187,7 @@ static inline TARGET_AVX2
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
-			f = ff * f2 * f;
+			f = _mm256_set1_pd(ff) * f2 * f;
 			// avoid different behavior due to rounding error of addition
 			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
 		}
@@ -231,7 +234,7 @@ static inline TARGET_AVX2
 			// four frequencies
 			__m256d f = _mm256_i64gather_pd(EXP_LOG_MIN_RARE_FREQ, ii4, 8);
 			__m256d f2 = _mm256_loadu_pd(GS.p_Freq + i2);
-			f = ff * f2 * f;
+			f = _mm256_set1_pd(ff) * f2 * f;
 			// avoid different behavior due to rounding error of addition
 			prob += f[0]; prob += f[1]; prob += f[2]; prob += f[3];
 		}
