@@ -62,7 +62,7 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 #   include <immintrin.h>  // AVX, AVX2
 
 #ifdef __ICC
-    #pragma intel optimization_parameter target_arch=CORE-AVX2
+	#pragma intel optimization_parameter target_arch=CORE-AVX2
 #elif !defined(__AVX2__) && !defined(__clang__)
 	#pragma GCC target("avx2")
 #endif

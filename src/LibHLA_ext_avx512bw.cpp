@@ -62,7 +62,7 @@ extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 #   include <immintrin.h>  // AVX, AVX2, AVX512F, AVX512BW
 
 #ifdef __ICC
-    #pragma intel optimization_parameter target_arch=CORE-AVX512
+	#pragma intel optimization_parameter target_arch=CORE-AVX512
 #   define TARGET_AVX512    __attribute__((target("avx512f")))
 #else
 #   if !defined(__AVX512F__) && !defined(__clang__)
