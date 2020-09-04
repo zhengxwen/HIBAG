@@ -4,13 +4,17 @@
 
 # use C++11
 CXX_STD = CXX11
-NOTWOKE
+
+# check GNU GCC
+GCC_FLAG=$(shell $(CC) -dM -E - < /dev/null |grep -Eo '__GNUC__|__clang__|ICC' \
+	|tr '\n' ' ' |grep GNUC |grep -v -e clang -e ICC)
+LIB_GCC=$(if ${GCC_FLAG},-lgcc)
+
 
 # to set flags for the linker
 PKG_LIBS = \
 	$(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") \
-	$(shell ${R_HOME}/bin/Rscript -e \
-	"if (grepl(intToUtf8(c(94,103,92,43,92,43)), basename('$(CXX)'))) cat('-lgcc')")
+	${LIB_GCC}
 
 all: $(SHLIB)
 
