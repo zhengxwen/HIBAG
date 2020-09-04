@@ -90,7 +90,7 @@ extern const bool HIBAG_ALGORITHM_AVX512BW = false;
 
 
 /// Prepare the internal genotype structure
-struct TGenoStruct
+struct TGenoStruct_512bw
 {
 public:
 	__m128i S1, S2;  ///< packed genotypes
@@ -99,7 +99,10 @@ public:
 	int64_t *p_H_0, *p_H_1;
 	double *p_Freq;
 	/// constructor
-	TARGET_AVX512 TGenoStruct(const CHaplotypeList &Haplo, const TGenotype &G)
+#ifndef __ICC
+	TARGET_AVX512
+#endif
+	inline TGenoStruct_512bw(const CHaplotypeList &Haplo, const TGenotype &G)
 	{
 		const INT64 *s1 = G.PackedSNP1, *s2 = G.PackedSNP2;
 		Low64b = (Haplo.Num_SNP <= 64);
@@ -125,7 +128,7 @@ public:
 
 
 static ALWAYS_INLINE TARGET_AVX512
-	int hamm_d(const TGenoStruct &G, const THaplotype &H1, const THaplotype &H2)
+	int hamm_d(const TGenoStruct_512bw &G, const THaplotype &H1, const THaplotype &H2)
 {
 	const INT64 *h1 = H1.PackedHaplo, *h2 = H2.PackedHaplo;
 	// here, UTYPE = int64_t
@@ -160,7 +163,7 @@ static ALWAYS_INLINE TARGET_AVX512
 
 static inline TARGET_AVX512
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, size_t i2,
-		const TGenoStruct &GS, double &prob)
+		const TGenoStruct_512bw &GS, double &prob)
 {
 	// defined for Wojciech Mula algorithm's popcnt in 64-bit integers
 	const __m512i pcnt_lookup = {
@@ -343,7 +346,7 @@ static inline TARGET_AVX512
 THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno)
 {
-	const TGenoStruct GS(Haplo, Geno);
+	const TGenoStruct_512bw GS(Haplo, Geno);
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double max=0, prob;
@@ -416,7 +419,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
 {
-	const TGenoStruct GS(Haplo, Geno);
+	const TGenoStruct_512bw GS(Haplo, Geno);
 	int H1=HLA.Allele1, H2=HLA.Allele2;
 	if (H1 > H2) std::swap(H1, H2);
 	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
@@ -485,7 +488,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
 {
-	const TGenoStruct GS(Haplo, Geno);
+	const TGenoStruct_512bw GS(Haplo, Geno);
 	double *pProb = &_PostProb[0], sum;
 	THaplotype *base=Haplo.List, *I1=base, *I2;
 

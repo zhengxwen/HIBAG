@@ -60,9 +60,12 @@ extern const bool HIBAG_ALGORITHM_AVX = false;
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #   include <immintrin.h>  // AVX
-#   if !defined(__AVX__) && !defined(__clang__) && !defined(__ICC)
-		#pragma GCC target("avx")
-#   endif
+
+#ifdef __ICC
+    #pragma intel optimization_parameter target_arch=AVX
+#elif !defined(__AVX__) && !defined(__clang__)
+	#pragma GCC target("avx")
+#endif
 
 #define TARGET_AVX    __attribute__((target("avx")))
 #undef SIMD_NAME
@@ -80,7 +83,7 @@ extern const bool HIBAG_ALGORITHM_AVX = false;
 
 
 /// Prepare the internal genotype structure
-struct TGenoStruct
+struct TGenoStruct_avx
 {
 public:
 	__m128i S1, S2;  ///< packed genotypes
@@ -89,7 +92,10 @@ public:
 	int64_t *p_H_0, *p_H_1;
 	double *p_Freq;
 	/// constructor
-	TARGET_AVX TGenoStruct(const CHaplotypeList &Haplo, const TGenotype &G)
+#ifndef __ICC
+	TARGET_AVX
+#endif
+	inline TGenoStruct_avx(const CHaplotypeList &Haplo, const TGenotype &G)
 	{
 		const INT64 *s1 = G.PackedSNP1, *s2 = G.PackedSNP2;
 		Low64b = (Haplo.Num_SNP <= 64);
@@ -115,7 +121,7 @@ public:
 
 
 static ALWAYS_INLINE TARGET_AVX
-	int hamm_d(const TGenoStruct &G, const THaplotype &H1, const THaplotype &H2)
+	int hamm_d(const TGenoStruct_avx &G, const THaplotype &H1, const THaplotype &H2)
 {
 	const INT64 *h1 = H1.PackedHaplo, *h2 = H2.PackedHaplo;
 	// here, UTYPE = int64_t
@@ -150,7 +156,7 @@ static ALWAYS_INLINE TARGET_AVX
 
 static inline TARGET_AVX
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, size_t i2,
-		const TGenoStruct &GS, double &prob)
+		const TGenoStruct_avx &GS, double &prob)
 {
 	const double ff = 2 * i1->Freq;
 	if (GS.Low64b)
@@ -208,7 +214,7 @@ static inline TARGET_AVX
 THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno)
 {
-	const TGenoStruct GS(Haplo, Geno);
+	const TGenoStruct_avx GS(Haplo, Geno);
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double max=0, prob;
@@ -281,7 +287,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
 {
-	const TGenoStruct GS(Haplo, Geno);
+	const TGenoStruct_avx GS(Haplo, Geno);
 	int H1=HLA.Allele1, H2=HLA.Allele2;
 	if (H1 > H2) std::swap(H1, H2);
 	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
@@ -350,7 +356,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
 {
-	const TGenoStruct GS(Haplo, Geno);
+	const TGenoStruct_avx GS(Haplo, Geno);
 	double *pProb = &_PostProb[0], sum;
 	THaplotype *base=Haplo.List, *I1=base, *I2;
 

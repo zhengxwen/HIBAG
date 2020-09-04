@@ -76,13 +76,13 @@ extern const bool HIBAG_ALGORITHM_SSE4_2 = false;
 
 
 /// Prepare the internal genotype structure
-struct TGenoStruct
+struct TGenoStruct_sse4
 {
 public:
 	__m128i S1, S2;  ///< packed genotypes
 	bool Low64b;     ///< whether length <= 64 or not
 	/// constructor
-	TGenoStruct(size_t Length, const TGenotype &G)
+	inline TGenoStruct_sse4(size_t Length, const TGenotype &G)
 	{
 		const INT64 *s1 = G.PackedSNP1, *s2 = G.PackedSNP2;
 		Low64b = (Length <= 64);
@@ -98,7 +98,7 @@ public:
 };
 
 
-static ALWAYS_INLINE int hamm_d(const TGenoStruct &G, const THaplotype &H1,
+static ALWAYS_INLINE int hamm_d(const TGenoStruct_sse4 &G, const THaplotype &H1,
 	const THaplotype &H2)
 {
 	const INT64 *h1 = H1.PackedHaplo, *h2 = H2.PackedHaplo;
@@ -134,7 +134,7 @@ static ALWAYS_INLINE int hamm_d(const TGenoStruct &G, const THaplotype &H1,
 THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno)
 {
-	const TGenoStruct GS(Haplo.Num_SNP, Geno);
+	const TGenoStruct_sse4 GS(Haplo.Num_SNP, Geno);
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double max=0, prob;
@@ -195,7 +195,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, const THLAType &HLA)
 {
-	const TGenoStruct GS(Haplo.Num_SNP, Geno);
+	const TGenoStruct_sse4 GS(Haplo.Num_SNP, Geno);
 	int H1=HLA.Allele1, H2=HLA.Allele2;
 	if (H1 > H2) std::swap(H1, H2);
 	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
@@ -252,7 +252,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
 {
-	const TGenoStruct GS(Haplo.Num_SNP, Geno);
+	const TGenoStruct_sse4 GS(Haplo.Num_SNP, Geno);
 	double *pProb = &_PostProb[0], sum;
 	THaplotype *I1=Haplo.List, *I2;
 
