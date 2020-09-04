@@ -139,6 +139,8 @@
 #       define HIBAG_BUILTIN_CPU_AVX512BW
 #   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
 #       define HIBAG_BUILTIN_CPU_AVX512BW
+#   elif defined(__ICC)
+#       define HIBAG_BUILTIN_CPU_AVX512BW
 #   endif
 #endif
 #if defined(__AVX512BW__) && !defined(HIBAG_CPU_ARCH_X86_AVX512BW)

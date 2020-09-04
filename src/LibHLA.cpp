@@ -1215,8 +1215,14 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 	const bool has_avx512bw = true;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512BW)
+#if defined(__ICC) && defined(_FEATURE_AVX512F) && defined(_FEATURE_AVX512BW)
+	// since __builtin_cpu_supports("avx512bw") not work
+	const bool has_avx512bw = _may_i_use_cpu_feature(
+		_FEATURE_AVX512F | _FEATURE_AVX512BW) && HIBAG_ALGORITHM_AVX512BW;
+#else
 	const bool has_avx512bw = __builtin_cpu_supports("avx512f") &&
 		__builtin_cpu_supports("avx512bw") && HIBAG_ALGORITHM_AVX512BW;
+#endif
 #else
 	const bool has_avx512bw = false;
 #endif
