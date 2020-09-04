@@ -21,12 +21,12 @@ of AVX512 within bounds.
     The HIBAG algorithm is optimized using SIMD intrinsics on different CPU
 platforms to leverage the efficiency of the target Intel/AMD platform. The
 higher version of the C++ compiler is needed to enable the compilation of
-AVX2 and AVX512F intrinsics, e.g., GCC >= v5.0.
+AVX2 and AVX512F intrinsics, e.g., GCC >= v6.0.
 If the compiler does not support the CPU target, the implementation on that
 target will be disabled.
 }
 \value{
-    Return a string of CPU capabilities.
+    Return a string describing the CPU capabilities.
 }
 \author{Xiuwen Zheng}
 
