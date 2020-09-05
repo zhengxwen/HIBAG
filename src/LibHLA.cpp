@@ -1431,6 +1431,12 @@ THLAType CAlg_Prediction::BestGuessEnsemble()
 	return rv;
 }
 
+void CAlg_Prediction::aux_var_resize(size_t n)
+{
+	aux_haplo.resize(2*n);
+	aux_freq.resize(n);
+}
+
 THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 	const TGenotype &Geno)
 {
@@ -2121,9 +2127,11 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
 
-	_Predict.InitPrediction(nHLA());
 	Progress.Info = "Predicting";
 	Progress.Init(n_samp, ShowInfo);
+
+	CAlg_Prediction pred;
+	pred.InitPrediction(nHLA());
 
 	vector<int> snp_weight(nSNP());
 	_GetSNPWeights(&snp_weight[0]);
@@ -2133,19 +2141,19 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	for (int i=0; i < n_samp; i++, genomat+=nSNP())
 	{
 		double pb;
-		_PredictHLA(genomat, &snp_weight[0], vote_method, pb);
+		_PredictHLA(pred, genomat, &snp_weight[0], vote_method, pb);
 
-		THLAType HLA = _Predict.BestGuessEnsemble();
+		THLAType HLA = pred.BestGuessEnsemble();
 		OutH1[i] = HLA.Allele1; OutH2[i] = HLA.Allele2;
 
 		if ((HLA.Allele1 != NA_INTEGER) && (HLA.Allele2 != NA_INTEGER))
-			OutMaxProb[i] = _Predict.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
+			OutMaxProb[i] = pred.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
 		else
 			OutMaxProb[i] = 0;
 
 		if (OutProbArray)
 		{
-			memcpy(OutProbArray, &_Predict.SumPostProb()[0], sizeof(double)*nn);
+			memcpy(OutProbArray, &pred.SumPostProb()[0], sizeof(double)*nn);
 			OutProbArray += nn;
 		}
 		if (OutMatching) OutMatching[i] = pb;
@@ -2155,8 +2163,8 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	_Done_PredictHLA();
 }
 
-void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
-	int vote_method, double &OutMatching)
+void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
+	const int snp_weight[], int vote_method, double &OutMatching)
 {
 	// weight for each classifier, based on missing proportion
 	double weight[_ClassifierList.size()];
@@ -2187,7 +2195,7 @@ void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 
 	} else {
 		// initialize probability
-		_Predict.InitSumPostProbBuffer();
+		pred.InitSumPostProbBuffer();
 		TGenotype Geno;
 		double sum_pb=0, pb;
 
@@ -2199,32 +2207,31 @@ void CAttrBag_Model::_PredictHLA(const int geno[], const int snp_weight[],
 
 			if (need_auxiliary_haplo)
 			{
-				aux_haplo.resize(p->_Haplo.Num_Haplo*2);
-				aux_freq.resize(p->_Haplo.Num_Haplo);
-				p->_Haplo.SetHaploAux(&aux_haplo[0], &aux_freq[0]);
+				pred.aux_var_resize(p->_Haplo.Num_Haplo);
+				p->_Haplo.SetHaploAux(&pred.aux_haplo[0], &pred.aux_freq[0]);
 			}
-			_Predict.PredictPostProb(p->_Haplo, Geno, pb);
+			pred.PredictPostProb(p->_Haplo, Geno, pb);
 			sum_pb += pb;
 
 			if (vote_method == 1)
 			{
 				// predicting based on the averaged posterior probabilities
-				_Predict.AddProbToSum(weight[w_i]);
+				pred.AddProbToSum(weight[w_i]);
 			} else if (vote_method == 2)
 			{
 				// predicting by class majority voting
-				THLAType pd = _Predict.BestGuess();
+				THLAType pd = pred.BestGuess();
 				if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
 				{
-					_Predict.InitPostProbBuffer();  // fill by ZERO
-					_Predict.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
-					_Predict.AddProbToSum(1.0);
+					pred.InitPostProbBuffer();  // fill by ZERO
+					pred.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
+					pred.AddProbToSum(1.0);
 				}
 			}
 		}
 
 		// normalize the sum of posterior prob
-		_Predict.NormalizeSumPostProb();
+		pred.NormalizeSumPostProb();
 		OutMatching = sum_pb / _ClassifierList.size();
 	}
 }

@@ -563,27 +563,28 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 {
 	int midx = Rf_asInteger(model);
 	int NumSamp = Rf_asInteger(nSamp);
+	bool verbose = Rf_asLogical(ShowInfo)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
 		rv_ans = PROTECT(NEW_LIST(4));
-		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
+		SEXP out_H1 = NEW_INTEGER(NumSamp);
 		SET_ELEMENT(rv_ans, 0, out_H1);
-		SEXP out_H2 = PROTECT(NEW_INTEGER(NumSamp));
+		SEXP out_H2 = NEW_INTEGER(NumSamp);
 		SET_ELEMENT(rv_ans, 1, out_H2);
-		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
+		SEXP out_Prob = NEW_NUMERIC(NumSamp);
 		SET_ELEMENT(rv_ans, 2, out_Prob);
-		SEXP out_PriorProb = PROTECT(NEW_NUMERIC(NumSamp));
-		SET_ELEMENT(rv_ans, 3, out_PriorProb);
+		SEXP out_Matching = NEW_NUMERIC(NumSamp);
+		SET_ELEMENT(rv_ans, 3, out_Matching);
 
 		if (!Rf_isNull(proc_ptr))
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
 			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-				REAL(out_PriorProb), NULL, Rf_asLogical(ShowInfo)==TRUE);
+				REAL(out_Matching), NULL, verbose);
 			GPUExtProcPtr = NULL;
 		}
 		catch(...) {
@@ -591,7 +592,7 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 			throw;
 		}
 
-		UNPROTECT(5);
+		UNPROTECT(1);
 	CORE_CATCH
 }
 
@@ -613,23 +614,22 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 {
 	int midx = Rf_asInteger(model);
 	int NumSamp = Rf_asInteger(nSamp);
+	bool verbose = Rf_asLogical(ShowInfo)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
 		rv_ans = PROTECT(NEW_LIST(5));
-
-		SEXP out_H1 = PROTECT(NEW_INTEGER(NumSamp));
+		SEXP out_H1 = NEW_INTEGER(NumSamp);
 		SET_ELEMENT(rv_ans, 0, out_H1);
-		SEXP out_H2 = PROTECT(NEW_INTEGER(NumSamp));
+		SEXP out_H2 = NEW_INTEGER(NumSamp);
 		SET_ELEMENT(rv_ans, 1, out_H2);
-		SEXP out_Prob = PROTECT(NEW_NUMERIC(NumSamp));
+		SEXP out_Prob = NEW_NUMERIC(NumSamp);
 		SET_ELEMENT(rv_ans, 2, out_Prob);
-		SEXP out_PriorProb = PROTECT(NEW_NUMERIC(NumSamp));
-		SET_ELEMENT(rv_ans, 3, out_PriorProb);
-		SEXP out_MatProb = PROTECT(
-			allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp));
+		SEXP out_Matching = NEW_NUMERIC(NumSamp);
+		SET_ELEMENT(rv_ans, 3, out_Matching);
+		SEXP out_MatProb = allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
 		if (!Rf_isNull(proc_ptr))
@@ -637,8 +637,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 		try {
 			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-				REAL(out_PriorProb), REAL(out_MatProb),
-				Rf_asLogical(ShowInfo)==TRUE);
+				REAL(out_Matching), REAL(out_MatProb), verbose);
 			GPUExtProcPtr = NULL;
 		}
 		catch(...) {
@@ -646,7 +645,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 			throw;
 		}
 
-		UNPROTECT(6);
+		UNPROTECT(1);
 	CORE_CATCH
 }
 

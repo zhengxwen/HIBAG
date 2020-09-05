@@ -193,8 +193,9 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     }
 
     # set the number of threads (initialized in HIBAG_NewClassifiers)
-    if (isTRUE(nthread)) nthread <- defaultNumThreads()
-    if (nthread < 1L) nthread <- 1L
+    if (isTRUE(nthread))
+        nthread <- as.integer(defaultNumThreads())
+    if (is.na(nthread) || (nthread<1L)) nthread <- 1L
 
 
     ###################################################################
@@ -224,7 +225,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     {
         if (verbose)
             cat("Calculating matching proportion:\n")
-        pd <- hlaPredict(mod, snp, verbose=FALSE)
+        pd <- hlaPredict(mod, snp, cl=nthread, verbose=FALSE)
         mod$matching <- pd$value$matching
         if (verbose)
         {

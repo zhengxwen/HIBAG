@@ -610,6 +610,13 @@ namespace HLA_LIB
 		vector<double> _PostProb;
 		/// a vector of posterior probabilities for summing up
 		vector<double> _SumPostProb;
+		/// auxiliary variable for haplotypes if need_auxiliary_haplo=true
+		vector<int64_t> aux_haplo;
+		/// auxiliary variable for frequencies if need_auxiliary_haplo=true
+		vector<double> aux_freq;
+
+		/// resize the auxiliary variables 'aux_haplo' and 'aux_freq'
+		void aux_var_resize(size_t n);
 
 	private:
 		/// the best-guess HLA type based on SNP profiles and haplotype list
@@ -819,8 +826,8 @@ namespace HLA_LIB
 		CAlg_Prediction _Predict;
 
 		/// prediction HLA types internally
-		void _PredictHLA(const int geno[], const int snp_weight[],
-			int vote_method, double &OutMatching);
+		void _PredictHLA(CAlg_Prediction &pred, const int geno[],
+			const int snp_weight[], int vote_method, double &OutMatching);
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
 		void _GetSNPWeights(int OutSNPWeight[]);
 
@@ -828,8 +835,6 @@ namespace HLA_LIB
 		void _Done_PredictHLA();
 
 	private:
-		vector<int64_t> aux_haplo;
-		vector<double> aux_freq;
 		vector<TGenotype> gpu_geno_buf;
 		vector<int> gpu_num_haplo;
 	};
