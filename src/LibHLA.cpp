@@ -1339,12 +1339,12 @@ void CAlg_Prediction::InitPrediction(int n_hla)
 	_SumPostProb.resize(size);
 }
 
-void CAlg_Prediction::InitPostProbBuffer()
+void CAlg_Prediction::InitPostProb()
 {
 	memset(&_PostProb[0], 0, _PostProb.size()*sizeof(double));
 }
 
-void CAlg_Prediction::InitSumPostProbBuffer()
+void CAlg_Prediction::InitSumPostProb()
 {
 	memset(&_SumPostProb[0], 0, _SumPostProb.size()*sizeof(double));
 	_Sum_Weight = 0;
@@ -1354,10 +1354,10 @@ void CAlg_Prediction::AddProbToSum(double weight)
 {
 	if (weight > 0)
 	{
-		double *p = &_PostProb[0];
-		double *s = &_SumPostProb[0];
-		for (size_t n = _SumPostProb.size(); n > 0; n--)
-			(*s++) += (*p++) * weight;
+		const size_t n = _SumPostProb.size();
+		double *p = &_PostProb[0], *s = &_SumPostProb[0];
+		for (size_t i=0; i < n; i++)
+			s[i] += p[i] * weight;
 		_Sum_Weight += weight;
 	}
 }
@@ -1366,10 +1366,10 @@ void CAlg_Prediction::NormalizeSumPostProb()
 {
 	if (_Sum_Weight > 0)
 	{
-		const double scale = 1.0 / _Sum_Weight;
+		const double ff = 1.0 / _Sum_Weight;
+		const size_t n = _SumPostProb.size();
 		double *s = &_SumPostProb[0];
-		for (size_t n = _SumPostProb.size(); n > 0; n--)
-			*s++ *= scale;
+		for (size_t i=0; i < n; i++) s[i] *= ff;
 	}
 }
 
@@ -1393,30 +1393,20 @@ void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 
 THLAType CAlg_Prediction::BestGuess()
 {
-	THLAType rv;
-	rv.Allele1 = rv.Allele2 = NA_INTEGER;
-	double *p = &_PostProb[0];
-	double max = 0;
-	for (int h1=0; h1 < _nHLA; h1++)
-	{
-		for (int h2=h1; h2 < _nHLA; h2++, p++)
-		{
-			if (max < *p)
-			{
-				max = *p;
-				rv.Allele1 = h1; rv.Allele2 = h2;
-			}
-		}
-	}
-	return rv;
+	return _BestGuess(&_PostProb[0]);
 }
 
 THLAType CAlg_Prediction::BestGuessEnsemble()
 {
+	return _BestGuess(&_SumPostProb[0]);
+}
+
+/// the best-guess HLA type from prob
+inline THLAType CAlg_Prediction::_BestGuess(double hla_prob[])
+{
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
-	double *p = &_SumPostProb[0];
-	double max = 0;
+	double *p=hla_prob, max = 0;
 	for (int h1=0; h1 < _nHLA; h1++)
 	{
 		for (int h2=h1; h2 < _nHLA; h2++, p++)
@@ -1431,7 +1421,7 @@ THLAType CAlg_Prediction::BestGuessEnsemble()
 	return rv;
 }
 
-void CAlg_Prediction::aux_var_resize(size_t n)
+inline void CAlg_Prediction::aux_var_resize(size_t n)
 {
 	aux_haplo.resize(2*n);
 	aux_freq.resize(n);
@@ -2191,11 +2181,11 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 			gpu_geno_buf[w_i].IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
 		}
 		(*GPUExtProcPtr->predict_avg_prob)(&gpu_geno_buf[0], weight,
-			&_Predict._SumPostProb[0], &OutMatching);
+			&pred._SumPostProb[0], &OutMatching);
 
 	} else {
 		// initialize probability
-		pred.InitSumPostProbBuffer();
+		pred.InitSumPostProb();
 		TGenotype Geno;
 		double sum_pb=0, pb;
 
@@ -2223,7 +2213,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 				THLAType pd = pred.BestGuess();
 				if ((pd.Allele1 != NA_INTEGER) && (pd.Allele2 != NA_INTEGER))
 				{
-					pred.InitPostProbBuffer();  // fill by ZERO
+					pred.InitPostProb();  // fill by ZERO
 					pred.IndexPostProb(pd.Allele1, pd.Allele2) = 1.0;
 					pred.AddProbToSum(1.0);
 				}

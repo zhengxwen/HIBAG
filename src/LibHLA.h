@@ -572,9 +572,9 @@ namespace HLA_LIB
 		void InitPrediction(int n_hla);
 
 		/// initialize the posterior probabilities by setting ZERO
-		void InitPostProbBuffer();
+		void InitPostProb();
 		/// initialize the sums of posterior probabilities by setting ZERO
-		void InitSumPostProbBuffer();
+		void InitSumPostProb();
 		/// add the posterior probabilities of a classifier with a weight to the variable for summing up
 		void AddProbToSum(double weight);
 		/// average over all classifiers
@@ -615,10 +615,12 @@ namespace HLA_LIB
 		/// auxiliary variable for frequencies if need_auxiliary_haplo=true
 		vector<double> aux_freq;
 
-		/// resize the auxiliary variables 'aux_haplo' and 'aux_freq'
-		void aux_var_resize(size_t n);
-
 	private:
+		/// the best-guess HLA type from 'hla_prob'
+		inline THLAType _BestGuess(double hla_prob[]);
+		/// resize the auxiliary variables 'aux_haplo' and 'aux_freq'
+		inline void aux_var_resize(size_t n);
+
 		/// the best-guess HLA type based on SNP profiles and haplotype list
 		//    without saving posterior probabilities
 		static THLAType _BestGuess_def(const CHaplotypeList &Haplo, const TGenotype &Geno);
@@ -822,10 +824,8 @@ namespace HLA_LIB
 		vector<CAttrBag_Classifier> _ClassifierList;
 		/// variable selection algorithm
 		CVariableSelection _VarSelect;
-		/// prediction algorithm
-		CAlg_Prediction _Predict;
 
-		/// prediction HLA types internally
+		/// predict HLA types internally
 		void _PredictHLA(CAlg_Prediction &pred, const int geno[],
 			const int snp_weight[], int vote_method, double &OutMatching);
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
