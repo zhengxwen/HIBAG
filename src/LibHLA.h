@@ -827,7 +827,8 @@ namespace HLA_LIB
 
 		/// predict HLA types internally
 		void _PredictHLA(CAlg_Prediction &pred, const int geno[],
-			const int snp_weight[], int vote_method, double &OutMatching);
+			const int snp_weight[], int vote_method, double &OutMatching,
+			double c_weight[]);
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
 		void _GetSNPWeights(int OutSNPWeight[]);
 
