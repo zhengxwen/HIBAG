@@ -1388,7 +1388,7 @@ double &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
 void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
 {
-	((*this).*fc_PostProb2)(Haplo, Geno, SumProb);
+	SumProb = (*fc_PostProb2)(Haplo, Geno, &_PostProb[0]);
 }
 
 THLAType CAlg_Prediction::BestGuess()
@@ -1561,14 +1561,14 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 	return hlaProb / sum;
 }
 
-void CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
-	const TGenotype &Geno, double &SumProb)
+double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
+	const TGenotype &Geno, double Prob[])
 {
-	double *pProb = &_PostProb[0];
-	double sum;
+	double *p = Prob, sum;
+	const int nHLA = Haplo.nHLA();
 	THaplotype *I1=Haplo.List, *I2;
 
-	for (int h1=0; h1 < _nHLA; h1++)
+	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
@@ -1589,11 +1589,11 @@ void CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 					hamm_d(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
-		*pProb++ = sum;
+		*p++ = sum;
 		I2 = I1 + n1;
 
 		// off-diagonal
-		for (int h2=h1+1; h2 < _nHLA; h2++)
+		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
 			sum = 0;
@@ -1608,7 +1608,7 @@ void CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 						hamm_d(Haplo.Num_SNP, Geno, *i1, *i2));
 				}
 			}
-			*pProb++ = sum;
+			*p++ = sum;
 			I2 += n2;
 		}
 
@@ -1616,13 +1616,12 @@ void CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 	}
 
 	// normalize
+	const size_t n = nHLA*(nHLA+1)/2;
 	sum = 0;
-	double *p = &_PostProb[0];
-	for (size_t n = _PostProb.size(); n > 0; n--) sum += *p++;
-	SumProb = sum;
-	sum = 1 / sum;
-	p = &_PostProb[0];
-	for (size_t n = _PostProb.size(); n > 0; n--) *p++ *= sum;
+	for (size_t i=0; i < n; i++) sum += Prob[i];
+	const double ff = 1 / sum;
+	for (size_t i=0; i < n; i++) Prob[i] *= ff;
+	return sum;
 }
 
 

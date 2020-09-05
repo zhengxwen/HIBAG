@@ -271,14 +271,15 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 }
 
 
-void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
-	const TGenotype &Geno, double &SumProb)
+double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
+	const TGenotype &Geno, double Prob[])
 {
 	const TGenoStruct_sse2 GS(Haplo.Num_SNP, Geno);
-	double *pProb = &_PostProb[0], sum;
+	double *p = Prob, sum;
+	const int nHLA = Haplo.nHLA();
 	THaplotype *I1=Haplo.List, *I2;
 
-	for (int h1=0; h1 < _nHLA; h1++)
+	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
@@ -295,11 +296,11 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 			for (size_t m2=m1-1; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(sum, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
-		*pProb++ = sum;
+		*p++ = sum;
 		I2 = I1 + n1;
 
 		// off-diagonal
-		for (int h2=h1+1; h2 < _nHLA; h2++)
+		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
 			sum = 0;
@@ -311,7 +312,7 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
 					ADD_FREQ_MUTANT(sum, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 			}
-			*pProb++ = sum;
+			*p++ = sum;
 			I2 += n2;
 		}
 
@@ -319,13 +320,12 @@ void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	}
 
 	// normalize
+	const size_t n = nHLA*(nHLA+1)/2;
 	sum = 0;
-	double *p = &_PostProb[0];
-	for (size_t n = _PostProb.size(); n > 0; n--) sum += *p++;
-	SumProb = sum;
-	sum = 1 / sum;
-	p = &_PostProb[0];
-	for (size_t n = _PostProb.size(); n > 0; n--) *p++ *= sum;
+	for (size_t i=0; i < n; i++) sum += Prob[i];
+	const double ff = 1 / sum;
+	for (size_t i=0; i < n; i++) Prob[i] *= ff;
+	return sum;
 }
 
 
@@ -343,8 +343,8 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	THROW_ERROR;
 }
 
-void SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
-	const TGenotype &Geno, double &SumProb)
+double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
+	const TGenotype &Geno, double Prob[])
 {
 	THROW_ERROR;
 }
