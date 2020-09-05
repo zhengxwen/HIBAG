@@ -1437,9 +1437,10 @@ THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double max=0, prob;
+	const int nHLA = Haplo.nHLA();
 	THaplotype *I1=Haplo.List, *I2;
 
-	for (int h1=0; h1 < _nHLA; h1++)
+	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
@@ -1468,7 +1469,7 @@ THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 		}
 
 		// off-diagonal
-		for (int h2=h1+1; h2 < _nHLA; h2++)
+		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
 			prob = 0;
@@ -1745,7 +1746,7 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 			const int k = 0;
 		#endif
 			TGenotype &p = _GenoList.List[idx_outbag[i]];
-			THLAType g = (_Predict.*fc_BestGuess)(Haplo, p);
+			THLAType g = (*fc_BestGuess)(Haplo, p);
 			cnt_thread[k] += CHLATypeList::Compare(g, p.aux_hla_type);
 		}
 		PARALLEL_END

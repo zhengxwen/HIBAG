@@ -350,9 +350,10 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
 	double max=0, prob;
+	const int nHLA = Haplo.nHLA();
 	THaplotype *base=Haplo.List, *I1=base, *I2;
 
-	for (int h1=0; h1 < _nHLA; h1++)
+	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
@@ -383,7 +384,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 		}
 
 		// off-diagonal
-		for (int h2=h1+1; h2 < _nHLA; h2++)
+		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
 			prob = 0;
