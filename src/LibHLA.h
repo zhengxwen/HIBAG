@@ -286,7 +286,7 @@ namespace HLA_LIB
 		size_t Num_SNP;
 		/// SNP haplotype list
 		THaplotype *List;
-		/// the number of SNP  haplotypes per HLA allele
+		/// the number of SNP  haplotypes for each unique HLA allele
 		vector<size_t> LenPerHLA;
 
 		/// the auxiliary haplotypes created in SetHaploAux()
@@ -558,8 +558,7 @@ namespace HLA_LIB
 
 		typedef THLAType (CAlg_Prediction::*F_BestGuess)(const CHaplotypeList &,
 			const TGenotype &);
-		typedef double (CAlg_Prediction::*F_PostProb)(const CHaplotypeList &,
-			const TGenotype &, const THLAType &);
+		typedef double (*F_PostProb)(const CHaplotypeList &, const TGenotype &, const THLAType &);
 		typedef void (CAlg_Prediction::*F_PostProb2)(const CHaplotypeList &,
 			const TGenotype &, double &);
 
@@ -604,7 +603,7 @@ namespace HLA_LIB
 		inline const vector<double> &SumPostProb() const { return _SumPostProb; }
 
 	protected:
-		/// the number of different HLA alleles
+		/// the number of unique HLA alleles
 		int _nHLA;
 		/// plus weight after calling AddProbToSum()
 		double _Sum_Weight;
@@ -619,7 +618,7 @@ namespace HLA_LIB
 		THLAType _BestGuess_def(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		/// the prob of the given HLA type based on SNP profiles and haplotype
 		//    list without saving posterior probabilities in '_PostProb'
-		double _PostProb_def(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		static double _PostProb_def(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		/// predict based on SNP profiles and haplotype list, and save posterior
 		//    probabilities in '_PostProb', used in PredictPostProb
@@ -628,37 +627,34 @@ namespace HLA_LIB
 
 	#ifdef HIBAG_CPU_ARCH_X86
 		// SSE2 CPU Flags
-		THLAType _BestGuess_sse2(const CHaplotypeList &Haplo,
-			const TGenotype &Geno);
-		double _PostProb_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
-			const THLAType &HLA);
-		void _PostProb2_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno,
-			double &SumProb);
+		THLAType _BestGuess_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		static double _PostProb_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
+		void _PostProb2_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno, double &SumProb);
 		// SSE4.2 CPU Flags
 		THLAType _BestGuess_sse4_2(const CHaplotypeList &Haplo,
 			const TGenotype &Geno);
-		double _PostProb_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		static double _PostProb_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 		// AVX CPU Flags
 		THLAType _BestGuess_avx(const CHaplotypeList &Haplo,
 			const TGenotype &Geno);
-		double _PostProb_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		static double _PostProb_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_avx(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 		// AVX2 CPU Flags
 		THLAType _BestGuess_avx2(const CHaplotypeList &Haplo,
 			const TGenotype &Geno);
-		double _PostProb_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		static double _PostProb_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);
 		// AVX512BW CPU Flags
 		THLAType _BestGuess_avx512bw(const CHaplotypeList &Haplo,
 			const TGenotype &Geno);
-		double _PostProb_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno,
+		static double _PostProb_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			const THLAType &HLA);
 		void _PostProb2_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno,
 			double &SumProb);

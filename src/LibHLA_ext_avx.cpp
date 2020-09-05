@@ -290,12 +290,13 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const TGenoStruct_avx GS(Haplo, Geno);
 	int H1=HLA.Allele1, H2=HLA.Allele2;
 	if (H1 > H2) std::swap(H1, H2);
-	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
+	const int nHLA = Haplo.nHLA();
+	int IxHLA = H2 + H1*(2*nHLA-H1-1)/2;
 	int idx = 0;
 	double sum=0, hlaProb=0, prob;
 	THaplotype *base=Haplo.List, *I1=base, *I2;
 
-	for (int h1=0; h1 < _nHLA; h1++)
+	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
@@ -323,7 +324,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 		idx ++; sum += prob;
 
 		// off-diagonal
-		for (int h2=h1+1; h2 < _nHLA; h2++)
+		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
 			prob = 0;

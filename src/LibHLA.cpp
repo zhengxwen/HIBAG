@@ -1216,7 +1216,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_avx512bw = true;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512BW)
 #if defined(__ICC) && defined(_FEATURE_AVX512F) && defined(_FEATURE_AVX512BW)
-	// since __builtin_cpu_supports("avx512bw") not work
+	// since __builtin_cpu_supports("avx512bw") always return 0
 	const bool has_avx512bw = _may_i_use_cpu_feature(
 		_FEATURE_AVX512F | _FEATURE_AVX512BW) && HIBAG_ALGORITHM_AVX512BW;
 #else
@@ -1502,12 +1502,13 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 {
 	int H1=HLA.Allele1, H2=HLA.Allele2;
 	if (H1 > H2) std::swap(H1, H2);
-	int IxHLA = H2 + H1*(2*_nHLA-H1-1)/2;
+	const int nHLA = Haplo.nHLA();
+	int IxHLA = H2 + H1*(2*nHLA-H1-1)/2;
 	int idx = 0;
 	double sum=0, hlaProb=0, prob;
 	THaplotype *I1=Haplo.List, *I2;
 
-	for (int h1=0; h1 < _nHLA; h1++)
+	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
@@ -1533,7 +1534,7 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 		idx ++; sum += prob;
 
 		// off-diagonal
-		for (int h2=h1+1; h2 < _nHLA; h2++)
+		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
 			prob = 0;
@@ -1771,7 +1772,7 @@ double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 		{
 			TGenotype &p = _GenoList.List[idx_inbag[i]];
 			log_inbag[i] = p.BootstrapCount *
-				log((_Predict.*fc_PostProb)(Haplo, p, p.aux_hla_type));
+				log((*fc_PostProb)(Haplo, p, p.aux_hla_type));
 		}
 		PARALLEL_END
 		// reduce sum
