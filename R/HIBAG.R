@@ -454,15 +454,6 @@ hlaPredict <- function(object, snp, cl=NULL,
         if (length(cl) <= 1L) cl <- NULL
     } else if (is.numeric(cl))
     {
-        if (cl > 1L)
-        {
-            if (!requireNamespace("parallel", quietly=TRUE))
-                stop("The `parallel' package should be installed.")
-            cl <- parallel::makeCluster(cl)
-            on.exit(parallel::stopCluster(cl))
-        } else {
-            cl <- NULL
-        }
     }
 
     # if warning
@@ -688,11 +679,18 @@ hlaPredict <- function(object, snp, cl=NULL,
     n.samp <- dim(snp)[2L]
     n.hla <- length(object$hla.allele)
     if (verbose)
+    {
         cat(sprintf("Number of samples: %d\n", n.samp))
+        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]], "\n", sep="")
+    }
 
     # parallel units
-    if (is.null(cl))
+    if (is.null(cl) || is.numeric(cl))
     {
+		nthread <- 1L
+		if (is.numeric(cl)) nthread <- cl[1L]
+		if (is.na(nthread) || nthread<1L) nthread <- 1L
+
         # pointer to functions for an extensible component
 		pm <- list()
 		pm <- pm$proc_ptr
@@ -705,7 +703,7 @@ hlaPredict <- function(object, snp, cl=NULL,
             if (type == "response")
             {
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
-                    n.samp, vote_method, verbose, pm)
+                    n.samp, vote_method, nthread, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "matching")
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,

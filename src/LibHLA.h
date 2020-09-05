@@ -799,7 +799,7 @@ namespace HLA_LIB
 		**/
 		void PredictHLA(const int *genomat, int n_samp, int vote_method,
 			int OutH1[], int OutH2[], double OutMaxProb[],
-			double OutMatching[], double OutProbArray[], bool ShowInfo);
+			double OutMatching[], double OutProbArray[], bool verbose);
 
 		/// the number of samples
 		inline int nSamp() const { return _SNPMat.Num_Total_Samp; }

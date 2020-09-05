@@ -126,12 +126,18 @@ static inline int RandomNum(int n)
 
 #define PARALLEL_END    });
 
+static inline int thread_num() { return tbb::this_task_arena::max_concurrency(); }
+static inline int thread_idx() { return tbb::this_task_arena::current_thread_index(); }
+
 #else
 
 #define PARALLEL_FOR(i, SIZE)    \
 	{  \
 		for (size_t i=0; i < SIZE; i++)
 #define PARALLEL_END    }
+
+static inline int thread_num() { return 1; }
+static inline int thread_idx() { return 0; }
 
 #endif
 
@@ -1727,31 +1733,18 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
 	if (!GPUExtProcPtr)
 	{
-	#if RCPP_PARALLEL_USE_TBB
-		const int ntot_thread = tbb::this_task_arena::max_concurrency();
-		vector<int> cnt_thread(ntot_thread, 0);
-	#else
-		int cnt_thread[1] = { 0 };
-	#endif
+		const int nthread = thread_num();
+		vector<int> cnt(nthread, 0);
 		PARALLEL_FOR(i, idx_outbag.size())
 		{
-		#if RCPP_PARALLEL_USE_TBB
-			const int k = tbb::this_task_arena::current_thread_index();
-		#else
-			const int k = 0;
-		#endif
 			TGenotype &p = _GenoList.List[idx_outbag[i]];
 			THLAType g = (*fc_BestGuess)(Haplo, p);
-			cnt_thread[k] += CHLATypeList::Compare(g, p.aux_hla_type);
+			cnt[thread_idx()] += CHLATypeList::Compare(g, p.aux_hla_type);
 		}
 		PARALLEL_END
-	#if RCPP_PARALLEL_USE_TBB
 		int CorrectCnt = 0;
-		for (int i=0; i < ntot_thread; i++) CorrectCnt += cnt_thread[i];
+		for (int i=0; i < nthread; i++) CorrectCnt += cnt[i];
 		return CorrectCnt;
-	#else
-		return cnt_thread[0];
-	#endif
 	} else {
 		return (*GPUExtProcPtr->build_acc_oob)();
 	}
@@ -2112,43 +2105,53 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 
 void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	int OutH1[], int OutH2[], double OutMaxProb[], double OutMatching[],
-	double OutProbArray[], bool ShowInfo)
+	double OutProbArray[], bool verbose)
 {
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
 
-	// progress information
-	Progress.Info = "Predicting";
-	Progress.Init(n_samp, ShowInfo);
-
-	// prediction object
-	CAlg_Prediction pred;
-	pred.InitPrediction(nHLA());
+	// get the maximum of haplotypes among all classifiers
+	size_t max_num_haplo = 0;
 	if (need_auxiliary_haplo)
 	{
-		size_t max_num_haplo = 0;
 		vector<CAttrBag_Classifier>::iterator p = _ClassifierList.begin();
 		for (; p != _ClassifierList.end(); p++)
 		{
 			if (max_num_haplo < p->_Haplo.Num_Haplo)
 				max_num_haplo = p->_Haplo.Num_Haplo;
 		}
-		pred.aux_var_resize(max_num_haplo);
 	}
 
+	// prediction object
+	const int nthread = thread_num();
+	vector<CAlg_Prediction> pred_lst(nthread);
+	for (int i=0; i < nthread; i++)
+	{
+		pred_lst[i].InitPrediction(nHLA());
+		pred_lst[i].aux_var_resize(max_num_haplo);
+	}
+
+	vector<double> c_weight(_ClassifierList.size()*nthread);
 	vector<int> snp_weight(nSNP());
 	_GetSNPWeights(&snp_weight[0]);
-	vector<double> c_weight(_ClassifierList.size());
 	const size_t nn = nHLA()*(nHLA()+1)/2;
 
+	// progress information
+	Progress.Info = "Predicting";
+	Progress.Init(n_samp, verbose);
+
 	_Init_PredictHLA();
-	for (int i=0; i < n_samp; i++, genomat+=nSNP())
+	PARALLEL_FOR(i, n_samp)
 	{
+		const int idx = thread_idx();
+		CAlg_Prediction &pred = pred_lst[idx];
 		double match_prob;
-		_PredictHLA(pred, genomat, &snp_weight[0], vote_method, match_prob, &c_weight[0]);
+		_PredictHLA(pred, genomat + i*nSNP(), &snp_weight[0], vote_method,
+			match_prob, &c_weight[idx*_ClassifierList.size()]);
 
 		THLAType HLA = pred.BestGuessEnsemble();
-		OutH1[i] = HLA.Allele1; OutH2[i] = HLA.Allele2;
+		OutH1[i] = HLA.Allele1;
+		OutH2[i] = HLA.Allele2;
 
 		if ((HLA.Allele1 != NA_INTEGER) && (HLA.Allele2 != NA_INTEGER))
 			OutMaxProb[i] = pred.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
@@ -2156,14 +2159,12 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 			OutMaxProb[i] = 0;
 
 		if (OutProbArray)
-		{
-			memcpy(OutProbArray, &pred.SumPostProb()[0], sizeof(double)*nn);
-			OutProbArray += nn;
-		}
+			memcpy(OutProbArray+i*nn, &pred._SumPostProb[0], sizeof(double)*nn);
 		if (OutMatching) OutMatching[i] = match_prob;
 
-		Progress.Forward(1, ShowInfo);
+		// Progress.Forward(1, verbose);
 	}
+	PARALLEL_END
 	_Done_PredictHLA();
 }
 

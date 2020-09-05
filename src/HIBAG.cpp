@@ -504,23 +504,25 @@ SEXP HIBAG_Close(SEXP model)
  *  \param verbose_detail  show more information if TRUE
  *  \param proc_ptr        pointer to functions for an extensible component
 **/
-SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
-	SEXP prune, SEXP nthread, SEXP verbose, SEXP verbose_detail, SEXP proc_ptr)
+SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
+	SEXP Prune, SEXP NThread, SEXP Verbose, SEXP VerboseDetail, SEXP proc_ptr)
 {
 	const int midx = Rf_asInteger(model);
-	const int i_nclassifier = Rf_asInteger(nclassifier);
-	const int i_mtry = Rf_asInteger(mtry);
-	const int i_nthread = Rf_asInteger(nthread);
-	const bool is_prune = Rf_asLogical(prune) == TRUE;
-	const bool is_verbose = Rf_asLogical(verbose) == TRUE;
-	const bool is_verbose_detail = Rf_asLogical(verbose_detail) == TRUE;
+	const int nclassifier = Rf_asInteger(NClassifier);
+	const int mtry = Rf_asInteger(MTry);
+	const int nthread = Rf_asInteger(NThread);
+	const bool prune = Rf_asLogical(Prune) == TRUE;
+	const bool verbose = Rf_asLogical(Verbose) == TRUE;
+	const bool verbose_detail = Rf_asLogical(VerboseDetail) == TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		GetRNGstate();
-		tbb::task_scheduler_init init(i_nthread);
 
-		if (is_verbose)
+	#if RCPP_PARALLEL_USE_TBB
+		tbb::task_scheduler_init init(nthread);
+	#endif
+		if (verbose)
 		{
 		#if RCPP_PARALLEL_USE_TBB
 			int n = tbb::this_task_arena::max_concurrency();
@@ -533,8 +535,8 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
 		if (!Rf_isNull(proc_ptr))
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
-			_HIBAG_MODELS_[midx]->BuildClassifiers(i_nclassifier, i_mtry,
-				is_prune, is_verbose, is_verbose_detail);
+			_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
+				prune, verbose, verbose_detail);
 			GPUExtProcPtr = NULL;
 		}
 		catch(...) {
@@ -559,15 +561,29 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP nclassifier, SEXP mtry,
  *  \return H1, H2 and posterior prob.
 **/
 SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP ShowInfo, SEXP proc_ptr)
+	SEXP vote_method, SEXP nthread, SEXP Verbose, SEXP proc_ptr)
 {
-	int midx = Rf_asInteger(model);
-	int NumSamp = Rf_asInteger(nSamp);
-	bool verbose = Rf_asLogical(ShowInfo)==TRUE;
+	const int midx = Rf_asInteger(model);
+	const int NumSamp = Rf_asInteger(nSamp);
+	const int i_nthread = Rf_asInteger(nthread);
+	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
+
+	#if RCPP_PARALLEL_USE_TBB
+		tbb::task_scheduler_init init(i_nthread);
+	#endif
+		if (verbose)
+		{
+		#if RCPP_PARALLEL_USE_TBB
+			int n = tbb::this_task_arena::max_concurrency();
+		#else
+			int n = 1;
+		#endif
+			Rprintf("# of threads: %d\n", n);
+		}
 
 		rv_ans = PROTECT(NEW_LIST(4));
 		SEXP out_H1 = NEW_INTEGER(NumSamp);
@@ -610,15 +626,29 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
  *  \return H1, H2, prob. and a matrix of all probabilities
 **/
 SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP ShowInfo, SEXP proc_ptr)
+	SEXP vote_method, SEXP nthread, SEXP verbose, SEXP proc_ptr)
 {
-	int midx = Rf_asInteger(model);
-	int NumSamp = Rf_asInteger(nSamp);
-	bool verbose = Rf_asLogical(ShowInfo)==TRUE;
+	const int midx = Rf_asInteger(model);
+	const int NumSamp = Rf_asInteger(nSamp);
+	const int i_nthread = Rf_asInteger(nthread);
+	const bool is_verbose = Rf_asLogical(verbose)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
+
+	#if RCPP_PARALLEL_USE_TBB
+		tbb::task_scheduler_init init(i_nthread);
+	#endif
+		if (is_verbose)
+		{
+		#if RCPP_PARALLEL_USE_TBB
+			int n = tbb::this_task_arena::max_concurrency();
+		#else
+			int n = 1;
+		#endif
+			Rprintf("# of threads: %d\n", n);
+		}
 
 		rv_ans = PROTECT(NEW_LIST(5));
 		SEXP out_H1 = NEW_INTEGER(NumSamp);
@@ -1191,8 +1221,8 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_New, 3),
 		CALL(HIBAG_NewClassifierHaplo, 7),
 		CALL(HIBAG_NewClassifiers, 8),
-		CALL(HIBAG_Predict_Resp, 6),
-		CALL(HIBAG_Predict_Resp_Prob, 6),
+		CALL(HIBAG_Predict_Resp, 7),
+		CALL(HIBAG_Predict_Resp_Prob, 7),
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
 		CALL(HIBAG_SeqMerge, 1),
