@@ -62,7 +62,7 @@ extern "C"
 
 
 /// the last error information
-std::string _LastError;
+static std::string _LastError;
 
 
 // ===========================================================
@@ -1144,15 +1144,6 @@ SEXP HIBAG_Distance(SEXP NumHLA, SEXP Idx, SEXP Freq, SEXP HaploStr)
 
 
 /**
- *  Get an error message
-**/
-SEXP HIBAG_ErrMsg()
-{
-	return mkString(_LastError.c_str());
-}
-
-
-/**
  *  Get the version and SSE information
 **/
 SEXP HIBAG_Kernel_Version()
@@ -1218,7 +1209,6 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_Confusion, 4),
 		CALL(HIBAG_ConvBED, 5),
 		CALL(HIBAG_Distance, 4),
-		CALL(HIBAG_ErrMsg, 0),
 		CALL(HIBAG_Kernel_Version, 0),
 		CALL(HIBAG_New, 3),
 		CALL(HIBAG_NewClassifierHaplo, 7),

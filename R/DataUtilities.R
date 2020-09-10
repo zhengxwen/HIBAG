@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2018   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2020   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@
 
 #######################################################################
 #
-# The internal functions
+# Internal functions
 #
 #######################################################################
 
@@ -192,7 +192,7 @@
 
 #######################################################################
 #
-# the functions for SNP genotypes
+# Functions for SNP genotypes
 #
 #######################################################################
 
@@ -211,7 +211,7 @@
 
 
 #######################################################################
-# To create a "hlaSNPGenoClass" object (SNP genotype object)
+# Create a "hlaSNPGenoClass" object (SNP genotype object)
 #
 
 hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
@@ -263,7 +263,7 @@ hlaMakeSNPGeno <- function(genotype, sample.id, snp.id, snp.position,
 
 
 #######################################################################
-# To select a subset of SNP genotypes
+# Select a subset of SNP genotypes
 #
 
 hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
@@ -319,7 +319,7 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
 
 
 #######################################################################
-# To select a subset of SNP genotypes within the flanking region
+# Select a subset of SNP genotypes within the flanking region
 #
 
 hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
@@ -354,7 +354,7 @@ hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
 
 
 #######################################################################
-# To get the overlapping SNPs between target and template with
+# Get the overlapping SNPs between target and template with
 #   corrected strand.
 #
 
@@ -481,7 +481,7 @@ hlaGenoSwitchStrand <- function(target, template,
 
 
 #######################################################################
-# To get the information of SNP ID and position
+# Get the information of SNP ID and position
 #
 
 hlaSNPID <- function(obj, type=c("RefSNP+Position", "RefSNP", "Position"))
@@ -501,7 +501,7 @@ hlaSNPID <- function(obj, type=c("RefSNP+Position", "RefSNP", "Position"))
 
 
 #######################################################################
-# To combine two SNP genotype dataset
+# Combine two SNP genotype dataset
 #
 
 hlaGenoCombine <- function(geno1, geno2,
@@ -981,12 +981,12 @@ print.hlaSNPGenoClass <- function(x, ...)
 
 #######################################################################
 #
-# the function list for genotypes
+# Function list for genotypes
 #
 #######################################################################
 
 #######################################################################
-# To the allele frequencies from genotypes
+# Calculate the allele frequencies from genotypes
 #
 
 hlaGenoAFreq <- function(obj)
@@ -998,7 +998,7 @@ hlaGenoAFreq <- function(obj)
 
 
 #######################################################################
-# To the minor allele frequencies from genotypes
+# Calculate the minor allele frequencies from genotypes
 #
 
 hlaGenoMFreq <- function(obj)
@@ -1011,7 +1011,7 @@ hlaGenoMFreq <- function(obj)
 
 
 #######################################################################
-# To the missing rates from genotypes per SNP
+# Calculate the missing rates from genotypes per SNP
 #
 
 hlaGenoMRate <- function(obj)
@@ -1023,7 +1023,7 @@ hlaGenoMRate <- function(obj)
 
 
 #######################################################################
-# To the missing rates from genotypes per sample
+# Calculate the missing rates from genotypes per sample
 #
 
 hlaGenoMRate_Samp <- function(obj)
@@ -1038,13 +1038,13 @@ hlaGenoMRate_Samp <- function(obj)
 
 #######################################################################
 #
-# the function list for HLA types
+# Function list for HLA types
 #
 #######################################################################
 
 
 #######################################################################
-# To get the starting and ending positions in basepair for HLA loci
+# Get the starting and ending positions in basepair for HLA loci
 #
 
 hlaLociInfo <- function(assembly =
@@ -1167,7 +1167,7 @@ hlaUniqueAllele <- function(hla)
 
 
 #######################################################################
-# To make a class of HLA alleles
+# Create an object of HLA alleles
 #
 
 hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
@@ -1189,9 +1189,9 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
         stopifnot(length(sample.id) == length(prob))
 
     # build
-    H1[H1 == ""] <- NA
+    H1[H1 == ""] <- NA_character_
     H1 <- hlaAlleleDigit(H1, max.resolution)
-    H2[H2 == ""] <- NA
+    H2[H2 == ""] <- NA_character_
     H2 <- hlaAlleleDigit(H2, max.resolution)
 
     if (locus %in% rownames(HLAinfo))
@@ -1228,17 +1228,17 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
 
 
 #######################################################################
-# To make a class of HLA alleles
+# Create a subset of HLA alleles
 #
 
 hlaAlleleSubset <- function(hla, samp.sel=NULL)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass") | inherits(hla, "hlaAASeqClass"))
-    stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.integer(samp.sel))
+    stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.numeric(samp.sel))
     if (is.logical(samp.sel))
         stopifnot(length(samp.sel) == dim(hla$value)[1L])
-    if (is.integer(samp.sel))
+    if (is.numeric(samp.sel))
         stopifnot(length(unique(samp.sel)) == length(samp.sel))
 
     # result
@@ -1270,7 +1270,7 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
 
 
 #######################################################################
-# To combine two classes of HLA alleles
+# Combine two objects of HLA alleles
 #
 
 hlaCombineAllele <- function(H1, H2)
@@ -1313,7 +1313,7 @@ hlaCombineAllele <- function(H1, H2)
 
 
 #######################################################################
-# To compare HLA alleles
+# Compare two objects of HLA alleles
 #
 
 hlaCompareAllele <- function(TrueHLA, PredHLA, allele.limit=NULL,
@@ -1717,7 +1717,7 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 
 
 #######################################################################
-# To select SNPs in the flanking region of a specified HLA locus
+# Select SNPs in the flanking region of a specified HLA locus
 #
 
 hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
@@ -1756,7 +1756,7 @@ hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
 
 
 #######################################################################
-# Summary a "hlaAlleleClass" object
+# Summarize a "hlaAlleleClass" object
 #
 
 summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
@@ -1909,7 +1909,7 @@ hlaCheckSNPs <- function(model, object,
 
 
 ##########################################################################
-# to finalize the HIBAG model
+# Finalize the HIBAG model for public release
 #
 
 hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
@@ -1989,7 +1989,7 @@ hlaPublish <- function(mobj, platform=NULL, information=NULL, warning=NULL,
 
 
 ##########################################################################
-# to get a model object of attribute bagging from a list of files
+# Get a model object of attribute bagging from a list of files
 #
 
 hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
@@ -2145,7 +2145,7 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 
 
 ##########################################################################
-# to create a report for evaluating accuracies
+# Create a report for evaluating accuracies
 #
 
 hlaReport <- function(object, export.fn="",
@@ -2390,7 +2390,7 @@ hlaReport <- function(object, export.fn="",
 
 
 ##########################################################################
-# to create a report for evaluating accuracies
+# Create a report for evaluating accuracies
 #
 
 hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,

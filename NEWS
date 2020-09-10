@@ -1,7 +1,7 @@
 CHANGES IN VERSION 1.26.0
 -------------------------
 
-    o 
+    o remove `hlaErrMsg()` since it is never used
 
 
 CHANGES IN VERSION 1.24.0

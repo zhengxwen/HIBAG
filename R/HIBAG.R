@@ -42,7 +42,7 @@
 
 
 ##########################################################################
-# To fit an attribute bagging model for predicting
+# Fit a HIBAG model for imputing HLA genotypes
 #
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
@@ -247,7 +247,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 
 
 ##########################################################################
-# To fit an attribute bagging model for predicting
+# Fit a HIBAG model for imputing HLA genotypes in parallel
 #
 
 hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
@@ -405,7 +405,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 
 
 ##########################################################################
-# To fit an attribute bagging model for predicting
+# Close and dispose a HIBAG model
 #
 
 hlaClose <- function(model)
@@ -417,7 +417,7 @@ hlaClose <- function(model)
 
 
 #######################################################################
-# Predict HLA types from unphased SNP data
+# Predict HLA types using unphased SNP data
 #
 
 predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
@@ -933,7 +933,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
 
 
 #######################################################################
-# summarize the "hlaAttrBagClass" object
+# Summarize the "hlaAttrBagClass" object
 #
 
 summary.hlaAttrBagClass <- function(object, show=TRUE, ...)
@@ -987,7 +987,7 @@ hlaModelToObj <- function(model)
 
 
 #######################################################################
-# To combine two model objects of attribute bagging
+# Combine two HIBAG models
 #
 
 hlaCombineModelObj <- function(obj1, obj2)
@@ -1039,20 +1039,21 @@ hlaCombineModelObj <- function(obj1, obj2)
 
 
 #######################################################################
-# To get the top n individual classifiers
+# Get a HIBAG model with the top n individual classifiers
 #
 
 hlaSubModelObj <- function(obj, n)
 {
     # check
     stopifnot(inherits(obj, "hlaAttrBagObj"))
+    stopifnot(is.numeric(n), length(n)==1L)
     obj$classifiers <- obj$classifiers[1L:n]
     obj
 }
 
 
 #######################################################################
-# To get a "hlaAttrBagClass" class
+# Create a "hlaAttrBagClass" class from an R object
 #
 
 hlaModelFromObj <- function(obj)
@@ -1100,7 +1101,7 @@ hlaModelFromObj <- function(obj)
 
 
 #######################################################################
-# summarize the "hlaAttrBagObj" object
+# Summarize the "hlaAttrBagObj" object
 #
 
 summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
@@ -1190,7 +1191,7 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 
 
 ##########################################################################
-# to get a model object of attribute bagging from a list of files
+# Get a model object of attribute bagging from a list of files
 #
 
 hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
@@ -1537,7 +1538,7 @@ hlaDistance <- function(model)
 #
 
 ##########################################################################
-# To visualize an attribute bagging model
+# Plot an attribute bagging model
 #
 
 plot.hlaAttrBagClass <- function(x, ...)
@@ -1556,7 +1557,7 @@ print.hlaAttrBagClass <- function(x, ...)
 
 
 ##########################################################################
-# To visualize an attribute bagging model
+# Plot an attribute bagging model
 #
 
 plot.hlaAttrBagObj <- function(x, snp.col="gray33", snp.pch=1, snp.sz=1,
@@ -1622,17 +1623,6 @@ print.hlaAttrBagObj <- function(x, ...)
 
 
 #######################################################################
-# To get the error message
-#
-
-hlaErrMsg <- function()
-{
-    .Call(HIBAG_ErrMsg)
-}
-
-
-
-#######################################################################
 # Export stardard R library function(s)
 #######################################################################
 
@@ -1643,6 +1633,7 @@ hlaSetKernelTarget <- function(
     .Call(HIBAG_Kernel_SetTarget, cpu)
     .Call(HIBAG_Kernel_Version)[[2L]]
 }
+
 
 .onAttach <- function(lib, pkg)
 {
