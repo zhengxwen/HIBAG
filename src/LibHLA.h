@@ -475,7 +475,10 @@ namespace HLA_LIB
 	class CSamplingWithoutReplace: public CBaseSampling
 	{
 	public:
+		/// constructor
 		CSamplingWithoutReplace();
+
+		/// initialize with the number of items to choose from
 		CBaseSampling *Init(int m_total);
 
 		/// the total number of candidate SNPs
@@ -561,7 +564,7 @@ namespace HLA_LIB
 		typedef double (*F_PostProb)(const CHaplotypeList &, const TGenotype &, const THLAType &);
 		typedef double (*F_PostProb2)(const CHaplotypeList &, const TGenotype &, double[]);
 
-		/// contructor
+		/// constructor
 		CAlg_Prediction();
 
 		/// initialize the internal functions according to the CPU target
@@ -654,6 +657,7 @@ namespace HLA_LIB
 	class CVariableSelection
 	{
 	public:
+		/// constructor
 		CVariableSelection();
 
 		/// initialize
@@ -716,6 +720,7 @@ namespace HLA_LIB
 	public:
 		friend class CAttrBag_Model;
 
+		/// constructor
 		CAttrBag_Classifier(CAttrBag_Model &_owner);
 
 		/// initialize the bootstrap sample
@@ -723,7 +728,7 @@ namespace HLA_LIB
 		/// assign the haplotype frequencies
 		void Assign(int n_snp, const int snpidx[], const int samp_num[],
 			int n_haplo, const double *freq, const int *hla,
-			const char * haplo[], double *_acc=NULL);
+			const char *haplo[], double *_acc=NULL);
 		/// grow this classifier by adding SNPs
 		void Grow(CBaseSampling &VarSampling, int mtry, bool prune,
 			bool verbose, bool verbose_detail);

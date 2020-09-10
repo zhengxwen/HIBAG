@@ -219,7 +219,6 @@ void CdProgression::Init(long TotalCnt, bool ShowInit)
 bool CdProgression::Forward(long step, bool Show)
 {
 	fCurrent += step;
-	CheckInterrupt();
 	int p = int(double(TotalPercent)*fCurrent / fTotal);
 	if ((p != fPercent) || (p == TotalPercent))
 	{
@@ -293,8 +292,9 @@ string THaplotype::HaploToStr(size_t Length) const
 	if (Length > 0)
 	{
 		rv.resize(Length);
+		const UINT8 *p = (const UINT8*)PackedHaplo;
 		for (size_t i=0; i < Length; i++)
-			rv[i] = (GetAllele(i)==0) ? '0' : '1';
+			rv[i] = ((p[i >> 3] >> (i & 0x07)) & 0x01) ? '1' : '0';
 	}
 	return rv;
 }
@@ -305,7 +305,7 @@ void THaplotype::StrToHaplo(const string &str)
 		"THaplotype::StrToHaplo, the input string is too long.");
 	for (size_t i=0; i < str.size(); i++)
 	{
-		char ch = str[i];
+		const char ch = str[i];
 		HIBAG_CHECKING(ch!='0' && ch!='1',
 			"THaplotype::StrToHaplo, the input string should be '0' or '1'");
 		_SetAllele(i, ch-'0');
@@ -487,35 +487,24 @@ void CHaplotypeList::EraseDoubleHaplos(double RareProb, CHaplotypeList &OutHaplo
 		OutHaplos.LenPerHLA[i] = num;
 	}
 
-	// DEBUG, TODO: remove
-	size_t ss = 0;
-	for (size_t i=0; i < OutHaplos.LenPerHLA.size(); i++)
-		ss += OutHaplos.LenPerHLA[i];
-	if (ss != OutHaplos.Num_Haplo)
-		throw "assert in CHaplotypeList::EraseDoubleHaplos()";
-
 	OutHaplos.ScaleFrequency(1/sum);
 }
 
 void CHaplotypeList::SaveClearFrequency()
 {
 	THaplotype *p = List;
-	for (size_t n=Num_Haplo; n > 0; n--)
+	for (size_t n=Num_Haplo; n > 0; n--, p++)
 	{
 		p->aux.OldFreq = p->Freq;
 		p->Freq = 0;
-		p ++;
 	}
 }
 
 void CHaplotypeList::ScaleFrequency(double scale)
 {
 	THaplotype *p = List;
-	for (size_t n=Num_Haplo; n > 0; n--)
-	{
+	for (size_t n=Num_Haplo; n > 0; n--, p++)
 		p->Freq *= scale;
-		p ++;
-	}
 }
 
 size_t CHaplotypeList::StartHaploHLA(int hla) const
@@ -631,7 +620,7 @@ void TGenotype::StringToSNP(const string &str)
 		"TGenotype::StringToSNP, the input string is too long.");
 	for (size_t i=0; i < str.size(); i++)
 	{
-		char ch = str[i];
+		const char ch = str[i];
 		HIBAG_CHECKING(ch!='0' && ch!='1' && ch!='2' && ch!='?',
 			"TGenotype::StringToSNP, the input string should be '0', '1', '2' or '?'.");
 		_SetSNP(i, ch-'0');
@@ -882,7 +871,7 @@ inline int CHLATypeList::Compare(const THLAType &H1, const THLAType &H2)
 		cnt = 1;
 		if (P1==T1) T1 = -1; else T2 = -1;
 	}
-	if ((P2==T1) || (P2==T2)) cnt ++;
+	if ((P2==T1) || (P2==T2)) cnt++;
 	return cnt;
 }
 
@@ -1388,7 +1377,7 @@ double &CAlg_Prediction::IndexSumPostProb(int H1, int H2)
 	return _SumPostProb[H2 + H1*(2*_nHLA-H1-1)/2];
 }
 
-void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
+inline void CAlg_Prediction::PredictPostProb(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double &SumProb)
 {
 	SumProb = (*fc_PostProb2)(Haplo, Geno, &_PostProb[0]);
@@ -2043,10 +2032,8 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 {
 	_ClassifierList.push_back(CAttrBag_Classifier(*this));
 	CAttrBag_Classifier *I = &_ClassifierList.back();
-
 	vector<int> S(nSamp(), 1);
 	I->InitBootstrapCount(&S[0]);
-
 	return I;
 }
 
@@ -2160,7 +2147,8 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 			memcpy(OutProbArray+i*nn, &pred._SumPostProb[0], sizeof(double)*nn);
 		if (OutMatching) OutMatching[i] = match_prob;
 
-		// Progress.Forward(1, verbose);
+		Progress.Forward(1, verbose && (idx==0));
+		if (idx == 0) CheckInterrupt();  // run on the baseline thread
 	}
 	PARALLEL_END
 	_Done_PredictHLA();
