@@ -655,6 +655,10 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 {
 	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::IntToSNP, the length is invalid.");
+	// fill all bytes with missing value
+	memset(PackedSNP1, 0,    sizeof(PackedSNP1));
+	memset(PackedSNP2, 0xFF, sizeof(PackedSNP2));
+	// set genotypes
 	const static UINT8 P1[4] = { 0, 1, 1, 0 };
 	const static UINT8 P2[4] = { 0, 0, 1, 1 };
 	UINT8 *p1 = (UINT8*)PackedSNP1;
@@ -662,14 +666,14 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 	// packed fill
 	for (; Length >= 8; Length -= 8, Index += 8)
 	{
-		size_t i0 = geno4(GenoBase[Index[0]]);
-		size_t i1 = geno4(GenoBase[Index[1]]);
-		size_t i2 = geno4(GenoBase[Index[2]]);
-		size_t i3 = geno4(GenoBase[Index[3]]);
-		size_t i4 = geno4(GenoBase[Index[4]]);
-		size_t i5 = geno4(GenoBase[Index[5]]);
-		size_t i6 = geno4(GenoBase[Index[6]]);
-		size_t i7 = geno4(GenoBase[Index[7]]);
+		const size_t i0 = geno4(GenoBase[Index[0]]);
+		const size_t i1 = geno4(GenoBase[Index[1]]);
+		const size_t i2 = geno4(GenoBase[Index[2]]);
+		const size_t i3 = geno4(GenoBase[Index[3]]);
+		const size_t i4 = geno4(GenoBase[Index[4]]);
+		const size_t i5 = geno4(GenoBase[Index[5]]);
+		const size_t i6 = geno4(GenoBase[Index[6]]);
+		const size_t i7 = geno4(GenoBase[Index[7]]);
 		*p1++ = P1[i0] | (P1[i1] << 1) | (P1[i2] << 2) | (P1[i3] << 3) |
 			(P1[i4] << 4) | (P1[i5] << 5) | (P1[i6] << 6) | (P1[i7] << 7);
 		*p2++ = P2[i0] | (P2[i1] << 1) | (P2[i2] << 2) | (P2[i3] << 3) |
@@ -680,18 +684,12 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 		*p1 = 0; *p2 = 0xFF;
 		for (size_t i=0; i < Length; i++)
 		{
-			size_t ii = geno4(GenoBase[*Index++]);
+			const size_t ii = geno4(GenoBase[*Index++]);
 			*p1 = (*p1) | (P1[ii] << i);
 			*p2 = ((*p2) & ~(1 << i)) | (P2[ii] << i);
 		}
 		p1++; p2++;
 	}
-
-	// fill the remaining bytes
-	for (UINT8 *pE=((UINT8*)PackedSNP1)+sizeof(PackedSNP1); p1 < pE; )
-		*p1++ = 0;
-	for (UINT8 *pE=((UINT8*)PackedSNP2)+sizeof(PackedSNP2); p2 < pE; )
-		*p2++ = 0xFF;
 }
 
 
@@ -2184,7 +2182,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 			if ((0 <= geno[k]) && (geno[k] <= 2))
 				nw += snp_weight[k];
 		}
-		c_weight[w_i++] = double(nw) / sum;
+		c_weight[w_i++] = (sum > 0) ? (double(nw) / sum) : 0;
 	}
 
 	if (GPUExtProcPtr)
@@ -2201,6 +2199,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 		pred.InitSumPostProb();
 		TGenotype Geno;
 		double sum_matching=0, pm;
+		int num_matching=0;
 
 		p = _ClassifierList.begin();
 		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
@@ -2214,6 +2213,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 			pred.PredictPostProb(p->_Haplo, Geno, pm);
 			// add matching probability
 			sum_matching += pm;
+			num_matching ++;
 			// add prob to the ensemble
 			if (vote_method == 1)
 			{
@@ -2234,7 +2234,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 
 		// normalize the sum of posterior prob
 		pred.NormalizeSumPostProb();
-		OutMatching = sum_matching / _ClassifierList.size();
+		OutMatching = sum_matching / num_matching;
 	}
 }
 
