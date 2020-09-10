@@ -858,24 +858,24 @@ namespace HLA_LIB
 		CdProgression();
 
 		/// initialize
-		void Init(long TotalCnt, bool ShowInit);
+		void Init(INT64 TotalCnt, bool ShowInit);
 		/// move forward
-		bool Forward(long step, bool Show);
+		bool Forward(INT64 step, bool Show);
 		/// show progress information
 		virtual void ShowProgress();
 
         /// Return the current percentile
 		inline int Percent() const { return fPercent; }
 		/// Return the total number
-		inline long Total() const { return fTotal; }
+		inline INT64 Total() const { return fTotal; }
 		/// Return the current position
-		inline long Current() const { return fCurrent; }
+		inline INT64 Current() const { return fCurrent; }
 
 	protected:
-		long fTotal;      //< the total number
-		long fCurrent;    //< the current number
-		int fPercent;     //< the corresponding percent
-		clock_t OldTime;  //< the old time point
+		INT64 fTotal;      //< the total number
+		INT64 fCurrent;    //< the current number
+		int fPercent;      //< the corresponding percent
+		clock_t OldTime;   //< the old time point
 	};
 
 	/// Progress information

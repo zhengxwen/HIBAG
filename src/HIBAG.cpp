@@ -552,19 +552,21 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 /**
  *  Predict HLA types, output the best-guess and their prob.
  *
- *  \param model        the model index
+ *  \param Model        the model index
  *  \param GenoMat      the pointer to the SNP genotypes
- *  \param nSamp        the number of samples in GenoMat
- *  \param vote_method  the voting method
- *  \param ShowInfo     whether showing information
+ *  \param NumSamp      the number of samples in GenoMat
+ *  \param VoteMethod   the voting method
+ *  \param NThread      the number of threads
+ *  \param Verbose      whether showing information
  *  \param proc_ptr     pointer to functions for an extensible component
  *  \return H1, H2 and posterior prob.
 **/
-SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
+SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
+	SEXP VoteMethod, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
 {
-	const int midx = Rf_asInteger(model);
-	const int NumSamp = Rf_asInteger(nSamp);
+	const int midx = Rf_asInteger(Model);
+	const int nSamp = Rf_asInteger(NumSamp);
+	const int vote_method = Rf_asInteger(VoteMethod);
 	const int nthread = Rf_asInteger(NThread);
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
@@ -586,19 +588,19 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 		}
 
 		rv_ans = PROTECT(NEW_LIST(4));
-		SEXP out_H1 = NEW_INTEGER(NumSamp);
+		SEXP out_H1 = NEW_INTEGER(nSamp);
 		SET_ELEMENT(rv_ans, 0, out_H1);
-		SEXP out_H2 = NEW_INTEGER(NumSamp);
+		SEXP out_H2 = NEW_INTEGER(nSamp);
 		SET_ELEMENT(rv_ans, 1, out_H2);
-		SEXP out_Prob = NEW_NUMERIC(NumSamp);
+		SEXP out_Prob = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 2, out_Prob);
-		SEXP out_Matching = NEW_NUMERIC(NumSamp);
+		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
 
 		if (!Rf_isNull(proc_ptr))
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
-			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+			M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
 				REAL(out_Matching), NULL, verbose);
 			GPUExtProcPtr = NULL;
@@ -625,11 +627,12 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
  *  \param proc_ptr     pointer to functions for an extensible component
  *  \return H1, H2, prob. and a matrix of all probabilities
 **/
-SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
+SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
+	SEXP VoteMethod, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
 {
-	const int midx = Rf_asInteger(model);
-	const int NumSamp = Rf_asInteger(nSamp);
+	const int midx = Rf_asInteger(Model);
+	const int nSamp = Rf_asInteger(NumSamp);
+	const int vote_method = Rf_asInteger(VoteMethod);
 	const int nthread = Rf_asInteger(NThread);
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
@@ -651,21 +654,21 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
 		}
 
 		rv_ans = PROTECT(NEW_LIST(5));
-		SEXP out_H1 = NEW_INTEGER(NumSamp);
+		SEXP out_H1 = NEW_INTEGER(nSamp);
 		SET_ELEMENT(rv_ans, 0, out_H1);
-		SEXP out_H2 = NEW_INTEGER(NumSamp);
+		SEXP out_H2 = NEW_INTEGER(nSamp);
 		SET_ELEMENT(rv_ans, 1, out_H2);
-		SEXP out_Prob = NEW_NUMERIC(NumSamp);
+		SEXP out_Prob = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 2, out_Prob);
-		SEXP out_Matching = NEW_NUMERIC(NumSamp);
+		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
-		SEXP out_MatProb = allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, NumSamp);
+		SEXP out_MatProb = allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
 		if (!Rf_isNull(proc_ptr))
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
-			M.PredictHLA(INTEGER(GenoMat), NumSamp, Rf_asInteger(vote_method),
+			M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
 				REAL(out_Matching), REAL(out_MatProb), verbose);
 			GPUExtProcPtr = NULL;
@@ -876,7 +879,6 @@ SEXP HIBAG_Confusion(SEXP n_hla, SEXP init_mat, SEXP n_DConfusion,
 SEXP HIBAG_BEDFlag(SEXP bedfn)
 {
 	const char *fn = CHAR(STRING_ELT(bedfn, 0));
-
 	CORE_TRY
 		ifstream file(fn, ios::binary);
 		if (!file.good())
@@ -1232,7 +1234,6 @@ void R_init_HIBAG(DllInfo *info)
 	};
 
 	R_registerRoutines(info, NULL, callMethods, NULL, NULL);
-
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
 }
 

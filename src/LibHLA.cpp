@@ -46,6 +46,7 @@
 #endif
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
+#include <mutex>
 
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE
@@ -202,12 +203,14 @@ inline static const char *date_text()
 
 static const clock_t TimeInterval = 15*CLOCKS_PER_SEC;
 
+static mutex progress_add;
+
 CdProgression::CdProgression()
 {
 	Init(0, false);
 }
 
-void CdProgression::Init(long TotalCnt, bool ShowInit)
+void CdProgression::Init(INT64 TotalCnt, bool ShowInit)
 {
 	if (TotalCnt < 0) TotalCnt = 0;
 	fTotal = TotalCnt;
@@ -216,8 +219,9 @@ void CdProgression::Init(long TotalCnt, bool ShowInit)
 	if (ShowInit) ShowProgress();
 }
 
-bool CdProgression::Forward(long step, bool Show)
+bool CdProgression::Forward(INT64 step, bool Show)
 {
+	progress_add.lock();
 	fCurrent += step;
 	int p = int(double(TotalPercent)*fCurrent / fTotal);
 	if ((p != fPercent) || (p == TotalPercent))
@@ -228,9 +232,11 @@ bool CdProgression::Forward(long step, bool Show)
 			fPercent = p;
 			if (Show) ShowProgress();
 			OldTime = Now;
+			progress_add.unlock();
 			return true;
 		}
 	}
+	progress_add.unlock();
 	return false;
 }
 
@@ -2147,7 +2153,7 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 			memcpy(OutProbArray+i*nn, &pred._SumPostProb[0], sizeof(double)*nn);
 		if (OutMatching) OutMatching[i] = match_prob;
 
-		Progress.Forward(1, verbose && (idx==0));
+		Progress.Forward(1, verbose);
 		if (idx == 0) CheckInterrupt();  // run on the baseline thread
 	}
 	PARALLEL_END
