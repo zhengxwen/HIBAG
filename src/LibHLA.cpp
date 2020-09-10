@@ -656,8 +656,8 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"TGenotype::IntToSNP, the length is invalid.");
 	// fill all bytes with missing value
-	memset(PackedSNP1, 0,    sizeof(PackedSNP1));
-	memset(PackedSNP2, 0xFF, sizeof(PackedSNP2));
+	memset(PackedSNP1,  0, sizeof(PackedSNP1));
+	memset(PackedSNP2, -1, sizeof(PackedSNP2));
 	// set genotypes
 	const static UINT8 P1[4] = { 0, 1, 1, 0 };
 	const static UINT8 P2[4] = { 0, 0, 1, 1 };
@@ -848,7 +848,7 @@ void CGenotypeList::SetAllMissing()
 	size_t n = List.size();
 	for (TGenotype *p = &List[0]; n > 0; n--, p++)
 	{
-		memset(p->PackedSNP1, 0, sizeof(p->PackedSNP1));
+		memset(p->PackedSNP1,  0, sizeof(p->PackedSNP1));
 		memset(p->PackedSNP2, -1, sizeof(p->PackedSNP2));
 	}
 }
@@ -1336,9 +1336,8 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 void CAlg_Prediction::InitPrediction(int n_hla)
 {
 	HIBAG_CHECKING(n_hla<=0, "CAlg_Prediction::Init, n_hla error.");
-
 	_nHLA = n_hla;
-	const int size = n_hla*(n_hla+1)/2;
+	const size_t size = n_hla*(n_hla+1)/2;
 	_PostProb.resize(size);
 	_SumPostProb.resize(size);
 }
@@ -1423,12 +1422,6 @@ inline THLAType CAlg_Prediction::_BestGuess(double hla_prob[])
 		}
 	}
 	return rv;
-}
-
-inline void CAlg_Prediction::aux_var_resize(size_t n)
-{
-	aux_haplo.resize(2*n);
-	aux_freq.resize(n);
 }
 
 THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
@@ -2108,27 +2101,34 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
 
-	// get the maximum of haplotypes among all classifiers
-	size_t max_num_haplo = 0;
-	if (need_auxiliary_haplo)
-	{
-		vector<CAttrBag_Classifier>::iterator p = _ClassifierList.begin();
-		for (; p != _ClassifierList.end(); p++)
-		{
-			if (max_num_haplo < p->_Haplo.Num_Haplo)
-				max_num_haplo = p->_Haplo.Num_Haplo;
-		}
-	}
-
 	// prediction object
 	const int nthread = thread_num();
 	vector<CAlg_Prediction> pred_lst(nthread);
 	for (int i=0; i < nthread; i++)
-	{
 		pred_lst[i].InitPrediction(nHLA());
-		pred_lst[i].aux_var_resize(max_num_haplo);
+
+	// set auxiliary variables if need_auxiliary_haplo=true
+	vector<int64_t> aux_haplo;
+	vector<double> aux_freq;
+	if (need_auxiliary_haplo)
+	{
+		const int ncl = _ClassifierList.size();
+		size_t sum_num_haplo = 0;
+		for (int i=0; i < ncl; i++)
+			sum_num_haplo += _ClassifierList[i]._Haplo.Num_Haplo;
+		aux_haplo.resize(2*sum_num_haplo);
+		aux_freq.resize(sum_num_haplo);
+		// call SetHaploAux
+		size_t p = 0;
+		for (int i=0; i < ncl; i++)
+		{
+			CHaplotypeList &haplo = _ClassifierList[i]._Haplo;
+			haplo.SetHaploAux(&aux_haplo[2*p], &aux_freq[p]);
+			p += haplo.Num_Haplo;
+		}
 	}
 
+	// get SNP weights according to the number of classifiers using that SNP
 	vector<double> c_weight(_ClassifierList.size()*nthread);
 	vector<int> snp_weight(nSNP());
 	_GetSNPWeights(&snp_weight[0]);
@@ -2198,7 +2198,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 		// initialize probability
 		pred.InitSumPostProb();
 		TGenotype Geno;
-		double sum_matching=0, pm;
+		double sum_matching=0;
 		int num_matching=0;
 
 		p = _ClassifierList.begin();
@@ -2208,8 +2208,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 			// get the packed SNP genotypes
 			Geno.IntToSNP(p->nSNP(), geno, &(p->_SNPIndex[0]));
 			// predict
-			if (need_auxiliary_haplo)
-				p->_Haplo.SetHaploAux(&pred.aux_haplo[0], &pred.aux_freq[0]);
+			double pm;
 			pred.PredictPostProb(p->_Haplo, Geno, pm);
 			// add matching probability
 			sum_matching += pm;

@@ -580,9 +580,9 @@ namespace HLA_LIB
 		/// average over all classifiers
 		void NormalizeSumPostProb();
 
-		/// 
+		/// return the '_PostProb' index with a pair of H1 and H2
 		double &IndexPostProb(int H1, int H2);
-		/// 
+		/// return the '_SumPostProb' index with a pair of H1 and H2
 		double &IndexSumPostProb(int H1, int H2);
 
 		/// predict based on SNP profiles and haplotype list,
@@ -604,22 +604,16 @@ namespace HLA_LIB
 	protected:
 		/// the number of unique HLA alleles
 		int _nHLA;
-		/// plus weight after calling AddProbToSum()
+		/// add weight after calling AddProbToSum()
 		double _Sum_Weight;
 		/// a vector of posterior probabilities
 		vector<double> _PostProb;
 		/// a vector of posterior probabilities for summing up
 		vector<double> _SumPostProb;
-		/// auxiliary variable for haplotypes if need_auxiliary_haplo=true
-		vector<int64_t> aux_haplo;
-		/// auxiliary variable for frequencies if need_auxiliary_haplo=true
-		vector<double> aux_freq;
 
 	private:
 		/// the best-guess HLA type from 'hla_prob'
 		inline THLAType _BestGuess(double hla_prob[]);
-		/// resize the auxiliary variables 'aux_haplo' and 'aux_freq'
-		inline void aux_var_resize(size_t n);
 
 		/// the best-guess HLA type based on SNP profiles and haplotype list
 		//    without saving posterior probabilities

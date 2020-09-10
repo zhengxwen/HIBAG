@@ -375,7 +375,6 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 			// i2 = i1
 			ADD_FREQ_MUTANT(sum, i1->Freq * i1->Freq, hamm_d(GS, *i1, *i1));
 			// i2 > i1
-			const double ff = 2 * i1->Freq;
 			THaplotype *i2 = i1 + 1;
 			size_t m2 = m1 - 1;
 			if (m2 >= 4)
@@ -383,6 +382,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 				m2 = add_geno_freq4(m2, i1, i2-base, GS, sum);
 				i2 += m1 - 1 - m2;
 			}
+			const double ff = 2 * i1->Freq;
 			for (; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(sum, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
