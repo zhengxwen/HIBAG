@@ -271,11 +271,11 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
     # check
     stopifnot(inherits(genoobj, "hlaSNPGenoClass"))
 
-    stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.integer(samp.sel))
+    stopifnot(is.null(samp.sel) | is.logical(samp.sel) | is.numeric(samp.sel))
     if (is.logical(samp.sel))
         stopifnot(length(samp.sel) == length(genoobj$sample.id))
 
-    stopifnot(is.null(snp.sel) | is.logical(snp.sel) | is.integer(snp.sel))
+    stopifnot(is.null(snp.sel) | is.logical(snp.sel) | is.numeric(snp.sel))
     if (!is.null(snp.sel))
     {
         if (!is.null(snp.id))
@@ -290,12 +290,12 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
             snp.sel <- genoobj$snp.id %in% snp.id
     }
 
-    if (is.integer(samp.sel))
+    if (is.numeric(samp.sel))
     {
         stopifnot(!any(is.na(samp.sel)))
         stopifnot(length(unique(samp.sel)) == length(samp.sel))
     }
-    if (is.integer(snp.sel))
+    if (is.numeric(snp.sel))
     {
         stopifnot(!any(is.na(snp.sel)))
         stopifnot(length(unique(snp.sel)) == length(snp.sel))
@@ -306,7 +306,7 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
         samp.sel <- rep(TRUE, length(genoobj$sample.id))
     if (is.null(snp.sel))
         snp.sel <- rep(TRUE, length(genoobj$snp.id))
-    rv <- list(genotype = genoobj$genotype[snp.sel, samp.sel],
+    rv <- list(genotype = genoobj$genotype[snp.sel, samp.sel, drop=FALSE],
         sample.id = genoobj$sample.id[samp.sel],
         snp.id = genoobj$snp.id[snp.sel],
         snp.position = genoobj$snp.position[snp.sel],

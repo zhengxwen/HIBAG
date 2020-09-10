@@ -561,11 +561,11 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
  *  \return H1, H2 and posterior prob.
 **/
 SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP nthread, SEXP Verbose, SEXP proc_ptr)
+	SEXP vote_method, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
 {
 	const int midx = Rf_asInteger(model);
 	const int NumSamp = Rf_asInteger(nSamp);
-	const int i_nthread = Rf_asInteger(nthread);
+	const int nthread = Rf_asInteger(NThread);
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
@@ -573,7 +573,7 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
 	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(i_nthread);
+		tbb::task_scheduler_init init(nthread);
 	#endif
 		if (verbose)
 		{
@@ -626,21 +626,21 @@ SEXP HIBAG_Predict_Resp(SEXP model, SEXP GenoMat, SEXP nSamp,
  *  \return H1, H2, prob. and a matrix of all probabilities
 **/
 SEXP HIBAG_Predict_Resp_Prob(SEXP model, SEXP GenoMat, SEXP nSamp,
-	SEXP vote_method, SEXP nthread, SEXP verbose, SEXP proc_ptr)
+	SEXP vote_method, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
 {
 	const int midx = Rf_asInteger(model);
 	const int NumSamp = Rf_asInteger(nSamp);
-	const int i_nthread = Rf_asInteger(nthread);
-	const bool is_verbose = Rf_asLogical(verbose)==TRUE;
+	const int nthread = Rf_asInteger(NThread);
+	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
 	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(i_nthread);
+		tbb::task_scheduler_init init(nthread);
 	#endif
-		if (is_verbose)
+		if (verbose)
 		{
 		#if RCPP_PARALLEL_USE_TBB
 			int n = tbb::this_task_arena::max_concurrency();

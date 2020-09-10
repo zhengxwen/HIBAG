@@ -707,7 +707,7 @@ hlaPredict <- function(object, snp, cl=NULL,
                 names(rv) <- c("H1", "H2", "prob", "matching")
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
-                    as.integer(snp), n.samp, vote_method, verbose, pm)
+                    as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
             }
 
@@ -732,7 +732,7 @@ hlaPredict <- function(object, snp, cl=NULL,
             # all probabilites
 
             rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
-                as.integer(snp), n.samp, vote_method, verbose, pm)
+                as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
             names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
 
             res <- rv$postprob
