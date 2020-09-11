@@ -378,6 +378,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     mod <- hlaModelFromObj(ans)
     if (verbose)
         cat("Calculating matching proportion:\n")
+    if (is.null(cl)) cl <- FALSE
     pd <- hlaPredict(mod, snp, cl=cl, verbose=FALSE)
     mod$matching <- pd$value$matching
 
@@ -420,7 +421,7 @@ hlaClose <- function(model)
 # Predict HLA types using unphased SNP data
 #
 
-predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
+predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
@@ -430,18 +431,17 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
         same.strand, verbose)
 }
 
-hlaPredict <- function(object, snp, cl=NULL,
+hlaPredict <- function(object, snp, cl=FALSE,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(inherits(object, "hlaAttrBagClass"))
-    stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
+    stopifnot(is.logical(cl) | is.numeric(cl) | inherits(cl, "cluster"))
     stopifnot(is.logical(allele.check), length(allele.check)==1L)
     stopifnot(is.logical(same.strand), length(same.strand)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
-
     type <- match.arg(type)
     vote <- match.arg(vote)
     match.type <- match.arg(match.type)
@@ -451,50 +451,37 @@ hlaPredict <- function(object, snp, cl=NULL,
     {
         if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
-        if (length(cl) <= 1L) cl <- NULL
-    } else if (is.numeric(cl))
-    {
+        if (length(cl) <= 1L) cl <- FALSE
     }
 
     # if warning
     if (!is.null(object$appendix$warning))
-    {
-        message(object$appendix$warning)
-        warning(object$appendix$warning)
-    }
+        warning(object$appendix$warning, immediate.=TRUE)
 
     if (verbose)
     {
         # get the number of classifiers
         CNum <- .Call(HIBAG_GetNumClassifiers, object$model)
-
-        cat(sprintf(
-            "HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
-            CNum, .plural(CNum), length(object$snp.id),
-            length(object$hla.allele)))
-
+        cat("HIBAG model:\n",
+            "    ", CNum, " individual classifier", .plural(CNum), "\n",
+            "    ", length(object$snp.id), " SNPs\n",
+            "    ", length(object$hla.allele), " unique HLA alleles\n", sep="")
+        cat("Prediction:\n")
         if (vote_method == 1L)
+            cat("    based on the averaged posterior probabilities\n")
+        else
+            cat("    by voting from all individual classifiers\n")
+        if (inherits(cl, "cluster"))
         {
-            cat("Predicting based on the averaged posterior probabilities",
-                "from all individual classifiers.\n")
-        } else
-            cat("Predicting by voting from all individual classifiers.\n")
-
-        if (!is.null(cl))
-        {
-            cat(sprintf(
-                "Run in parallel with %d compute node%s.\n",
-                length(cl), ifelse(length(cl)>1L, "s", "")
-            ))
+            cat("    run in parallel with ", length(cl), " compute node",
+                .plural(length(cl)), "\n", sep="")
         }
     }
 
     if (!inherits(snp, "hlaSNPGenoClass"))
     {
         # it should be a vector or a matrix
-        stopifnot(is.numeric(snp))
-        stopifnot(is.vector(snp) | is.matrix(snp))
-
+        stopifnot(is.numeric(snp), is.vector(snp) | is.matrix(snp))
         if (is.vector(snp))
         {
             stopifnot(length(snp) == object$n.snp)
@@ -534,10 +521,8 @@ hlaPredict <- function(object, snp, cl=NULL,
                 else
                     assembly <- geno.assembly
             } else {
-                if (verbose)
-                    message("The human genome references do not match!")
                 warning("The human genome references do not match! ",
-                    refstr, ".")
+                    refstr, ".", immediate.=TRUE)
                 assembly <- model.assembly
             }
         } else {
@@ -578,20 +563,17 @@ hlaPredict <- function(object, snp, cl=NULL,
             snp.allele <- snp$snp.allele
             snp.allele[is.na(snp.allele)] <- ""
 
-            # tmp variable
+            # temporary variable
             tmp <- list(genotype = snp$genotype[snp.sel,],
                 sample.id = snp$sample.id,
                 snp.id = object$snp.id, snp.position = object$snp.position,
                 snp.allele = snp.allele[snp.sel],
                 assembly = snp$assembly)
-
             flag <- is.na(tmp$snp.allele)
             tmp$snp.allele[flag] <- object$snp.allele[
                 match(tmp$snp.id[flag], object$snp.id)]
-
             if (is.vector(tmp$genotype))
                 tmp$genotype <- matrix(tmp$genotype, ncol=1L)
-
             class(tmp) <- "hlaSNPGenoClass"
 
             # the total number of missing snp
@@ -603,9 +585,8 @@ hlaPredict <- function(object, snp, cl=NULL,
                 if (missing.cnt > 0L)
                 {
                     cat(sprintf("There %s %d missing SNP%s (%0.1f%%).\n",
-                        if (missing.cnt > 1L) "are" else "is",
-                        missing.cnt,
-                        if (missing.cnt > 1L) "s" else "",
+                        ifelse(missing.cnt > 1L, "are", "is"),
+                        missing.cnt, .plural(missing.cnt),
                         100*missing.cnt/length(obj.id)))
                 }
             }
@@ -653,7 +634,7 @@ hlaPredict <- function(object, snp, cl=NULL,
                 stop("There is no overlapping of SNPs!")
             } else if (missing.cnt > 0.5*length(obj.id))
             {
-                warning("More than 50% of SNPs are missing!")
+                warning("More than 50% of SNPs are missing!", immediate.=TRUE)
             }
 
             # switch
@@ -672,7 +653,7 @@ hlaPredict <- function(object, snp, cl=NULL,
     {
         stop("The number of SNPs is not valid, and ",
             "it maybe due to duplicated 'snp.id' or ",
-            "incorrect dimension of genotypic matrix.")
+            "incorrect dimension of genotype matrix.")
     }
 
     # initialize ...
@@ -680,26 +661,27 @@ hlaPredict <- function(object, snp, cl=NULL,
     n.hla <- length(object$hla.allele)
     if (verbose)
     {
-        cat(sprintf("Number of samples: %d\n", n.samp))
+        cat(sprintf("# of samples: %d\n", n.samp))
         cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]], "\n", sep="")
     }
 
     # parallel units
-    if (is.null(cl) || is.numeric(cl))
+    if (!inherits(cl, "cluster"))
     {
-		nthread <- 1L
-		if (is.numeric(cl)) nthread <- cl[1L]
-		if (is.na(nthread) || nthread<1L) nthread <- 1L
+        # the number of threads
+        nthread <- 1L
+        if (isTRUE(cl)) nthread <- as.integer(defaultNumThreads())
+        if (is.numeric(cl)) nthread <- cl[1L]
+        if (is.na(nthread) || nthread<1L) nthread <- 1L
 
         # pointer to functions for an extensible component
-		pm <- list()
-		pm <- pm$proc_ptr
+        pm <- list()
+        pm <- pm$proc_ptr
 
-        # to predict HLA types
+        # predict HLA genotypes
         if (type %in% c("response", "response+prob"))
         {
             # the best-guess prediction
-
             if (type == "response")
             {
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
@@ -711,6 +693,7 @@ hlaPredict <- function(object, snp, cl=NULL,
                 names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
             }
 
+            # output object
             res <- hlaAllele(geno.sampid,
                 H1 = object$hla.allele[rv$H1 + 1L],
                 H2 = object$hla.allele[rv$H2 + 1L],
@@ -725,45 +708,42 @@ hlaPredict <- function(object, snp, cl=NULL,
                     function(x, y) paste(x, y, sep="/"))
                 rownames(res$postprob) <- m[lower.tri(m, diag=TRUE)]
             }
-
             NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
 
         } else {
-            # all probabilites
-
+            # all probabilities
             rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
                 as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
             names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
 
+            # output object
             res <- rv$postprob
             colnames(res) <- geno.sampid
             m <- outer(object$hla.allele, object$hla.allele,
                 function(x, y) paste(x, y, sep="/"))
             rownames(res) <- m[lower.tri(m, diag=TRUE)]
-
             NA.cnt <- sum(colSums(res) <= 0L)
         }
     } else {
 
-        # in parallel
+        # run in parallel
         rv <- parallel::clusterApply(cl=cl,
             parallel::splitIndices(n.samp, length(cl)),
-            fun = function(idx, mobj, snp, type, vote)
+            fun = function(i, mobj, snp, type, vote)
             {
-                if (length(idx) > 0L)
+                if (length(i) > 0L)
                 {
                     library(HIBAG)
                     m <- hlaModelFromObj(mobj)
                     on.exit(hlaClose(m))
-                    pd <- hlaPredict(m, snp[,idx], type=type, vote=vote,
-                        verbose=FALSE)
-                    pd
+                    hlaPredict(m, snp[,i], type=type, vote=vote, verbose=FALSE)
                 } else
                     NULL
             },
             mobj=hlaModelToObj(object), snp=snp, type=type, vote=vote
         )
 
+        # merge the results
         if (type %in% c("response", "response+prob"))
         {
             res <- rv[[1L]]
@@ -790,13 +770,10 @@ hlaPredict <- function(object, snp, cl=NULL,
 
     if (NA.cnt > 0L)
     {
-        if (NA.cnt > 1L) s <- "s" else s <- ""
-        warning(sprintf(
-            "No prediction output%s of %d individual%s ",
-            s, NA.cnt, s),
-            "(possibly due to missing SNPs.)")
+        warning("No prediction output for ", NA.cnt, " individual",
+            .plural(NA.cnt), " (possibly due to missing SNPs).",
+            immediate.=TRUE)
     }
-
     # return
     res
 }
