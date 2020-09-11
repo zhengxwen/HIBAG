@@ -287,21 +287,16 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
 
     if (verbose)
     {
+        cat("Building a HIBAG model:\n")
+        cat(sprintf("    %d individual classifier%s\n", nclassifier,
+            .plural(nclassifier)))
         if (!is.null(cl))
         {
-            cat("Build a HIBAG model of", sprintf(
-                "%d individual classifier%s in parallel with %d compute node%s:\n",
-                nclassifier, if (nclassifier>1L) "s" else "",
-                length(cl), if (length(cl)>1L) "s" else ""
-            ))
-        } else {
-            cat(sprintf(
-                "Build a HIBAG model of %d individual classifier%s:\n",
-                nclassifier, if (nclassifier>1L) "s" else ""
-            ))
+            cat(sprintf("    run in parallel with %d compute node%s\n",
+                length(cl), .plural(length(cl))))
         }
         if (auto.save != "")
-            cat("The model is autosaved in '", auto.save, "'.\n", sep="")
+            cat("    autosave to ", sQuote(auto.save), "\n", sep="")
     }
 
     # set random number
@@ -339,10 +334,11 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 if (verbose & !is.null(mobj))
                 {
                     z <- summary(mobj, show=FALSE)
-                    cat("  --  avg out-of-bag acc:", sprintf(
-                        "%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
+                    cat(" -- avg out-of-bag acc:", sprintf(
+                        "%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%%s\n",
                         z$info["accuracy", "Mean"], z$info["accuracy", "SD"],
-                        z$info["accuracy", "Min"], z$info["accuracy", "Max"]))
+                        z$info["accuracy", "Min"], z$info["accuracy", "Max"],
+                        ifelse(auto.save!="", " [saved]", "")))
                 }
                 mobj
             },

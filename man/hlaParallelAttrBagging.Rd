@@ -12,13 +12,14 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE)
 }
 \arguments{
-    \item{cl}{if a cluster object, created by the package
-        \link{parallel-package}; if \code{NULL}, serial implementation will
-        be performed; if numeric, specify the number of cores}
+    \item{cl}{if a cluster object, created by the \link{parallel-package};
+        if \code{NULL}, serial implementation will be performed; if numeric,
+        specify the number of cores}
     \item{hla}{training HLA types, an object of \code{\link{hlaAlleleClass}}}
     \item{snp}{training SNP genotypes, an object of
         \code{\link{hlaSNPGenoClass}}}
-    \item{auto.save}{specify a autosaved file, see details}
+    \item{auto.save}{specify a autosaved file name for an R object
+        (.rda or .RData); "", no file saving}
     \item{nclassifier}{the total number of individual classifiers}
     \item{mtry}{a character or a numeric value, the number of variables randomly
         sampled as candidates for each selection. See details}
@@ -26,7 +27,8 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
         otherwise, exhaustive forward variable selection. See details}
     \item{na.rm}{if TRUE, remove the samples with missing HLA types}
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
-    \item{stop.cluster}{\code{TRUE}: stop cluster nodes after computing}
+    \item{stop.cluster}{\code{TRUE}: stop cluster nodes after completing
+        the calculation}
     \item{verbose}{if TRUE, show information}
 }
 \details{
@@ -106,8 +108,8 @@ model <- hlaParallelAttrBagging(2, hlatab$training, train.geno, nclassifier=4)
 
 library(parallel)
 
-# use option cl.core to choose an appropriate cluster size.
-cl <- makeCluster(getOption("cl.cores", 2))
+# choose an appropriate cluster size, e.g., 2
+cl <- makeCluster(2)
 set.seed(100)
 
 # train a HIBAG model in parallel
@@ -120,7 +122,7 @@ summary(mobj)
 model <- hlaModelFromObj(mobj)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 summary(pred)
 
 # compare
@@ -129,9 +131,9 @@ hlaCompareAllele(hlatab$validation, pred, allele.limit=model)$overall
 
 # since 'stop.cluster=TRUE' used in 'hlaParallelAttrBagging'
 # need a new cluster
-cl <- makeCluster(getOption("cl.cores", 2))
+cl <- makeCluster(2)
 
-pred <- predict(model, test.geno, cl=cl)
+pred <- hlaPredict(model, test.geno, cl=cl)
 summary(pred)
 
 # stop parallel nodes
