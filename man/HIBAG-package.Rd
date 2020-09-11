@@ -39,7 +39,7 @@ ensembles using bootstrap aggregating and random variable selection.
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
     HIBAG -- HLA Genotype Imputation with Attribute Bagging.
     The Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
-    \url{http://www.nature.com/tpj/journal/v14/n2/full/tpj201318a.html}
+    \url{https://www.nature.com/articles/tpj201318}
 }
 \author{
     Xiuwen Zheng [aut, cre, cph] \email{zhengx@u.washington.edu},
