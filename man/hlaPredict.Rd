@@ -20,8 +20,8 @@ hlaPredict(object, snp, cl=FALSE,
 \arguments{
     \item{object}{a model of \code{\link{hlaAttrBagClass}}}
     \item{snp}{a genotypic object of \code{\link{hlaSNPGenoClass}}}
-    \item{cl}{\code{FALSE}, \code{TRUE}, integer, or a cluster object created
-        by the \link{parallel-package}; if \code{FALSE}, use the serial
+    \item{cl}{\code{FALSE}, \code{TRUE}, an integer, or a cluster object
+        created by the \link{parallel-package}; if \code{FALSE}, use the serial
         implementation; if \code{TRUE}, use the number of threads returned from
         \code{RcppParallel::defaultNumThreads()} (by default using all threads);
         if an integer, specify the number of threads}
@@ -68,7 +68,8 @@ platform provider.
 \author{Xiuwen Zheng}
 \seealso{
     \code{\link{hlaAttrBagging}}, \code{\link{hlaAllele}},
-    \code{\link{hlaCompareAllele}}, \code{\link{hlaParallelAttrBagging}}
+    \code{\link{hlaCompareAllele}}, \code{\link{hlaParallelAttrBagging}},
+    \code{\link{hlaSetKernelTarget}}
 }
 
 \examples{

@@ -12,14 +12,17 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE, verbose.detail=FALSE)
 }
 \arguments{
-    \item{cl}{if a cluster object, created by the \link{parallel-package};
-        if \code{NULL}, serial implementation will be performed; if numeric,
-        specify the number of cores}
+    \item{cl}{\code{NULL}, \code{FALSE}, \code{TRUE}, an integer, or a cluster
+        object created by the \link{parallel-package}; if \code{NULL} or
+        \code{FALSE}, use the serial implementation; if \code{TRUE}, use the
+        number of threads returned from \code{RcppParallel::defaultNumThreads()}
+        (by default using all threads); if an integer, specify the number of
+        threads}
     \item{hla}{training HLA types, an object of \code{\link{hlaAlleleClass}}}
     \item{snp}{training SNP genotypes, an object of
         \code{\link{hlaSNPGenoClass}}}
     \item{auto.save}{specify a autosaved file name for an R object
-        (.rda or .RData); "", no file saving}
+        (.rda, .RData or .rds); "", no file saving}
     \item{nclassifier}{the total number of individual classifiers}
     \item{mtry}{a character or a numeric value, the number of variables randomly
         sampled as candidates for each selection. See details}
@@ -61,7 +64,8 @@ of non-informative SNP markers.
 }
 \author{Xiuwen Zheng}
 \seealso{
-    \code{\link{hlaAttrBagging}}, \code{\link{hlaClose}}
+    \code{\link{hlaAttrBagging}}, \code{\link{hlaClose}},
+    \code{\link{hlaSetKernelTarget}}
 }
 
 \examples{

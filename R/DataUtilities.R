@@ -41,6 +41,7 @@
         paste0(bp, "bp")
 }
 
+
 #######################################################################
 # get the name of HLA gene
 #
@@ -79,6 +80,41 @@
         assembly <- "hg19"
     }
     assembly
+}
+
+
+#######################################################################
+# check, load and save R objects
+#
+
+.fn_obj_check <- function(fn)
+{
+    if (grepl("\\.(rda|RData)$", fn, ignore.case=TRUE))
+        return(TRUE)
+    else if (grepl("\\.(rds)$", fn, ignore.case=TRUE))
+        return(FALSE)
+    else
+        return(NA)
+}
+
+.fn_obj_load <- function(fn)
+{
+    if (grepl("\\.(rda|RData)$", fn, ignore.case=TRUE))
+        get(load(fn))
+    else if (grepl("\\.(rds)$", fn, ignore.case=TRUE))
+        readRDS(fn)
+    else
+        stop("Unknown file ", sQuote(fn))
+}
+
+.fn_obj_save <- function(fn, .obj)
+{
+    if (grepl("\\.(rda|RData)$", fn, ignore.case=TRUE))
+        save(.obj, file=fn)
+    else if (grepl("\\.(rds)$", fn, ignore.case=TRUE))
+        saveRDS(.obj, fn)
+    else
+        stop("Invalid file ", sQuote(fn))
 }
 
 
@@ -1997,16 +2033,16 @@ hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
 {
     # check
     stopifnot(is.character(fn.list))
-    stopifnot(is.logical(verbose))
+    stopifnot(is.logical(verbose), length(verbose)==1L)
     action.missingfile <- match.arg(action.missingfile)
 
     # for-loop
     rv <- NULL
     for (fn in fn.list)
     {
-        if (file.exists(fn))
+        if (file.exists(fn) && !is.na(.fn_obj_check(fn)))
         {
-            tmp <- get(load(fn))
+            tmp <- .fn_obj_load(fn)
             if (is.null(rv))
             {
                 rv <- tmp
@@ -2014,7 +2050,7 @@ hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
                 rv <- hlaCombineModelObj(rv, tmp)
             }
         } else {
-            s <- sprintf("No file '%s'.", fn)
+            s <- sprintf("No or invalid file '%s'.", fn)
             if (action.missingfile == "stop")
             {
                 stop(s)

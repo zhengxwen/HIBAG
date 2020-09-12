@@ -271,7 +271,9 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         inherits(cl, "cluster"))
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
-    stopifnot(is.character(auto.save), length(auto.save)==1L, !is.na(auto.save))
+    stopifnot(is.character(auto.save), length(auto.save)==1L)
+    if (is.na(.fn_obj_check(auto.save)))
+        stop("'auto.save' should be a .rda/.RData or .rds file name.")
     stopifnot(is.numeric(nclassifier), length(nclassifier)==1L, nclassifier>0L)
     stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
     stopifnot(is.logical(prune), length(prune)==1L)
@@ -327,7 +329,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 else
                     mobj <- hlaCombineModelObj(obj1, obj2)
                 if (auto.save != "")
-                    save(mobj, file=auto.save)
+                    .fn_obj_save(auto.save, mobj)
                 if (verbose & !is.null(mobj))
                     .show_model_obj(mobj, auto.save!="")
                 mobj
@@ -378,7 +380,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 nthread=nthread, verbose=verbose, verbose.detail=verbose.detail)
             mtry <- mod$mtry
             mobj <- hlaModelToObj(mod)
-            save(mobj, file=auto.save)
+            .fn_obj_save(auto.save, mobj)
             if (verbose) .show_model_obj(mobj, TRUE)
             # add the remaining individual classifiers
             for (i in seq_len(nclassifier-1L))
@@ -386,7 +388,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 .Call(HIBAG_NewClassifiers, mod$model, 1L, mtry, prune,
                     -nthread, verbose, verbose.detail, NULL)
                 mobj <- hlaModelToObj(mod)
-                save(mobj, file=auto.save)
+                .fn_obj_save(auto.save, mobj)
                 if (verbose) .show_model_obj(mobj, TRUE)
             }
         }
@@ -402,7 +404,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     if (auto.save != "")
     {
         mobj <- hlaModelToObj(mod)
-        save(mobj, file=auto.save)
+        .fn_obj_save(auto.save, mobj)
     }
     if (verbose)
     {

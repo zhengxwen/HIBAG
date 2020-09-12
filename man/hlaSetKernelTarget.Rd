@@ -29,6 +29,10 @@ target will be disabled.
     Return a string describing the CPU capabilities.
 }
 \author{Xiuwen Zheng}
+\seealso{
+    \code{\link{hlaAttrBagging}}, \code{\link{hlaParallelAttrBagging}},
+    \code{\link{predict.hlaAttrBagClass}}, \code{\link{hlaPredict}}
+}
 
 \examples{
 hlaSetKernelTarget("auto")
