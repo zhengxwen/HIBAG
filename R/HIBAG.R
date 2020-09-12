@@ -271,8 +271,8 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         inherits(cl, "cluster"))
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
-    stopifnot(is.character(auto.save), length(auto.save)==1L)
-    if (is.na(.fn_obj_check(auto.save)))
+    stopifnot(is.character(auto.save), length(auto.save)==1L, !is.na(auto.save))
+    if (auto.save!="" && is.na(.fn_obj_check(auto.save)))
         stop("'auto.save' should be a .rda/.RData or .rds file name.")
     stopifnot(is.numeric(nclassifier), length(nclassifier)==1L, nclassifier>0L)
     stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
@@ -1181,45 +1181,6 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
         snp.id = obj$snp.id, snp.position = obj$snp.position,
         snp.hist = snp.hist, info = info)
     invisible(rv)
-}
-
-
-##########################################################################
-# Get a model object of attribute bagging from a list of files
-#
-
-hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
-    verbose=TRUE)
-{
-    # check
-    stopifnot(is.character(fn.list))
-    stopifnot(is.logical(verbose))
-    action.missingfile <- match.arg(action.missingfile)
-
-    # for-loop
-    rv <- NULL
-    for (fn in fn.list)
-    {
-        if (file.exists(fn))
-        {
-            tmp <- get(load(fn))
-            if (is.null(rv))
-            {
-                rv <- tmp
-            } else {
-                rv <- hlaCombineModelObj(rv, tmp)
-            }
-        } else {
-            s <- sprintf("There is no '%s'.", fn)
-            if (action.missingfile == "stop")
-            {
-                stop(s)
-            } else {
-                if (verbose) message(s)
-            }
-        }
-    }
-    rv
 }
 
 
