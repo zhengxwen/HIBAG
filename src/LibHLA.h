@@ -941,6 +941,9 @@ namespace HLA_LIB
 			double out_prob[], double out_match[]);
 	};
 
+	/// Get a string of date
+	const char *date_text();
+
 	/// Pointer to the structure of functions using GPU
 	extern TypeGPUExtProc *GPUExtProcPtr;
 

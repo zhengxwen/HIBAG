@@ -520,9 +520,9 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 		GetRNGstate();
 
 	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(nthread);
+		tbb::task_scheduler_init init(abs(nthread));
 	#endif
-		if (verbose)
+		if (verbose && nthread>0)
 		{
 		#if RCPP_PARALLEL_USE_TBB
 			int n = tbb::this_task_arena::max_concurrency();
@@ -530,6 +530,7 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 			int n = 1;
 		#endif
 			Rprintf("# of threads: %d\n", n);
+			Rprintf("[-] %s\n", date_text());
 		}
 
 		if (!Rf_isNull(proc_ptr))

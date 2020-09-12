@@ -191,7 +191,7 @@ inline void CheckInterrupt()
 
 static char date_buffer[256];
 
-inline static const char *date_text()
+const char *HLA_LIB::date_text()
 {
 	time_t rawtime;
 	time(&rawtime);
@@ -2046,9 +2046,6 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	bool verbose, bool verbose_detail)
 {
-	if (verbose)
-		Rprintf("[-] %s\n", date_text());
-
 	if (GPUExtProcPtr)
 		(*GPUExtProcPtr->build_init)(nHLA(), nSamp());
 
@@ -2065,7 +2062,7 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 			int nOOB = 0;
 			for (size_t i=0; i < bc.size(); i++) if (bc[i] == 0) nOOB++;
 			Rprintf("=== building individual classifier %d, out-of-bag (%d/%.1f%%) ===\n",
-				k+1, nOOB, 100.0*nOOB/bc.size());
+				(int)_ClassifierList.size(), nOOB, 100.0*nOOB/bc.size());
 		}
 
 		// initialize bootstrap samples in GPU implementation
@@ -2077,8 +2074,8 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		{
 			Rprintf(
 				"[%d] %s, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
-				k+1, date_text(), I->OutOfBag_Accuracy()*100, I->nSNP(),
-				I->nHaplo());
+				(int)_ClassifierList.size(), date_text(),
+				I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
 			CheckInterrupt();
 		}
 	}

@@ -9,7 +9,7 @@
 \usage{
 hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
-    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE)
+    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE, verbose.detail=FALSE)
 }
 \arguments{
     \item{cl}{if a cluster object, created by the \link{parallel-package};
@@ -29,7 +29,8 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
     \item{stop.cluster}{\code{TRUE}: stop cluster nodes after completing
         the calculation}
-    \item{verbose}{if TRUE, show information}
+    \item{verbose}{if \code{TRUE}, show information}
+    \item{verbose.detail}{if \code{TRUE}, show more information}
 }
 \details{
     \code{mtry} (the number of variables randomly sampled as candidates for

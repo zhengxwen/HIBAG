@@ -26,8 +26,8 @@ hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
     \item{nthread}{specify the number of threads used in the model building;
         if \code{TRUE}, use the number of threads returned from
         \code{RcppParallel::defaultNumThreads()} (by default using all threads)}
-    \item{verbose}{if TRUE, show information}
-    \item{verbose.detail}{if TRUE, show more information}
+    \item{verbose}{if \code{TRUE}, show information}
+    \item{verbose.detail}{if \code{TRUE}, show more information}
 }
 \details{
     \code{mtry} (the number of variables randomly sampled as candidates
