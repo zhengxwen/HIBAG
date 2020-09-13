@@ -47,8 +47,10 @@ removed from the candidate SNP set for future searching. Parsimonious selection
 helps to improve the computational efficiency by reducing the searching times
 on non-informative SNP markers.
 
-    A parallel version of \code{hlaAttrBagging} is
-\code{\link{hlaParallelAttrBagging}}.
+    \code{\link{hlaParallelAttrBagging}} extends \code{hlaAttrBagging} to allow
+parallel computing with multiple compute nodes in a cluster. An autosave
+function is available in \code{\link{hlaParallelAttrBagging}} when an new
+individual classifier is built internally without completing the ensemble.
 }
 \value{
     Return an object of \code{\link{hlaAttrBagClass}}:

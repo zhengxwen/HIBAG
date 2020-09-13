@@ -52,6 +52,9 @@ if a new SNP predictor reduces the current out-of-bag accuracy, then it is
 removed from the candidate SNP set for future searching. Parsimonious selection
 helps to improve the computational efficiency by reducing the searching times
 of non-informative SNP markers.
+
+    An autosave function is available in \code{hlaParallelAttrBagging} when an
+new individual classifier is built internally without completing the ensemble.
 }
 \value{
     Return an object of \code{\link{hlaAttrBagClass}} if \code{auto.save=""}.
