@@ -7,8 +7,10 @@
 }
 \value{
     There are five components:
-    \item{genotype}{a genotype matrix,
-        ``# of SNPs'' - by - ``# of individuals''}
+    \item{genotype}{a genotype matrix, ``# of SNPs''-by-``# of individuals'';
+        0 standing for BB (ZERO A allele), 1 for AB (ONE A allele), 2 for AA
+        (TWO A alleles) and others for missing values (missing genotypes are
+        usually set to be NA)}
     \item{sample.id}{a vector of sample IDs}
     \item{snp.id}{a vector of SNP IDs}
     \item{snp.position}{a vector of SNP positions in basepair}

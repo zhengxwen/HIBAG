@@ -1581,8 +1581,8 @@ print.hlaAttrBagObj <- function(x, ...)
 # Export stardard R library function(s)
 #######################################################################
 
-hlaSetKernelTarget <- function(
-    cpu=c("auto", "avx2", "avx", "sse4", "sse2", "base", "avx512bw"))
+hlaSetKernelTarget <- function(cpu=c("auto", "max",
+    "base", "sse2", "sse4", "avx", "avx2", "avx512f", "avx512bw"))
 {
 	cpu <- match.arg(cpu)
     .Call(HIBAG_Kernel_SetTarget, cpu)

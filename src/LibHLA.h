@@ -131,6 +131,25 @@
 // AVX512F
 #ifdef HIBAG_CPU_ARCH_X86
 #   if defined(__GNUC__) && (__GNUC__>=5)
+#       define HIBAG_CPU_ARCH_X86_AVX512F
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#       define HIBAG_CPU_ARCH_X86_AVX512F
+#   endif
+#   if defined(__GNUC__) && (__GNUC__>=6)
+#       define HIBAG_BUILTIN_CPU_AVX512F
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#       define HIBAG_BUILTIN_CPU_AVX512F
+#   elif defined(__ICC)
+#       define HIBAG_BUILTIN_CPU_AVX512F
+#   endif
+#endif
+#if defined(__AVX512F__) && !defined(HIBAG_CPU_ARCH_X86_AVX512F)
+#   define HIBAG_CPU_ARCH_X86_AVX512F
+#endif
+
+// AVX512BW
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && (__GNUC__>=5)
 #       define HIBAG_CPU_ARCH_X86_AVX512BW
 #   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
 #       define HIBAG_CPU_ARCH_X86_AVX512BW
@@ -645,6 +664,10 @@ namespace HLA_LIB
 		static THLAType _BestGuess_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
+		// AVX512F CPU flags
+		static THLAType _BestGuess_avx512f(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		static double _PostProb_avx512f(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
+		static double _PostProb2_avx512f(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
 		// AVX512BW CPU flags
 		static THLAType _BestGuess_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
