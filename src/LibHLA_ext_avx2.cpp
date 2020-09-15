@@ -37,6 +37,23 @@
 #endif
 
 
+#include "LibHLA_ext.h"
+// need a patch for gcc_v4.8
+#if defined(HIBAG_CPU_ARCH_X86) && defined(__GNUC__) && (__GNUC__==4) && (__GNUC_MINOR__==8)
+#   pragma GCC target("avx2")
+#   define __AVX2__      1
+#   define __AVX__       1
+#   define __SSE4_1__    1
+#   define __SSE4_2__    1
+#   define __SSE3__      1
+#   define __SSSE3__     1
+#   define __POPCNT__    1
+#   include <xmmintrin.h>  // SSE
+#   include <emmintrin.h>  // SSE2
+#   include <immintrin.h>  // AVX
+#   define TARGET_AVX2
+#endif
+
 #include "LibHLA.h"
 #include <R.h>
 
@@ -67,7 +84,9 @@ extern const bool HIBAG_ALGORITHM_AVX2 = false;
 #include <emmintrin.h>  // SSE2
 #include <immintrin.h>  // AVX, AVX2
 
-#define TARGET_AVX2    __attribute__((target("avx2")))
+#ifndef TARGET_AVX2
+#   define TARGET_AVX2    __attribute__((target("avx2")))
+#endif
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX2 NAME ## _avx2
 
