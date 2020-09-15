@@ -57,10 +57,6 @@ extern const bool HIBAG_ALGORITHM_AVX512F = false;
 
 #ifdef HIBAG_CPU_ARCH_X86_AVX512F
 
-#   include <xmmintrin.h>  // SSE
-#   include <emmintrin.h>  // SSE2
-#   include <immintrin.h>  // AVX, AVX2, AVX512F
-
 #ifdef __ICC
 	#pragma intel optimization_parameter target_arch=COMMON-AVX512
 #   define TARGET_AVX512    __attribute__((target("avx512f")))
@@ -70,6 +66,10 @@ extern const bool HIBAG_ALGORITHM_AVX512F = false;
 #   endif
 #   define TARGET_AVX512    __attribute__((target("avx512f")))
 #endif
+
+#include <xmmintrin.h>  // SSE
+#include <emmintrin.h>  // SSE2
+#include <immintrin.h>  // AVX, AVX2, AVX512F
 
 #undef SIMD_NAME
 #define SIMD_NAME(NAME)  TARGET_AVX512 NAME ## _avx512f

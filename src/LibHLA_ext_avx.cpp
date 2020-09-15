@@ -57,15 +57,15 @@ extern const bool HIBAG_ALGORITHM_AVX = false;
 
 #ifdef HIBAG_CPU_ARCH_X86_AVX
 
-#   include <xmmintrin.h>  // SSE
-#   include <emmintrin.h>  // SSE2
-#   include <immintrin.h>  // AVX
-
 #ifdef __ICC
 	#pragma intel optimization_parameter target_arch=AVX
 #elif !defined(__AVX__) && !defined(__clang__)
 	#pragma GCC target("avx")
 #endif
+
+#include <xmmintrin.h>  // SSE
+#include <emmintrin.h>  // SSE2
+#include <immintrin.h>  // AVX, AVX2
 
 #define TARGET_AVX    __attribute__((target("avx")))
 #undef SIMD_NAME
