@@ -64,8 +64,8 @@ length(mobj$snp.id)
 mobj$appendix
 summary(mobj)
 
-p1 <- predict(model, train.geno)
-p2 <- predict(model2, train.geno)
+p1 <- hlaPredict(model, train.geno)
+p2 <- hlaPredict(model2, train.geno)
 
 # check
 cbind(p1$value, p2$value)

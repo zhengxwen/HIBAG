@@ -122,7 +122,7 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 summary(pred)
 
 # compare
@@ -153,7 +153,7 @@ model <- hlaModelFromObj(mobj)
 test.geno <- get(load("testgeno.RData"))
 hlatab <- get(load("HLASplit.RData"))
 
-pred <- predict(model, test.geno, type="response")
+pred <- hlaPredict(model, test.geno, type="response")
 summary(pred)
 
 # compare

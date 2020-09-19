@@ -39,6 +39,8 @@ In the association tests of HLA allele, four models (dominant, additive, recessi
 | genotype  | three categories: [-/-], [-/h], [h/h] |
 
 ```{r echo=FALSE}
+library(HIBAG)
+
 fn <- system.file("doc", "case_control.txt", package="HIBAG")
 ```
 

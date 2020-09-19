@@ -58,8 +58,8 @@ and \code{rownames} is an unordered pair of HLA alleles.
     When \code{match.type="RefSNP+Position"}, the matching of SNPs requires
 both SNP IDs and positions. A lower missing fraction maybe gained by
 matching SNP IDs or positions only. Call
-    \code{predict(..., match.type="RefSNP")} or
-    \code{predict(..., match.type="Position")} for this purpose.
+    \code{hlaPredict(..., match.type="RefSNP")} or
+    \code{hlaPredict(..., match.type="Position")} for this purpose.
 It could be safe to assume that the SNPs with the same positions on the same
 genome reference (e.g., hg19) are the same variant albeit the different SNP
 IDs. Any concern about SNP mismatching should be emailed to the genotyping
@@ -110,7 +110,7 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0))

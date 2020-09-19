@@ -77,8 +77,8 @@ m2 <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=2,
 
 
 # validation
-pd1 <- predict(m1, test.geno, type="response+prob", vote="majority")
-pd2 <- predict(m2, test.geno, type="response+prob", vote="majority")
+pd1 <- hlaPredict(m1, test.geno, type="response+prob", vote="majority")
+pd2 <- hlaPredict(m2, test.geno, type="response+prob", vote="majority")
 
 hlaCompareAllele(hlatab$validation, pd1)$overall
 

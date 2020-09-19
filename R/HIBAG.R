@@ -192,7 +192,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         cat("    # of samples: ", n.samp, "\n", sep="")
         s <- ifelse(!grepl("^KIR", hla$locus), "HLA", "KIR")
         cat("    # of unique ", s, " alleles: ", n.hla, "\n", sep="")
-        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]], "\n", sep="")
+        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]][1L], "\n", sep="")
     }
 
     # set the number of threads (initialized in HIBAG_NewClassifiers)
@@ -1600,7 +1600,7 @@ hlaSetKernelTarget <- function(cpu=c("auto", "max",
         "HIBAG (HLA Genotype Imputation with Attribute Bagging)")
     packageStartupMessage(
         sprintf("Kernel Version: v%d.%d (%s)", info[[1L]][1L], info[[1L]][2L],
-        info[[2L]]))
+        info[[2L]][1L]))
     if (is.na(info[[3L]]))
         packageStartupMessage("No Intel Threading Building Blocks (TBB)")
     TRUE
