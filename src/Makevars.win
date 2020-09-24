@@ -12,7 +12,7 @@ LIB_GCC=$(if ${GCC_FLAG},-lgcc)
 
 
 # additional preprocessor options
-PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
+PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1 -fno-asynchronous-unwind-tables
 
 # to set flags for the linker
 PKG_LIBS = \
