@@ -5,21 +5,29 @@
 # use C++11
 CXX_STD = CXX11
 
-# check GNU GCC
-GCC_FLAG=$(shell $(CC) -dM -E - < /dev/null |grep -Eo '__GNUC__|__clang__|ICC' \
-	|tr '\n' ' ' |grep GNUC |grep -v -e clang -e ICC)
-LIB_GCC=$(if ${GCC_FLAG},-lgcc)
-
+# need to fix "invalid register for .seh_savexmm" for avx512
+# assume using gcc
+FIXED_REG = -ffixed-xmm16 -ffixed-xmm17 -ffixed-xmm18 -ffixed-xmm19 \
+	-ffixed-xmm20 -ffixed-xmm21 -ffixed-xmm22 -ffixed-xmm23 \
+	-ffixed-xmm24 -ffixed-xmm25 -ffixed-xmm26 -ffixed-xmm27 \
+	-ffixed-xmm28 -ffixed-xmm29 -ffixed-xmm30 -ffixed-xmm31
 
 # additional preprocessor options
-PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1 -fno-asynchronous-unwind-tables
+PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
 
 # to set flags for the linker
 PKG_LIBS = \
-	$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()") \
-	${LIB_GCC}
+	$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()")
+
 
 all: $(SHLIB)
+
+LibHLA_ext_avx512f.o:
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG) LibHLA_ext_avx512f.cpp -c -o $@
+
+LibHLA_ext_avx512bw.o:
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG) LibHLA_ext_avx512bw.cpp -c -o $@
+
 
 clean:
 	rm -f ../.travis.yml
