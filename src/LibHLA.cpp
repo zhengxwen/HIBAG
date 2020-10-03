@@ -166,7 +166,7 @@ public:
 				EXP_LOG_MIN_RARE_FREQ[i] = 0;
 		}
 		// select CPU target
-		CAlg_Prediction::Init_Target_IFunc(NULL);
+		CAlg_Prediction::Init_Target_IFunc("max");
 	}
 };
 
@@ -1196,7 +1196,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 {
 	bool cpu_auto, cpu_max;
 	if (!cpu) cpu = "";
-	if (strcmp(cpu, "auto")==0) cpu = "";
+	if (strcmp(cpu, "auto.avx2")==0) cpu = "";
 	cpu_auto = (strlen(cpu)==0);
 	cpu_max = (strcmp(cpu, "max")==0);
 	if (cpu_max) cpu_auto = true;

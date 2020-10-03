@@ -5,19 +5,20 @@
     Set the CPU target that the HIBAG algorithm is built on.
 }
 \usage{
-hlaSetKernelTarget(cpu=c("auto", "max",
+hlaSetKernelTarget(cpu=c("max", "auto.avx2",
     "base", "sse2", "sse4", "avx", "avx2", "avx512f", "avx512bw"))
 }
 \arguments{
-    \item{cpu}{Specify the Intel/AMD CPU flag; "auto" by default}
+    \item{cpu}{Specify the Intel/AMD CPU flag; "max" by default}
 }
 \details{
-    If \code{cpu="auto"}, the kernel target will be automatically determined
-according to the CPU capabilities. By default, "avx2" is used instead of
-"avx512f", "avx512bw" even if the CPU supports the AVX512F and AVX512BW
-intrinsics, since the CPU may reduce the frequency of the cores dynamically
-to keep power usage of AVX512 within bounds. If \code{cpu="max"}, AVX512F and
-AVX512BW will be used when they are available.
+    If \code{cpu="max"}, the kernel target will be automatically determined
+according to the CPU capabilities to maximize the algorithm efficiency.
+When \code{cpu="auto.avx2"}, "avx2" is used instead of "avx512f", "avx512bw"
+even if the CPU supports the AVX512F and AVX512BW intrinsics, since the CPU
+may reduce the frequency of the cores dynamically to keep power usage of
+AVX512 within bounds; if AVX2 is not applicable, other target will be
+automatically determined.
 
     The HIBAG algorithm is optimized using different SIMD instruction sets to
 leverage the efficiency of the target Intel/AMD platform. The higher version of
