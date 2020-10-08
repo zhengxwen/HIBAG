@@ -534,7 +534,10 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 		}
 
 		if (!Rf_isNull(proc_ptr))
+		{
+			error("GPU is disable, and will be enable in future version.");
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		}
 		try {
 			_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
 				prune, verbose, verbose_detail);
