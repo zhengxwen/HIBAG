@@ -11,12 +11,7 @@ FIXED_REG = -ffixed-xmm16 -ffixed-xmm17 -ffixed-xmm18 -ffixed-xmm19 \
 	-ffixed-xmm20 -ffixed-xmm21 -ffixed-xmm22 -ffixed-xmm23 \
 	-ffixed-xmm24 -ffixed-xmm25 -ffixed-xmm26 -ffixed-xmm27 \
 	-ffixed-xmm28 -ffixed-xmm29 -ffixed-xmm30 -ffixed-xmm31
-
-ifeq "$(WIN)" "64"
-	FIXED_REG_64 = ${FIXED_REG}
-else
-	FIXED_REG_64 =
-endif
+FIXED_REG_64 = $(if $(filter ${R_ARCH_BIN},/x64),${FIXED_REG})
 
 
 # additional preprocessor options
