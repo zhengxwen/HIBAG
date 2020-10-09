@@ -1,0 +1,131 @@
+---
+title: "New Implementation of the HIBAG Algorithm with Latest Intel Intrinsics"
+author: "Dr. Xiuwen Zheng"
+date: "Sep, 2020"
+output:
+    html_document:
+        theme: default
+        highlight: tango
+        toc: yes
+    pdf_document:
+        toc: yes
+        toc_depth: 3
+vignette: >
+    %\VignetteIndexEntry{HIBAG algorithm implementation}
+    %\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS}
+    %\VignetteEngine{knitr::rmarkdown}
+---
+
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(HIBAG)
+library(ggplot2)
+
+version <- c("v1.24.0", "v1.24.0\n(POPCNT)", "v1.26.0\n(SSE2)",
+    "v1.26.0\n(SSE4&POPCNT)", "v1.26.0\n(AVX)", "v1.26.0\n(AVX2)", "v1.26.0\n(AVX512F)",
+    "v1.26.0\n(AVX512BW)")
+vs <- factor(version, version)
+
+draw <- function(dat)
+{
+    ggplot(dat, aes(x=Intrinsics, y=Speedup, fill=Gene)) +
+        xlab("Package Version and Intrinsics") + ylab("Speed-up factor") +
+        geom_bar(stat="identity", width=0.9, colour="white", position=position_dodge()) +
+        geom_hline(yintercept=1, linetype=2, colour="gray33") +
+        geom_text(aes(label=Speedup), vjust=-0.55, position=position_dodge(0.9), size=2) +
+        scale_fill_brewer(palette="Dark2") + theme_bw()
+}
+```
+
+## Benchmarks on building the training models
+
+Benchmarks were run on the compute nodes of Cascade Lake microarchitecture (Intel Xeon Gold 6248 CPU\@2.50GHz) with 192GB memory. The HIBAG package was compiled with GCC v8.3.0 in R-v4.0.2. In HIBAG (>= v1.26.0), users can use `hlaSetKernelTarget()` to select the target intrinsics, or `hlaSetKernelTarget("max")` for maximizing the algorithm efficiency.
+
+```{r}
+# continue without interrupting
+IgnoreError <- function(cmd) tryCatch(cmd, error=function(e) { message("Not support"); invisible() })
+```
+
+```{r}
+IgnoreError(hlaSetKernelTarget("sse4"))
+IgnoreError(hlaSetKernelTarget("avx"))
+IgnoreError(hlaSetKernelTarget("avx2"))
+IgnoreError(hlaSetKernelTarget("avx512f"))
+IgnoreError(hlaSetKernelTarget("avx512bw"))
+```
+
+
+### 1. Speedup factor using small training sets
+
+```{r echo=FALSE,fig.align='center',fig.width=9,fig.height=3.2}
+s <- "HLA-A  HLA-B  HLA-C  HLA-DRB1
+1.0	1.0	1.0	1.0
+1.7	1.6	1.6	1.6
+1.2	1.1	1.0	1.0
+2.3	2.2	2.2	2.2
+2.7	2.5	2.8	2.6
+3.2	2.7	2.8	2.7
+3.3	2.8	3.6	2.9
+4.2	3.5	4.6	3.9"
+
+b <- read.table(text=s, header=TRUE)
+colnames(b) <- gsub(".", "-", colnames(b), fixed=TRUE)
+b1 <- data.frame(Intrinsics=rep(vs, ncol(b)), Gene=as.factor(rep(names(b), each=nrow(b))),
+    Speedup=unname(unlist(b)))
+draw(b1) + ggtitle("Building HIBAG models using ~1,000 samples:")
+```
+
+
+### 2. Speedup factor using medium training sets
+
+```{r echo=FALSE,fig.align='center',fig.width=9,fig.height=3.2}
+s <- "HLA-A	HLA-B	HLA-C	HLA-DRB1	HLA-DQA1	HLA-DQB1
+1.0	1.0	1.0	1.0	1.0	1.0
+1.6	1.6	1.6	1.6	1.5	1.6
+1.1	1.0	1.0	1.0	1.0	1.1
+2.2	2.2	2.2	2.2	2.3	2.3
+2.6	2.8	2.9	2.8	2.9	2.9
+2.7	2.8	2.9	2.9	3.0	3.0
+2.9	3.7	3.5	3.4	4.1	3.8
+3.5	4.7	4.7	4.6	5.3	5.2"
+
+b <- read.table(text=s, header=TRUE)
+colnames(b) <- gsub(".", "-", colnames(b), fixed=TRUE)
+b2 <- data.frame(Intrinsics=rep(vs, ncol(b)), Gene=as.factor(rep(names(b), each=nrow(b))),
+    Speedup=unname(unlist(b)))
+draw(b2) + ggtitle("Building HIBAG models using ~5,000 samples:")
+```
+
+
+### 3. Speedup factor using large training sets
+
+```{r echo=FALSE,warning=FALSE,fig.align='center',fig.width=9,fig.height=3.2}
+s <- "HLA-A	HLA-B	HLA-C	HLA-DRB1	HLA-DQA1	HLA-DQB1
+1.0	1.0	1.0	1.0	1.0	1.0
+1.5	1.9	1.8	1.7	1.7	1.6
+NA NA NA 1.1 1.2 NA
+1.9	2.5	2.4	2.3	2.3	2.3
+2.2	3.1	2.9	3.0	3.0	2.8
+3.2	3.9	3.7	3.6	3.7	3.6
+4.0	4.4	4.5	4.3	4.4	4.3
+5.4	6.4	6.6	6.5	6.9	6.7"
+
+b <- read.table(text=s, header=TRUE)
+colnames(b) <- gsub(".", "-", colnames(b), fixed=TRUE)
+b3 <- data.frame(Intrinsics=rep(vs, ncol(b)), Gene=as.factor(rep(names(b), each=nrow(b))),
+    Speedup=unname(unlist(b)))
+draw(b3) + ggtitle("Building HIBAG models using ~10,000 samples:")
+```
+
+
+
+# References
+
+* Zheng X, *et al*. (2014). ``HIBAG -- HLA Genotype Imputation with Attribute Bagging''. *The Pharmacogenomics Journal*. https://doi.org/10.1038/tpj.2013.18.
+
+* Zheng X (2018). ``Imputation-based HLA Typing with SNPs in GWAS Studies''. *Methods in Molecular Biology*. https://doi.org/10.1007/978-1-4939-8546-3_11.
+
+* Intel AVX2 intrinsics: https://software.intel.com/content/www/us/en/develop/articles/how-intel-avx2-improves-performance-on-server-applications.html.
+
+* Intel AVX-512 overview: https://www.intel.com/content/www/us/en/architecture-and-technology/avx-512-overview.html.
+

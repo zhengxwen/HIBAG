@@ -1,7 +1,19 @@
 CHANGES IN VERSION 1.26.0
 -------------------------
 
+    o users can interrupt the model building in an interactive R session
+
     o remove `hlaErrMsg()` since it is never used
+
+    o a new option 'nthread' in `hlaAttrBagging()` as a complement to
+      `hlaParallelAttrBagging()`
+
+    o kernel version 1.5: generates the same training model as v1.4,
+      but 2x ~ 6x faster, by taking advantage of Intel AVX, AVX2 and AVX512
+      intrinsics
+
+    o new function `hlaSetKernelTarget()` to automatically select the CPU
+      target the algorithm is optimized for
 
 
 CHANGES IN VERSION 1.24.0
