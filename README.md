@@ -86,30 +86,10 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 
 ### CPU with Intel Intrinsics
 
-* Install the package from the source code with the support of hardware POPCNT (requiring SSE4.2):
-You have to customize the package compilation, see: [CRAN: Customizing-package-compilation](http://cran.r-project.org/doc/manuals/r-release/R-admin.html#Customizing-package-compilation)
+* GCC (>= v6.0) is strongly recommended to compile the HIBAG package (Intel ICC is not suggested).
 
-Change `~/.R/Makevars` to, if your machine supports SSE4.2 or higher, assuming GNU Compilers (gcc/g++) or Clang compiler (clang++) are installed:
-```sh
-## for C code
-CFLAGS=-g -O3 -march=native -mtune=native
-## for C++ code
-CXXFLAGS=-g -O3 -march=native -mtune=native
-```
-Or force to create hardware POPCNT code:
-```sh
-## for C code
-CFLAGS=-g -O3 -mpopcnt -msse4.2
-## for C++ code
-CXXFLAGS=-g -O3 -mpopcnt -msse4.2
-```
+* `HIBAG::hlaSetKernelTarget("max")` can be used to maximize the algorithm efficiency.
 
-If the package compilation succeeds with hardware POPCNT instructions, you should see a welcome message after loading the package:
-```
-HIBAG (HLA Genotype Imputation with Attribute Bagging)
-Kernel Version: v1.4
-Supported by Streaming SIMD Extensions (SSE2 + POPCNT)
-```
 
 ### GPU with OpenCL
 
