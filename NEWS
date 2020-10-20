@@ -9,7 +9,7 @@ CHANGES IN VERSION 1.26.0
       `hlaParallelAttrBagging()`
 
     o kernel version 1.5: generates the same training model as v1.4,
-      but 2x ~ 6x faster, by taking advantage of Intel AVX, AVX2 and AVX512
+      but 2-6x faster, by taking advantage of Intel AVX, AVX2 and AVX512
       intrinsics
 
     o new function `hlaSetKernelTarget()` to automatically select the CPU

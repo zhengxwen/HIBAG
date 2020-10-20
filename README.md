@@ -28,7 +28,7 @@ Release Version: 1.24.0
 ### Changes in Bioconductor Version (since v1.26.0, Y2020):
 
 * Kernel Version: **v1.5**
-* The kernel v1.5 generates the same training model as v1.4, but 2x ~ 6x faster, by taking advantage of Intel AVX, AVX2 and AVX512 intrinsics
+* The kernel v1.5 generates the same training model as v1.4, but 2-6x faster, by taking advantage of Intel AVX, AVX2 and AVX512 intrinsics if available.
 
 
 ### Changes in Bioconductor Version (since v1.14.0, Y2017):
