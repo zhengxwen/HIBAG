@@ -679,7 +679,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
     if (verbose)
     {
         cat(sprintf("# of samples: %d\n", n.samp))
-        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]], "\n", sep="")
+        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]][1L], "\n", sep="")
     }
 
     # parallel units

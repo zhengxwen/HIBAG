@@ -41,7 +41,7 @@ draw <- function(dat)
 
 Benchmarks were run on the compute nodes of Cascade Lake microarchitecture (Intel Xeon Gold 6248 CPU\@2.50GHz). The HIBAG package was compiled with GCC v8.3.0 in R-v4.0.2. In HIBAG (>= v1.26.0), users can use `hlaSetKernelTarget()` to select the target intrinsics, or `hlaSetKernelTarget("max")` for maximizing the algorithm efficiency.
 
-GCC (>= v6.0) is recommended to compile the HIBAG package. In the benchmarks, the kernel version of HIBAG_v1.24 is v1.4, and the kernel version of newer package is v1.5.
+**GCC (>= v6.0)** is recommended to compile the HIBAG package. In the benchmarks, the kernel version of HIBAG_v1.24 is v1.4, and the kernel version of newer package is v1.5.
 
 ```{r}
 # continue without interrupting
