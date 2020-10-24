@@ -172,14 +172,13 @@ train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
 summary(train.geno)
 
 
-# Create an environment with an appropriate cluster size,
-#   e.g., 2 -- # of (CPU) cores
-cl <- makeCluster(2)
+# Multithreading
+cl <- 2    # 2 -- # of threads
 
 # Building ...
 set.seed(1000)
 hlaParallelAttrBagging(cl, train.HLA, train.geno, nclassifier=100,
-    auto.save="AutoSaveModel.RData", stop.cluster=TRUE)
+    auto.save="AutoSaveModel.RData")
 model.obj <- get(load("AutoSaveModel.RData"))
 model <- hlaModelFromObj(model.obj)
 summary(model)

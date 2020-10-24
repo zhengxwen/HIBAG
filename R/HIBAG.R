@@ -261,7 +261,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 {
     z <- summary(mobj, show=FALSE)
     cat(ifelse(autosave, "[Saved]", " --"),
-        "avg OOB acc:",
+        paste0("#", length(mobj$classifier), ","), " avg OOB acc:",
         sprintf("%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
         z$info["accuracy", "Mean"], z$info["accuracy", "SD"],
         z$info["accuracy", "Min"], z$info["accuracy", "Max"]))
@@ -963,7 +963,6 @@ hlaModelToObj <- function(model)
         # get freq. and haplotypes, etc
         v <- .Call(HIBAG_Classifier_GetHaplos, model$model, i)
         names(v) <- c("freq", "hla", "haplo", "snpidx", "samp.num", "acc")
-
         res[[i]] <- list(
             samp.num = v$samp.num,
             haplos = data.frame(freq = v$freq, hla = model$hla.allele[v$hla],

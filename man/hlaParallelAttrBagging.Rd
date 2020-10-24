@@ -104,6 +104,7 @@ test.geno <- hlaGenoSubset(HapMap_CEU_Geno,
 
 
 #############################################################################
+# Multithreading
 
 set.seed(100)
 
@@ -113,6 +114,7 @@ model <- hlaParallelAttrBagging(2, hlatab$training, train.geno, nclassifier=4)
 
 
 #############################################################################
+# Multicore & autosave
 
 library(parallel)
 
