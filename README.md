@@ -1,7 +1,7 @@
 HLA Genotype Imputation with Attribute Bagging
 ======
 
-Kernel Version: v1.5
+Kernel Version: 1.5
 
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
 [GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
@@ -99,3 +99,5 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 ## Archive
 
 [https://github.com/zhengxwen/Archive/tree/master/HIBAG](https://github.com/zhengxwen/Archive/tree/master/HIBAG)
+
+[https://bioconductor.org/about/release-announcements](https://bioconductor.org/about/release-announcements)
