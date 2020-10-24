@@ -64,7 +64,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     if (verbose.detail) verbose <- TRUE
 
     if (is.na(nclassifier)) nclassifier <- 0L
-    with.mtry <- nclassifier==0L
+    with.in.call <- nclassifier==0L
     with.matching <- (nclassifier > 0L)
     if (!with.matching)
     {
@@ -103,6 +103,11 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     snp.geno <- snp$genotype[, samp.flag]
     if (!is.integer(snp.geno))
         storage.mode(snp.geno) <- "integer"
+    if (with.in.call)
+    {
+        # save the variable, until remove it later
+        .packageEnv$snp.geno <- snp.geno
+    }
 
     tmp.snp.id <- snp$snp.id
     tmp.snp.position <- snp$snp.position
@@ -218,7 +223,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         model = ABmodel,
         appendix = list())
     if (is.na(mod$assembly)) mod$assembly <- "unknown"
-    if (with.mtry) mod$mtry <- mtry
+    if (with.in.call) mod$mtry <- mtry
 
     class(mod) <- "hlaAttrBagClass"
 
@@ -255,7 +260,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 .show_model_obj <- function(mobj, autosave)
 {
     z <- summary(mobj, show=FALSE)
-    cat(ifelse(autosave, "[Saved]", " --"), "avg OOB acc:",
+    cat(ifelse(autosave, "[Saved]", " --"),
+        "avg OOB acc:",
         sprintf("%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
         z$info["accuracy", "Mean"], z$info["accuracy", "SD"],
         z$info["accuracy", "Min"], z$info["accuracy", "Max"]))
@@ -379,6 +385,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
                 nthread=nthread, verbose=verbose, verbose.detail=verbose.detail)
             mtry <- mod$mtry
+            on.exit({ .packageEnv$snp.geno <- NULL }, add=TRUE)
             mobj <- hlaModelToObj(mod)
             .fn_obj_save(auto.save, mobj)
             if (verbose) .show_model_obj(mobj, TRUE)
