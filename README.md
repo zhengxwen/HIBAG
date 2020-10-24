@@ -1,7 +1,7 @@
 HLA Genotype Imputation with Attribute Bagging
 ======
 
-Kernel Version: v1.4
+Kernel Version: v1.5
 
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
 [GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
@@ -20,7 +20,7 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor Package
 
-Release Version: 1.24.0
+Release Version: 1.26.0
 
 [http://www.bioconductor.org/packages/HIBAG/](http://www.bioconductor.org/packages/HIBAG/)
 
@@ -86,35 +86,14 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 
 ### CPU with Intel Intrinsics
 
-* GCC (>= v6.0) is strongly recommended to compile the HIBAG package (Intel ICC is not suggested).
+* **GCC (>= v6.0)** is strongly recommended to compile the HIBAG package (Intel ICC is not suggested).
 
 * `HIBAG::hlaSetKernelTarget("max")` can be used to maximize the algorithm efficiency.
 
 
 ### GPU with OpenCL
 
-* Install HIBAG.gpu (for developers/testers only)
-
-Please use `hlaAttrBagging_gpu()` and `hlaPredict_gpu()` for model training and prediction.
-
-
-**Speed-up factors for training HIBAG models:**
-
-| CPU (1 core) | CPU (1 core, POPCNT) |
-|:------------:|:--------------------:|
-| 1            | 1.63 x               |
-
-| 1x NVIDIA Tesla K80 | 1x NVIDIA Tesla M60 | 1x NVIDIA GTX 1080Ti | 1x NVIDIA Tesla P100 | 1x NVIDIA Tesla V100 |
-|:-------------------:|:-------------------:|:--------------------:|:--------------------:|:--------------------:|
-| 46.5 x              | 57.5 x              | 93.7 x               | 209.1 x              | 246.3 x              |
-
-*using HIBAG v1.14.0 and HIBAG.gpu v0.9.1*
-
-*CPU (1 core), the default installation from Bioconductor supporting SIMD SSE2 instructions, using Intel(R) Xeon(R) CPU E5-2630L @2.40GHz*
-
-*CPU (1 core, POPCNT), optimization with Intel/AMD POPCNT instruction, using Intel(R) Xeon(R) CPU E5-2630L @2.40GHz*
-
-*The benchmark was made possible, in part, through HPC time donated by Microway, Inc. We gratefully acknowledge Microway for providing access to their GPU-accelerated compute cluster (http://www.microway.com/gpu-test-drive/).*
+* will be updated according to the Kernel v1.5 (HIBAG >= v1.26.0).
 
 
 ## Archive
