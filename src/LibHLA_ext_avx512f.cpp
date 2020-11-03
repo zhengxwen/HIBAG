@@ -187,12 +187,12 @@ static inline TARGET_AVX512
 	if (GS.Low64b)
 	{
 		const __m512i H1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
+		const __m512i S1 = GS.S1_0, S2 = GS.S2_0;
+		const __m512i M = SIMD_ANDNOT_I512(S1, S2);  // missing value, 1 is missing
 		__m512d sum8 = _mm512_setzero_pd();
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
 			__m512i H2_8 = _mm512_loadu_si512(GS.p_H_0 + i2);
-			__m512i S1 = GS.S1_0, S2 = GS.S2_0;
-			__m512i M = SIMD_ANDNOT_I512(S1, S2);  // missing value, 1 is missing
 			__m512i MASK = SIMD_ANDNOT_I512(M, (H1_8 ^ S2) | (H2_8 ^ S1));
 			__m512i va = (H1_8 ^ S1) & MASK, vb = (H2_8 ^ S2) & MASK;
 			// popcount for 64b integers
@@ -235,15 +235,15 @@ static inline TARGET_AVX512
 	} else {
 		const __m512i H1_0_8 = _mm512_set1_epi64(i1[0].PackedHaplo[0]);
 		const __m512i H1_1_8 = _mm512_set1_epi64(i1[0].PackedHaplo[1]);
+		const __m512i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
+		const __m512i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
+		const __m512i M_0 = SIMD_ANDNOT_I512(S1_0, S2_0);  // missing value, 1 is missing
+		const __m512i M_1 = SIMD_ANDNOT_I512(S1_1, S2_1);  // missing value, 1 is missing
 		__m512d sum8 = _mm512_setzero_pd();
 		for (; n >= 8; n -= 8, i2 += 8)
 		{
 			__m512i H2_0_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_0 + i2));
 			__m512i H2_1_8 = _mm512_loadu_si512((__m512i*)(GS.p_H_1 + i2));
-			__m512i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
-			__m512i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
-			__m512i M_0 = SIMD_ANDNOT_I512(S1_0, S2_0);  // missing value, 1 is missing
-			__m512i M_1 = SIMD_ANDNOT_I512(S1_1, S2_1);  // missing value, 1 is missing
 			__m512i MASK_0 = SIMD_ANDNOT_I512(M_0, (H1_0_8 ^ S2_0) | (H2_0_8 ^ S1_0));
 			__m512i MASK_1 = SIMD_ANDNOT_I512(M_1, (H1_1_8 ^ S2_1) | (H2_1_8 ^ S1_1));
 			__m512i va_0 = (H1_0_8 ^ S1_0) & MASK_0, vb_0 = (H2_0_8 ^ S2_0) & MASK_0;
