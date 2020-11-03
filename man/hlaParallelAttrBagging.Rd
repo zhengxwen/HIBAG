@@ -57,7 +57,8 @@ of non-informative SNP markers.
 new individual classifier is built internally without completing the ensemble.
 }
 \value{
-    Return an object of \code{\link{hlaAttrBagClass}} if \code{auto.save=""}.
+    Return an object of \code{\link{hlaAttrBagClass}} if \code{auto.save=""},
+and \code{NULL} otherwise.
 }
 \references{
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
