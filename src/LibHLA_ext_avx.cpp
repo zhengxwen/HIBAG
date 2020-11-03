@@ -180,11 +180,11 @@ static inline TARGET_AVX
 	if (GS.Low64b)
 	{
 		const __m256i H1 = _mm256_set1_epi64x(i1[0].PackedHaplo[0]);
+		const __m256i S1 = GS.S1_0, S2 = GS.S2_0;
+		const __m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
 		for (; n >= 4; n -= 4, i2 += 4)
 		{
 			__m256i H2 = _mm256_loadu_si256((__m256i*)(GS.p_H_0 + i2));
-			__m256i S1 = GS.S1_0, S2 = GS.S2_0;
-			__m256i M = SIMD_ANDNOT_I256(S1, S2);  // missing value, 1 is missing
 			__m256i MASK = SIMD_ANDNOT_I256(M, (H1 ^ S2) | (H2 ^ S1));
 			__m256i va = (H1 ^ S1) & MASK, vb = (H2 ^ S2) & MASK;
 			// popcount for 64b integers
@@ -201,14 +201,14 @@ static inline TARGET_AVX
 	} else {
 		const __m256i H1_0 = _mm256_set1_epi64x(i1[0].PackedHaplo[0]);
 		const __m256i H1_1 = _mm256_set1_epi64x(i1[0].PackedHaplo[1]);
+		const __m256i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
+		const __m256i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
+		const __m256i M_0 = SIMD_ANDNOT_I256(S1_0, S2_0);  // missing value, 1 is missing
+		const __m256i M_1 = SIMD_ANDNOT_I256(S1_1, S2_1);  // missing value, 1 is missing
 		for (; n >= 4; n -= 4, i2 += 4)
 		{
 			__m256i H2_0 = _mm256_loadu_si256((__m256i*)(GS.p_H_0 + i2));
 			__m256i H2_1 = _mm256_loadu_si256((__m256i*)(GS.p_H_1 + i2));
-			__m256i S1_0 = GS.S1_0, S2_0 = GS.S2_0;
-			__m256i S1_1 = GS.S1_1, S2_1 = GS.S2_1;
-			__m256i M_0 = SIMD_ANDNOT_I256(S1_0, S2_0);  // missing value, 1 is missing
-			__m256i M_1 = SIMD_ANDNOT_I256(S1_1, S2_1);  // missing value, 1 is missing
 			__m256i MASK_0 = SIMD_ANDNOT_I256(M_0, (H1_0 ^ S2_0) | (H2_0 ^ S1_0));
 			__m256i MASK_1 = SIMD_ANDNOT_I256(M_1, (H1_1 ^ S2_1) | (H2_1 ^ S1_1));
 			__m256i va_0 = (H1_0 ^ S1_0) & MASK_0, vb_0 = (H2_0 ^ S2_0) & MASK_0;
