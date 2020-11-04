@@ -1201,6 +1201,22 @@ SEXP HIBAG_Distance(SEXP NumHLA, SEXP Idx, SEXP Freq, SEXP HaploStr)
 }
 
 
+// whether compile the algorithm with specified targets or not
+extern const bool HIBAG_ALGORITHM_SSE2;
+extern const bool HIBAG_ALGORITHM_SSE2_POPCNT;
+extern const bool HIBAG_ALGORITHM_SSE4_2;
+extern const bool HIBAG_ALGORITHM_AVX;
+extern const bool HIBAG_ALGORITHM_AVX2;
+extern const bool HIBAG_ALGORITHM_AVX512F;
+extern const bool HIBAG_ALGORITHM_AVX512BW;
+
+static void target_add(string &s, const char *code, bool work)
+{
+	if (work)
+		s.append(" ").append(code);
+}
+
+
 /**
  *  Get the version and SSE information
 **/
@@ -1212,11 +1228,12 @@ SEXP HIBAG_Kernel_Version()
 	SET_ELEMENT(ans, 0, I);
 	INTEGER(I)[0] = HIBAG_KERNEL_VERSION >> 8;
 	INTEGER(I)[1] = HIBAG_KERNEL_VERSION & 0xFF;
+
 	// CPU information
-	SEXP info = NEW_CHARACTER(2);
+	SEXP info = NEW_CHARACTER(3);
 	SET_ELEMENT(ans, 1, info);
 	SET_STRING_ELT(info, 0, mkChar(CPU_Info()));
-	// compiler
+	// compiler information
 #ifdef __VERSION__
 	string version = __VERSION__;
 #else
@@ -1246,6 +1263,16 @@ SEXP HIBAG_Kernel_Version()
 			s = "Unknown compiler";
 	}
 	SET_STRING_ELT(info, 1, mkChar(s.c_str()));
+	// supported implementation
+	s = "Support:";
+	target_add(s, "SSE2", HIBAG_ALGORITHM_SSE2);
+	target_add(s, "SSE4.2", HIBAG_ALGORITHM_SSE4_2);
+	target_add(s, "AVX", HIBAG_ALGORITHM_AVX);
+	target_add(s, "AVX2", HIBAG_ALGORITHM_AVX2);
+	target_add(s, "AVX512F", HIBAG_ALGORITHM_AVX512F);
+	target_add(s, "AVX512BW", HIBAG_ALGORITHM_AVX512BW);
+	SET_STRING_ELT(info, 2, mkChar(s.c_str()));
+
 	// using Intel TBB or not
 #if RCPP_PARALLEL_USE_TBB
 	int ntot = tbb::this_task_arena::max_concurrency();

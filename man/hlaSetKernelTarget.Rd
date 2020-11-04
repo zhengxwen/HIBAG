@@ -27,7 +27,8 @@ intrinsics, e.g., GCC >= v6.0. If the compiler does not support the CPU target,
 the implementation on that target will be disabled.
 }
 \value{
-    Return a string describing the CPU capabilities.
+    Return a character vector for describing the CPU capabilities, the compiler
+information and the supported implementation.
 }
 \author{Xiuwen Zheng}
 \seealso{
