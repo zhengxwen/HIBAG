@@ -1,3 +1,10 @@
+CHANGES IN VERSION 1.26.1
+-------------------------
+
+    o the hlaAttrBagging object can be removed in garbage collection without
+      calling `hlaClose()`
+
+
 CHANGES IN VERSION 1.26.0
 -------------------------
 

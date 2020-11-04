@@ -408,7 +408,7 @@ static int _Need_New_HIBAG_Model()
 	for (int i=0; i < MODEL_NUM_LIMIT; i++)
 		if (_HIBAG_MODELS_[i] == NULL) return i;
 	throw ErrHLA("No memory space to store a new HIBAG model, "
-		"please call \"hlaClose\" to release unused HIBAG models.");
+		"please call \"hlaClose()\" to release unused HIBAG models.");
 }
 
 /// check the model
@@ -423,6 +423,50 @@ static void _Check_HIBAG_Model(int model)
 }
 
 
+static void model_free(SEXP ptr_obj)
+{
+	// pointer
+	void *ptr = R_ExternalPtrAddr(ptr_obj);
+	if (!ptr) return;
+	R_ClearExternalPtr(ptr_obj);
+	// file ID
+	SEXP ID = R_ExternalPtrProtected(ptr_obj);
+	int i = Rf_asInteger(ID);
+	if (TYPEOF(ID)==INTSXP && Rf_length(ID)>=1)
+		INTEGER(ID)[0] = -1;
+	// free model
+	if ((0 <= i) && (i < MODEL_NUM_LIMIT))
+	{
+		CAttrBag_Model *m = _HIBAG_MODELS_[i];
+		if (m != NULL)
+		{
+			bool has_error = false;
+			try {
+				_HIBAG_MODELS_[i] = NULL;
+				delete m;
+			} catch (exception &E) {
+				_LastError = E.what(); has_error = true;
+			} catch (const char *E) {
+				_LastError = E; has_error = true;
+			} catch (...) {
+				_LastError = "unknown error!"; has_error = true;
+			}
+			if (has_error) error(_LastError.c_str());
+		}
+	}
+}
+
+static SEXP new_model_id(int id, CAttrBag_Model *mod_ptr)
+{
+	SEXP ans = PROTECT(ScalarInteger(id));
+	SEXP ptr = PROTECT(R_MakeExternalPtr(mod_ptr, R_NilValue, ans));
+	R_RegisterCFinalizerEx(ptr, model_free, (Rboolean)TRUE);
+	Rf_setAttrib(ans, install("handle_ptr"), ptr);
+	UNPROTECT(2);
+	return ans;
+}
+
+
 /**
  *  Build a HIBAG model
  *
@@ -433,20 +477,20 @@ static void _Check_HIBAG_Model(int model)
 **/
 SEXP HIBAG_New(SEXP nSamp, SEXP nSNP, SEXP nHLA)
 {
-	int NumSamp = Rf_asInteger(nSamp);
-	if (NumSamp <= 0) error("Invalid number of samples.");
-
-	int NumSNP  = Rf_asInteger(nSNP);
-	if (NumSNP <= 0) error("Invalid number of SNPs.");
-
-	int NumHLA  = Rf_asInteger(nHLA);
-	if (NumHLA <= 0) error("Invalid number of unique HLA allele.");
-
+	int n_samp = Rf_asInteger(nSamp);
+	if (n_samp <= 0)
+		error("Invalid number of samples: %d.", n_samp);
+	int n_snp  = Rf_asInteger(nSNP);
+	if (n_snp <= 0)
+		error("Invalid number of SNPs: %d.", n_snp);
+	int n_hla  = Rf_asInteger(nHLA);
+	if (n_hla <= 0)
+		error("Invalid number of unique HLA alleles: %d.", n_hla);
 	CORE_TRY
-		int model = _Need_New_HIBAG_Model();
-		_HIBAG_MODELS_[model] = new CAttrBag_Model;
-		_HIBAG_MODELS_[model]->InitTraining(NumSNP, NumSamp, NumHLA);
-		rv_ans = ScalarInteger(model);
+		int id = _Need_New_HIBAG_Model();
+		CAttrBag_Model *obj = _HIBAG_MODELS_[id] = new CAttrBag_Model;
+		obj->InitTraining(n_snp, n_samp, n_hla);
+		rv_ans = new_model_id(id, obj);
 	CORE_CATCH
 }
 
@@ -462,16 +506,24 @@ SEXP HIBAG_New(SEXP nSamp, SEXP nSNP, SEXP nHLA)
  *  \param H2         the second HLA allele of a HLA type
  *  \return the model index
 **/
-SEXP HIBAG_Training(SEXP nSNP, SEXP nSamp, SEXP snp_geno,
-	SEXP nHLA, SEXP H1, SEXP H2)
+SEXP HIBAG_Training(SEXP nSNP, SEXP nSamp, SEXP snp_geno, SEXP nHLA,
+	SEXP H1, SEXP H2)
 {
+	int n_samp = Rf_asInteger(nSamp);
+	if (n_samp <= 0)
+		error("Invalid number of samples: %d.", n_samp);
+	int n_snp  = Rf_asInteger(nSNP);
+	if (n_snp <= 0)
+		error("Invalid number of SNPs: %d.", n_snp);
+	int n_hla  = Rf_asInteger(nHLA);
+	if (n_hla <= 0)
+		error("Invalid number of unique HLA alleles: %d.", n_hla);
 	CORE_TRY
-		int model = _Need_New_HIBAG_Model();
-		_HIBAG_MODELS_[model] = new CAttrBag_Model;
-		_HIBAG_MODELS_[model]->InitTraining(Rf_asInteger(nSNP),
-			Rf_asInteger(nSamp), INTEGER(snp_geno),
-			Rf_asInteger(nHLA), INTEGER(H1), INTEGER(H2));
-		rv_ans = ScalarInteger(model);
+		int id = _Need_New_HIBAG_Model();
+		CAttrBag_Model *obj = _HIBAG_MODELS_[id] = new CAttrBag_Model;
+		obj->InitTraining(n_snp, n_samp, INTEGER(snp_geno),
+			n_hla, INTEGER(H1), INTEGER(H2));
+		rv_ans = new_model_id(id, obj);
 	CORE_CATCH
 }
 
@@ -484,8 +536,10 @@ SEXP HIBAG_Training(SEXP nSNP, SEXP nSamp, SEXP snp_geno,
 SEXP HIBAG_Close(SEXP model)
 {
 	int midx = Rf_asInteger(model);
+	if (midx < 0) return R_NilValue;
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
+		INTEGER(model)[0] = -1;
 		CAttrBag_Model *m = _HIBAG_MODELS_[midx];
 		_HIBAG_MODELS_[midx] = NULL;
 		delete m;
