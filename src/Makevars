@@ -5,7 +5,7 @@
 # use C++11
 CXX_STD = CXX11
 
-# check GNU GCC
+# check GNU GCC for function multi-versioning
 GCC_FLAG = $(shell $(CC) -dM -E - < /dev/null |grep -Eo '__GNUC__|__clang__|ICC' \
 	|tr '\n' ' ' |grep GNUC |grep -v -e clang -e ICC)
 LIB_GCC = $(if ${GCC_FLAG},-lgcc)
