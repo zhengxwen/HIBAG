@@ -1264,7 +1264,7 @@ SEXP HIBAG_Kernel_Version()
 	}
 	SET_STRING_ELT(info, 1, mkChar(s.c_str()));
 	// supported implementation
-	s = "Support:";
+	s = "Algorithm SIMD:";
 	target_add(s, "SSE2", HIBAG_ALGORITHM_SSE2);
 	target_add(s, "SSE4.2", HIBAG_ALGORITHM_SSE4_2);
 	target_add(s, "AVX", HIBAG_ALGORITHM_AVX);
