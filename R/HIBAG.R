@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2019   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2020   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -42,12 +42,12 @@
 
 
 ##########################################################################
-# To fit an attribute bagging model for predicting
+# Fit a HIBAG model for imputing HLA genotypes
 #
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE, mono.rm=TRUE,
-    verbose=TRUE, verbose.detail=FALSE)
+    nthread=1L, verbose=TRUE, verbose.detail=FALSE)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass"))
@@ -57,10 +57,14 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
+    stopifnot(is.numeric(nthread) | is.logical(nthread), length(nthread)==1L,
+        !is.na(nthread))
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
     if (verbose.detail) verbose <- TRUE
 
+    if (is.na(nclassifier)) nclassifier <- 0L
+    with.in.call <- nclassifier==0L
     with.matching <- (nclassifier > 0L)
     if (!with.matching)
     {
@@ -99,6 +103,11 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     snp.geno <- snp$genotype[, samp.flag]
     if (!is.integer(snp.geno))
         storage.mode(snp.geno) <- "integer"
+    if (with.in.call)
+    {
+        # save the variable, until remove it later
+        .packageEnv$snp.geno <- snp.geno
+    }
 
     tmp.snp.id <- snp$snp.id
     tmp.snp.position <- snp$snp.position
@@ -182,19 +191,26 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     {
         cat(sprintf("Build a HIBAG model with %d individual classifier%s:\n",
             nclassifier, .plural(nclassifier)))
-        cat("# of SNPs randomly sampled as candidates for each selection: ",
+        cat("    # of SNPs randomly sampled as candidates for each selection: ",
             mtry, "\n", sep="")
-        cat("# of SNPs: ", n.snp, ", # of samples: ", n.samp, "\n", sep="")
+        cat("    # of SNPs: ", n.snp, "\n", sep="")
+        cat("    # of samples: ", n.samp, "\n", sep="")
         s <- ifelse(!grepl("^KIR", hla$locus), "HLA", "KIR")
-        cat("# of unique ", s, " alleles: ", n.hla, "\n", sep="")
+        cat("    # of unique ", s, " alleles: ", n.hla, "\n", sep="")
+        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]][1L], "\n", sep="")
     }
+
+    # set the number of threads (initialized in HIBAG_NewClassifiers)
+    if (isTRUE(nthread))
+        nthread <- as.integer(defaultNumThreads())
+    if (is.na(nthread) || (nthread<1L)) nthread <- 1L
 
 
     ###################################################################
     # training ...
     # add new individual classifers
     .Call(HIBAG_NewClassifiers, ABmodel, nclassifier, mtry, prune,
-        verbose, verbose.detail, NULL)
+        nthread, verbose, verbose.detail, NULL)
 
     # output
     mod <- list(n.samp = n.samp, n.snp = n.snp, sample.id = samp.id,
@@ -207,6 +223,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         model = ABmodel,
         appendix = list())
     if (is.na(mod$assembly)) mod$assembly <- "unknown"
+    if (with.in.call) mod$mtry <- mtry
 
     class(mod) <- "hlaAttrBagClass"
 
@@ -217,101 +234,92 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     {
         if (verbose)
             cat("Calculating matching proportion:\n")
-        pd <- hlaPredict(mod, snp, verbose=FALSE)
+        pd <- hlaPredict(mod, snp, cl=nthread, verbose=FALSE)
         mod$matching <- pd$value$matching
         if (verbose)
         {
             .printMatching(mod$matching)
             acc <- hlaCompareAllele(hla, pd, verbose=FALSE)$overall$acc.haplo
-            cat(sprintf("Accuracy with training data: %.1f%%\n", acc*100))
+            cat(sprintf("Accuracy with training data: %.2f%%\n", acc*100))
+            # out-of-bag accuracy
+            mobj <- hlaModelToObj(mod)
+            acc <- sapply(mobj$classifiers, function(x) x$outofbag.acc)
+            cat(sprintf("Out-of-bag accuracy: %.2f%%\n", mean(acc)*100))
         }
     }
-    # out-of-bag accuracy
-    if (verbose)
-    {
-        mobj <- hlaModelToObj(mod)
-        acc <- sapply(mobj$classifiers, function(x) x$outofbag.acc)
-        cat(sprintf("Out-of-bag accuracy: %.1f%%\n", mean(acc)*100))
-    }
 
+    # output
     mod
 }
 
 
 ##########################################################################
-# To fit an attribute bagging model for predicting
+# Fit a HIBAG model for imputing HLA genotypes in parallel
 #
+
+.show_model_obj <- function(mobj, autosave)
+{
+    z <- summary(mobj, show=FALSE)
+    cat(ifelse(autosave, "[Saved]", " --"),
+        paste0("#", length(mobj$classifier), ","), " avg OOB acc:",
+        sprintf("%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
+        z$info["accuracy", "Mean"], z$info["accuracy", "SD"],
+        z$info["accuracy", "Min"], z$info["accuracy", "Max"]))
+    invisible()
+}
 
 hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
-    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE)
+    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE, verbose.detail=FALSE)
 {
     # check
-    stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
+    stopifnot(is.null(cl) | is.logical(cl) | is.numeric(cl) |
+        inherits(cl, "cluster"))
     stopifnot(inherits(hla, "hlaAlleleClass"))
     stopifnot(inherits(snp, "hlaSNPGenoClass"))
-    stopifnot(is.character(auto.save), length(auto.save)==1L)
-    stopifnot(is.numeric(nclassifier), length(nclassifier)==1L)
+    stopifnot(is.character(auto.save), length(auto.save)==1L, !is.na(auto.save))
+    if (auto.save!="" && is.na(.fn_obj_check(auto.save)))
+        stop("'auto.save' should be a .rda/.RData or .rds file name.")
+    stopifnot(is.numeric(nclassifier), length(nclassifier)==1L, nclassifier>0L)
     stopifnot(is.character(mtry) | is.numeric(mtry), length(mtry)>0L)
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
-    stopifnot(is.logical(stop.cluster))
-    stopifnot(is.logical(verbose))
+    stopifnot(is.logical(stop.cluster), length(stop.cluster)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
+    stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
+
+    if (verbose)
+    {
+        cat("Building a HIBAG model:\n")
+        cat(sprintf("    %d individual classifier%s\n", nclassifier,
+            .plural(nclassifier)))
+        if (!is.null(cl))
+        {
+            cat(sprintf("    run in parallel with %d compute node%s\n",
+                length(cl), .plural(length(cl))))
+        }
+        if (auto.save != "")
+            cat("    autosave to ", sQuote(auto.save), "\n", sep="")
+    }
 
     if (inherits(cl, "cluster"))
     {
         if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
-    } else if (is.numeric(cl))
-    {
-        if (cl > 1L)
-        {
-            if (!requireNamespace("parallel", quietly=TRUE))
-                stop("The `parallel' package should be installed.")
-            cl <- parallel::makeCluster(cl)
-            on.exit(parallel::stopCluster(cl))
-            stop.cluster <- FALSE
-        } else {
-            cl <- NULL
-        }
-    }
-
-    if (verbose)
-    {
-        if (!is.null(cl))
-        {
-            cat("Build a HIBAG model of", sprintf(
-                "%d individual classifier%s in parallel with %d compute node%s:\n",
-                nclassifier, if (nclassifier>1L) "s" else "",
-                length(cl), if (length(cl)>1L) "s" else ""
-            ))
-        } else {
-            cat(sprintf(
-                "Build a HIBAG model of %d individual classifier%s:\n",
-                nclassifier, if (nclassifier>1L) "s" else ""
-            ))
-        }
-        if (auto.save != "")
-            cat("The model is autosaved in '", auto.save, "'.\n", sep="")
-    }
-
-    # set random number
-    if (!is.null(cl))
-    {
+        if (verbose)
+            cat("[-] ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n", sep="")
+        # set random number for the cluster
         RNGkind("L'Ecuyer-CMRG")
         rand <- eval(parse(text=".Random.seed"))
         parallel::clusterSetRNGStream(cl)
-    }
 
-    ans <- local({
         total <- 0L
-
-        .DynamicClusterCall(cl,
+        ans <- .DynamicClusterCall(cl,
             fun = function(job, hla, snp, mtry, prune, na.rm, mono.rm)
             {
                 eval(parse(text="library(HIBAG)"))
-                model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=0L,
+                model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=-1L,
                     mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
                     verbose=FALSE, verbose.detail=FALSE)
                 mobj <- hlaModelToObj(model)
@@ -327,15 +335,9 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 else
                     mobj <- hlaCombineModelObj(obj1, obj2)
                 if (auto.save != "")
-                    save(mobj, file=auto.save)
+                    .fn_obj_save(auto.save, mobj)
                 if (verbose & !is.null(mobj))
-                {
-                    z <- summary(mobj, show=FALSE)
-                    cat("  --  avg out-of-bag acc:", sprintf(
-                        "%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
-                        z$info["accuracy", "Mean"], z$info["accuracy", "SD"],
-                        z$info["accuracy", "Min"], z$info["accuracy", "Max"]))
-                }
+                    .show_model_obj(mobj, auto.save!="")
                 mobj
             },
             msg.fn = function(job, obj)
@@ -343,61 +345,92 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                 if (verbose)
                 {
                     z <- summary(obj, show=FALSE)
-                    eval(parse(text="total <<- total + 1L"))
+                    total <<- total + 1L
                     cat(sprintf(
-                        "%s,%4d, job%3d, # of SNPs: %g, # of haplo: %g, acc: %0.1f%%\n",
-                        format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-                        total, as.integer(job), z$info["num.snp", "Mean"],
+                        "[%d] %s, job%3d, # of SNPs: %g, # of haplo: %g, acc: %0.1f%%\n",
+                        total, format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+                        as.integer(job), z$info["num.snp", "Mean"],
                         z$info["num.haplo", "Mean"],
                         z$info["accuracy", "Mean"]))
                 }
             },
-            n = nclassifier, stop.cluster = stop.cluster,
+            n=nclassifier, stop.cluster=stop.cluster,
             hla=hla, snp=snp, mtry=mtry, prune=prune,
             na.rm=na.rm, mono.rm=mono.rm
         )
-    })
 
-    if (!is.null(cl) & !stop.cluster)
-    {
+        # the next random seed
         parallel::nextRNGStream(rand)
         parallel::nextRNGSubStream(rand)
-    }
-    if (stop.cluster) cl <- NULL
+        if (stop.cluster) cl <- NULL
+        if (auto.save != "")
+            ans <- get(load(auto.save))
+        mod <- hlaModelFromObj(ans)
 
-    if (auto.save != "")
-        ans <- get(load(auto.save))
-    mod <- hlaModelFromObj(ans)
+    } else {
+        # find the number of threads
+        nthread <- 1L
+        if (isTRUE(nthread))
+            nthread <- as.integer(defaultNumThreads())
+        if (is.numeric(cl)) nthread <- as.integer(cl)
+        if (is.na(nthread) || (nthread<1L)) nthread <- 1L
+
+        if (auto.save == "")
+        {
+            mod <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=-nclassifier,
+                mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
+                nthread=nthread, verbose=verbose, verbose.detail=verbose.detail)
+        } else {
+            mod <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=0L,
+                mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
+                nthread=nthread, verbose=verbose, verbose.detail=verbose.detail)
+            mtry <- mod$mtry
+            on.exit({ .packageEnv$snp.geno <- NULL }, add=TRUE)
+            mobj <- hlaModelToObj(mod)
+            .fn_obj_save(auto.save, mobj)
+            if (verbose) .show_model_obj(mobj, TRUE)
+            # add the remaining individual classifiers
+            for (i in seq_len(nclassifier-1L))
+            {
+                .Call(HIBAG_NewClassifiers, mod$model, 1L, mtry, prune,
+                    -nthread, verbose, verbose.detail, NULL)
+                mobj <- hlaModelToObj(mod)
+                .fn_obj_save(auto.save, mobj)
+                if (verbose) .show_model_obj(mobj, TRUE)
+            }
+        }
+    }
+
+    # matching proportion
     if (verbose)
         cat("Calculating matching proportion:\n")
+    if (is.null(cl)) cl <- FALSE
     pd <- hlaPredict(mod, snp, cl=cl, verbose=FALSE)
     mod$matching <- pd$value$matching
-
+    mobj <- NULL
+    if (auto.save != "")
+    {
+        mobj <- hlaModelToObj(mod)
+        .fn_obj_save(auto.save, mobj)
+    }
     if (verbose)
     {
         .printMatching(mod$matching)
         acc <- hlaCompareAllele(hla, pd, verbose=FALSE)$overall$acc.haplo
-        cat(sprintf("Accuracy with training data: %.1f%%\n", acc*100))
+        cat(sprintf("Accuracy with training data: %.2f%%\n", acc*100))
         # out-of-bag accuracy
-        mobj <- hlaModelToObj(mod)
+        if (is.null(mobj)) mobj <- hlaModelToObj(mod)
         acc <- sapply(mobj$classifiers, function(x) x$outofbag.acc)
-        cat(sprintf("Out-of-bag accuracy: %.1f%%\n", mean(acc)*100))
+        cat(sprintf("Out-of-bag accuracy: %.2f%%\n", mean(acc)*100))
     }
 
     # output
-    if (auto.save != "")
-    {
-        mobj <- hlaModelToObj(mod)
-        save(mobj, file=auto.save)
-        invisible()
-    } else {
-        mod
-    }
+    if (auto.save != "") invisible() else mod
 }
 
 
 ##########################################################################
-# To fit an attribute bagging model for predicting
+# Close and dispose a HIBAG model
 #
 
 hlaClose <- function(model)
@@ -409,31 +442,30 @@ hlaClose <- function(model)
 
 
 #######################################################################
-# Predict HLA types from unphased SNP data
+# Predict HLA types using unphased SNP data
 #
 
-hlaPredict <- function(object, snp, cl=NULL,
-    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE)
-{
-    stopifnot(inherits(object, "hlaAttrBagClass"))
-    predict(object, snp, cl, type, vote, allele.check, match.type,
-        same.strand, verbose)
-}
-
-predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
+predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
 {
+    stopifnot(inherits(object, "hlaAttrBagClass"))
+    hlaPredict(object, snp, cl, type, vote, allele.check, match.type,
+        same.strand, verbose)
+}
+
+hlaPredict <- function(object, snp, cl=FALSE,
+    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
+    same.strand=FALSE, verbose=TRUE)
+{
     # check
     stopifnot(inherits(object, "hlaAttrBagClass"))
-    stopifnot(is.null(cl) | is.numeric(cl) | inherits(cl, "cluster"))
+    stopifnot(is.logical(cl) | is.numeric(cl) | inherits(cl, "cluster"))
     stopifnot(is.logical(allele.check), length(allele.check)==1L)
     stopifnot(is.logical(same.strand), length(same.strand)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
-
     type <- match.arg(type)
     vote <- match.arg(vote)
     match.type <- match.arg(match.type)
@@ -443,59 +475,37 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     {
         if (!requireNamespace("parallel", quietly=TRUE))
             stop("The `parallel' package should be installed.")
-        if (length(cl) <= 1L) cl <- NULL
-    } else if (is.numeric(cl))
-    {
-        if (cl > 1L)
-        {
-            if (!requireNamespace("parallel", quietly=TRUE))
-                stop("The `parallel' package should be installed.")
-            cl <- parallel::makeCluster(cl)
-            on.exit(parallel::stopCluster(cl))
-        } else {
-            cl <- NULL
-        }
+        if (length(cl) <= 1L) cl <- FALSE
     }
 
     # if warning
     if (!is.null(object$appendix$warning))
-    {
-        message(object$appendix$warning)
-        warning(object$appendix$warning)
-    }
+        warning(object$appendix$warning, immediate.=TRUE)
 
     if (verbose)
     {
         # get the number of classifiers
         CNum <- .Call(HIBAG_GetNumClassifiers, object$model)
-
-        cat(sprintf(
-            "HIBAG model: %d individual classifier%s, %d SNPs, %d unique HLA alleles.\n",
-            CNum, .plural(CNum), length(object$snp.id),
-            length(object$hla.allele)))
-
+        cat("HIBAG model:\n",
+            "    ", CNum, " individual classifier", .plural(CNum), "\n",
+            "    ", length(object$snp.id), " SNPs\n",
+            "    ", length(object$hla.allele), " unique HLA alleles\n", sep="")
+        cat("Prediction:\n")
         if (vote_method == 1L)
+            cat("    based on the averaged posterior probabilities\n")
+        else
+            cat("    by voting from all individual classifiers\n")
+        if (inherits(cl, "cluster"))
         {
-            cat("Predicting based on the averaged posterior probabilities",
-                "from all individual classifiers.\n")
-        } else
-            cat("Predicting by voting from all individual classifiers.\n")
-
-        if (!is.null(cl))
-        {
-            cat(sprintf(
-                "Run in parallel with %d compute node%s.\n",
-                length(cl), ifelse(length(cl)>1L, "s", "")
-            ))
+            cat("    run in parallel with ", length(cl), " compute node",
+                .plural(length(cl)), "\n", sep="")
         }
     }
 
     if (!inherits(snp, "hlaSNPGenoClass"))
     {
         # it should be a vector or a matrix
-        stopifnot(is.numeric(snp))
-        stopifnot(is.vector(snp) | is.matrix(snp))
-
+        stopifnot(is.numeric(snp), is.vector(snp) | is.matrix(snp))
         if (is.vector(snp))
         {
             stopifnot(length(snp) == object$n.snp)
@@ -535,10 +545,8 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                 else
                     assembly <- geno.assembly
             } else {
-                if (verbose)
-                    message("The human genome references do not match!")
                 warning("The human genome references do not match! ",
-                    refstr, ".")
+                    refstr, ".", immediate.=TRUE)
                 assembly <- model.assembly
             }
         } else {
@@ -579,20 +587,17 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
             snp.allele <- snp$snp.allele
             snp.allele[is.na(snp.allele)] <- ""
 
-            # tmp variable
+            # temporary variable
             tmp <- list(genotype = snp$genotype[snp.sel,],
                 sample.id = snp$sample.id,
                 snp.id = object$snp.id, snp.position = object$snp.position,
                 snp.allele = snp.allele[snp.sel],
                 assembly = snp$assembly)
-
             flag <- is.na(tmp$snp.allele)
             tmp$snp.allele[flag] <- object$snp.allele[
                 match(tmp$snp.id[flag], object$snp.id)]
-
             if (is.vector(tmp$genotype))
                 tmp$genotype <- matrix(tmp$genotype, ncol=1L)
-
             class(tmp) <- "hlaSNPGenoClass"
 
             # the total number of missing snp
@@ -604,9 +609,8 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                 if (missing.cnt > 0L)
                 {
                     cat(sprintf("There %s %d missing SNP%s (%0.1f%%).\n",
-                        if (missing.cnt > 1L) "are" else "is",
-                        missing.cnt,
-                        if (missing.cnt > 1L) "s" else "",
+                        ifelse(missing.cnt > 1L, "are", "is"),
+                        missing.cnt, .plural(missing.cnt),
                         100*missing.cnt/length(obj.id)))
                 }
             }
@@ -634,10 +638,10 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                         "be gained:\n",
                         sprintf("\t%0.1f%% by matching RefSNP IDs only, ",
                             100*mcnt.id/length(s1)),
-                        "call 'predict(..., match.type=\"RefSNP\")'\n",
+                        "call 'hlaPredict(..., match.type=\"RefSNP\")'\n",
                         sprintf("\t%0.1f%% by matching positions only, ",
                             100*mcnt.pos/length(s1)),
-                        "call 'predict(..., match.type=\"Position\")'\n",
+                        "call 'hlaPredict(..., match.type=\"Position\")'\n",
                         "Any concern about SNP mismatching should be emailed ",
                         "to the genotyping platform provider.")
 
@@ -654,7 +658,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                 stop("There is no overlapping of SNPs!")
             } else if (missing.cnt > 0.5*length(obj.id))
             {
-                warning("More than 50% of SNPs are missing!")
+                warning("More than 50% of SNPs are missing!", immediate.=TRUE)
             }
 
             # switch
@@ -673,38 +677,47 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
     {
         stop("The number of SNPs is not valid, and ",
             "it maybe due to duplicated 'snp.id' or ",
-            "incorrect dimension of genotypic matrix.")
+            "incorrect dimension of genotype matrix.")
     }
 
     # initialize ...
     n.samp <- dim(snp)[2L]
     n.hla <- length(object$hla.allele)
     if (verbose)
-        cat(sprintf("Number of samples: %d\n", n.samp))
+    {
+        cat(sprintf("# of samples: %d\n", n.samp))
+        cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]][1L], "\n", sep="")
+    }
 
     # parallel units
-    if (is.null(cl))
+    if (!inherits(cl, "cluster"))
     {
-        # pointer to functions for an extensible component
-		pm <- list(...)
-		pm <- pm$proc_ptr
+        # the number of threads
+        nthread <- 1L
+        if (isTRUE(cl)) nthread <- as.integer(defaultNumThreads())
+        if (is.numeric(cl)) nthread <- cl[1L]
+        if (is.na(nthread) || nthread<1L) nthread <- 1L
 
-        # to predict HLA types
+        # pointer to functions for an extensible component
+        pm <- list()
+        pm <- pm$proc_ptr
+
+        # predict HLA genotypes
         if (type %in% c("response", "response+prob"))
         {
             # the best-guess prediction
-
             if (type == "response")
             {
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
-                    n.samp, vote_method, verbose, pm)
+                    n.samp, vote_method, nthread, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "matching")
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
-                    as.integer(snp), n.samp, vote_method, verbose, pm)
+                    as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
             }
 
+            # output object
             res <- hlaAllele(geno.sampid,
                 H1 = object$hla.allele[rv$H1 + 1L],
                 H2 = object$hla.allele[rv$H2 + 1L],
@@ -719,45 +732,42 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
                     function(x, y) paste(x, y, sep="/"))
                 rownames(res$postprob) <- m[lower.tri(m, diag=TRUE)]
             }
-
             NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
 
         } else {
-            # all probabilites
-
+            # all probabilities
             rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
-                as.integer(snp), n.samp, vote_method, verbose, pm)
+                as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
             names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
 
+            # output object
             res <- rv$postprob
             colnames(res) <- geno.sampid
             m <- outer(object$hla.allele, object$hla.allele,
                 function(x, y) paste(x, y, sep="/"))
             rownames(res) <- m[lower.tri(m, diag=TRUE)]
-
             NA.cnt <- sum(colSums(res) <= 0L)
         }
     } else {
 
-        # in parallel
+        # run in parallel
         rv <- parallel::clusterApply(cl=cl,
             parallel::splitIndices(n.samp, length(cl)),
-            fun = function(idx, mobj, snp, type, vote)
+            fun = function(i, mobj, snp, type, vote)
             {
-                if (length(idx) > 0L)
+                if (length(i) > 0L)
                 {
                     library(HIBAG)
                     m <- hlaModelFromObj(mobj)
                     on.exit(hlaClose(m))
-                    pd <- hlaPredict(m, snp[,idx], type=type, vote=vote,
-                        verbose=FALSE)
-                    pd
+                    hlaPredict(m, snp[,i], type=type, vote=vote, verbose=FALSE)
                 } else
                     NULL
             },
             mobj=hlaModelToObj(object), snp=snp, type=type, vote=vote
         )
 
+        # merge the results
         if (type %in% c("response", "response+prob"))
         {
             res <- rv[[1L]]
@@ -784,13 +794,10 @@ predict.hlaAttrBagClass <- function(object, snp, cl=NULL,
 
     if (NA.cnt > 0L)
     {
-        if (NA.cnt > 1L) s <- "s" else s <- ""
-        warning(sprintf(
-            "No prediction output%s of %d individual%s ",
-            s, NA.cnt, s),
-            "(possibly due to missing SNPs.)")
+        warning("No prediction output for ", NA.cnt, " individual",
+            .plural(NA.cnt), " (possibly due to missing SNPs).",
+            immediate.=TRUE)
     }
-
     # return
     res
 }
@@ -817,7 +824,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
         {
             stop("The object(s) passed to 'hlaPredMerge' should have ",
                 "a field of 'postprob' returned from ",
-                "'predict(..., type=\"response+prob\", vote=\"majority\")'.")
+                "'hlaPredict(..., type=\"response+prob\", vote=\"majority\")'.")
         }
     }
 
@@ -927,7 +934,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
 
 
 #######################################################################
-# summarize the "hlaAttrBagClass" object
+# Summarize the "hlaAttrBagClass" object
 #
 
 summary.hlaAttrBagClass <- function(object, show=TRUE, ...)
@@ -956,7 +963,6 @@ hlaModelToObj <- function(model)
         # get freq. and haplotypes, etc
         v <- .Call(HIBAG_Classifier_GetHaplos, model$model, i)
         names(v) <- c("freq", "hla", "haplo", "snpidx", "samp.num", "acc")
-
         res[[i]] <- list(
             samp.num = v$samp.num,
             haplos = data.frame(freq = v$freq, hla = model$hla.allele[v$hla],
@@ -981,7 +987,7 @@ hlaModelToObj <- function(model)
 
 
 #######################################################################
-# To combine two model objects of attribute bagging
+# Combine two HIBAG models
 #
 
 hlaCombineModelObj <- function(obj1, obj2)
@@ -1033,20 +1039,21 @@ hlaCombineModelObj <- function(obj1, obj2)
 
 
 #######################################################################
-# To get the top n individual classifiers
+# Get a HIBAG model with the top n individual classifiers
 #
 
 hlaSubModelObj <- function(obj, n)
 {
     # check
     stopifnot(inherits(obj, "hlaAttrBagObj"))
+    stopifnot(is.numeric(n), length(n)==1L)
     obj$classifiers <- obj$classifiers[1L:n]
     obj
 }
 
 
 #######################################################################
-# To get a "hlaAttrBagClass" class
+# Create a "hlaAttrBagClass" class from an R object
 #
 
 hlaModelFromObj <- function(obj)
@@ -1094,7 +1101,7 @@ hlaModelFromObj <- function(obj)
 
 
 #######################################################################
-# summarize the "hlaAttrBagObj" object
+# Summarize the "hlaAttrBagObj" object
 #
 
 summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
@@ -1184,45 +1191,6 @@ summary.hlaAttrBagObj <- function(object, show=TRUE, ...)
 
 
 ##########################################################################
-# to get a model object of attribute bagging from a list of files
-#
-
-hlaModelFiles <- function(fn.list, action.missingfile=c("ignore", "stop"),
-    verbose=TRUE)
-{
-    # check
-    stopifnot(is.character(fn.list))
-    stopifnot(is.logical(verbose))
-    action.missingfile <- match.arg(action.missingfile)
-
-    # for-loop
-    rv <- NULL
-    for (fn in fn.list)
-    {
-        if (file.exists(fn))
-        {
-            tmp <- get(load(fn))
-            if (is.null(rv))
-            {
-                rv <- tmp
-            } else {
-                rv <- hlaCombineModelObj(rv, tmp)
-            }
-        } else {
-            s <- sprintf("There is no '%s'.", fn)
-            if (action.missingfile == "stop")
-            {
-                stop(s)
-            } else {
-                if (verbose) message(s)
-            }
-        }
-    }
-    rv
-}
-
-
-##########################################################################
 # Out-of-bag estimation of overall accuracy, per-allele sensitivity, etc
 #
 
@@ -1285,7 +1253,7 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
 
         tmp.model <- hlaModelFromObj(mx)
         tmp.geno <- geno[, s == 0L]
-        v <- predict(tmp.model, tmp.geno, verbose=FALSE)
+        v <- hlaPredict(tmp.model, tmp.geno, verbose=FALSE)
         hlaClose(tmp.model)
         v$value$sample.id <- mx$sample.id[s == 0L]
         pam <- hlaCompareAllele(hla, v, allele.limit=mx,
@@ -1531,7 +1499,7 @@ hlaDistance <- function(model)
 #
 
 ##########################################################################
-# To visualize an attribute bagging model
+# Plot an attribute bagging model
 #
 
 plot.hlaAttrBagClass <- function(x, ...)
@@ -1550,7 +1518,7 @@ print.hlaAttrBagClass <- function(x, ...)
 
 
 ##########################################################################
-# To visualize an attribute bagging model
+# Plot an attribute bagging model
 #
 
 plot.hlaAttrBagObj <- function(x, snp.col="gray33", snp.pch=1, snp.sz=1,
@@ -1616,39 +1584,30 @@ print.hlaAttrBagObj <- function(x, ...)
 
 
 #######################################################################
-# To get the error message
-#
-
-hlaErrMsg <- function()
-{
-    .Call(HIBAG_ErrMsg)
-}
-
-
-
-#######################################################################
 # Export stardard R library function(s)
 #######################################################################
 
+hlaSetKernelTarget <- function(cpu=c("max", "auto.avx2", "base",
+    "sse2", "sse4", "avx", "avx2", "avx512f", "avx512bw"))
+{
+    cpu <- match.arg(cpu)
+    .Call(HIBAG_Kernel_SetTarget, cpu)
+    .Call(HIBAG_Kernel_Version)[[2L]]
+}
+
+
 .onAttach <- function(lib, pkg)
 {
-    # get version and SSE2 information
-    Version <- .Call(HIBAG_Kernel_Version)
+    # get version and CPU information
+    info <- .Call(HIBAG_Kernel_Version)
 
     # information
     packageStartupMessage(
         "HIBAG (HLA Genotype Imputation with Attribute Bagging)")
     packageStartupMessage(
-        sprintf("Kernel Version: v%d.%d", Version[1L], Version[2L]))
-    if (Version[3L] == 1L)
-        s <- "Supported by Streaming SIMD Extensions (SSE2)"
-    else if (Version[3L] == 2L)
-        s <- "Supported by Streaming SIMD Extensions (SSE2 + POPCNT)"
-    else
-        s <- ""
-    if ((Version[4L] > 0L) & (s != ""))
-        s <- paste0(s, " [", Version[4L], "-bit]")
-    if (s != "") packageStartupMessage(s)
-
+        sprintf("Kernel Version: v%d.%d (%s)", info[[1L]][1L], info[[1L]][2L],
+        info[[2L]][1L]))
+    if (is.na(info[[3L]]))
+        packageStartupMessage("No Intel Threading Building Blocks (TBB)")
     TRUE
 }

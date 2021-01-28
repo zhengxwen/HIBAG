@@ -39,7 +39,7 @@ ensembles using bootstrap aggregating and random variable selection.
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
     HIBAG -- HLA Genotype Imputation with Attribute Bagging.
     The Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
-    \url{http://www.nature.com/tpj/journal/v14/n2/full/tpj201318a.html}
+    \url{https://www.nature.com/articles/tpj201318}
 }
 \author{
     Xiuwen Zheng [aut, cre, cph] \email{zhengx@u.washington.edu},
@@ -95,7 +95,7 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 summary(pred)
 
 # compare
@@ -126,7 +126,7 @@ model <- hlaModelFromObj(mobj)
 test.geno <- get(load("testgeno.RData"))
 hlatab <- get(load("HLASplit.RData"))
 
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0.5))
@@ -144,7 +144,7 @@ hapmap.ceu <- hlaBED2Geno(bed.fn, fam.fn, bim.fn, assembly="hg19")
 #########################################################################
 # predict
 #
-pred <- predict(model, hapmap.ceu, type="response")
+pred <- hlaPredict(model, hapmap.ceu, type="response")
 head(pred$value)
 #   sample.id allele1 allele2      prob
 # 1   NA10859   01:01   03:01 0.9999992

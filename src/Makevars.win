@@ -1,0 +1,37 @@
+#################################################################
+###                           HIBAG                           ###
+###                                                           ###
+
+# use C++11
+CXX_STD = CXX11
+
+# need to fix "invalid register for .seh_savexmm" for avx512
+# assume using gcc
+FIXED_REG = -ffixed-xmm16 -ffixed-xmm17 -ffixed-xmm18 -ffixed-xmm19 \
+	-ffixed-xmm20 -ffixed-xmm21 -ffixed-xmm22 -ffixed-xmm23 \
+	-ffixed-xmm24 -ffixed-xmm25 -ffixed-xmm26 -ffixed-xmm27 \
+	-ffixed-xmm28 -ffixed-xmm29 -ffixed-xmm30 -ffixed-xmm31
+FIXED_REG_64 = $(if $(filter ${R_ARCH_BIN},/x64),${FIXED_REG})
+
+
+# additional preprocessor options
+PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
+
+# to set flags for the linker
+PKG_LIBS = \
+	$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()")
+
+
+all: $(SHLIB)
+
+LibHLA_ext_avx512f.o:
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512f.cpp -c -o $@
+
+LibHLA_ext_avx512bw.o:
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512bw.cpp -c -o $@
+
+
+clean:
+	rm -f ../.travis.yml
+	rm -rf ../appveyor.yml
+	rm -f ../.gitignore

@@ -1,0 +1,25 @@
+#################################################################
+###                           HIBAG                           ###
+###                                                           ###
+
+# use C++11
+CXX_STD = CXX11
+
+# check GNU GCC for function multi-versioning
+GCC_FLAG = $(shell $(CC) -dM -E - < /dev/null |grep -Eo '__GNUC__|__clang__|ICC' \
+	|tr '\n' ' ' |grep GNUC |grep -v -e clang -e ICC)
+LIB_GCC = $(if ${GCC_FLAG},-lgcc)
+
+
+# to set flags for the linker
+PKG_LIBS = \
+	$(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") \
+	${LIB_GCC}
+
+
+all: $(SHLIB)
+
+clean:
+	rm -f ../.travis.yml
+	rm -rf ../appveyor.yml
+	rm -f ../.gitignore

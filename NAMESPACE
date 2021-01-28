@@ -4,7 +4,7 @@ useDynLib(HIBAG,
     HIBAG_Clear_GPU, HIBAG_Close, HIBAG_Confusion, HIBAG_Distance,
     HIBAG_GetNumClassifiers, HIBAG_Classifier_GetHaplos,
     HIBAG_New, HIBAG_NewClassifiers, HIBAG_NewClassifierHaplo,
-    HIBAG_SortAlleleStr, HIBAG_Kernel_Version, HIBAG_ErrMsg,
+    HIBAG_SortAlleleStr, HIBAG_Kernel_Version, HIBAG_Kernel_SetTarget,
     HIBAG_Predict_Resp, HIBAG_Predict_Resp_Prob,
     HIBAG_Training, HIBAG_SeqMerge, HIBAG_SeqRmDot
 )
@@ -15,9 +15,10 @@ export(.onAttach)
 
 # Imports
 import(methods)
+importFrom(RcppParallel, RcppParallelLibs, defaultNumThreads)
 import(stats)
 importFrom(graphics, abline, plot, text)
-importFrom(utils, read.table, write.table)
+importFrom(utils, read.table, write.table, str)
 
 # Registering S3 methods
 S3method(plot, hlaAttrBagClass)
@@ -28,7 +29,9 @@ S3method(print, hlaAttrBagObj)
 S3method(summary, hlaAttrBagClass)
 S3method(summary, hlaAttrBagObj)
 S3method(summary, hlaAlleleClass)
+S3method(print, hlaAlleleClass)
 S3method(summary, hlaAASeqClass)
 S3method(summary, hlaSNPGenoClass)
+S3method(print, hlaSNPGenoClass)
 S3method(hlaAssocTest, hlaAlleleClass)
 S3method(hlaAssocTest, hlaAASeqClass)

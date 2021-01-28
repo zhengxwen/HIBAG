@@ -8,7 +8,8 @@
 }
 \usage{
 hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
-    prune=TRUE, na.rm=TRUE, mono.rm=TRUE, verbose=TRUE, verbose.detail=FALSE)
+    prune=TRUE, na.rm=TRUE, mono.rm=TRUE, nthread=1L, verbose=TRUE,
+    verbose.detail=FALSE)
 }
 \arguments{
     \item{hla}{the training HLA types, an object of
@@ -20,10 +21,13 @@ hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
         randomly sampled as candidates for each selection. See details}
     \item{prune}{if TRUE, to perform a parsimonious forward variable selection,
         otherwise, exhaustive forward variable selection. See details}
-    \item{na.rm}{if TRUE, remove the samples with missing HLA types}
+    \item{na.rm}{if TRUE, remove the samples with missing HLA alleles}
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
-    \item{verbose}{if TRUE, show information}
-    \item{verbose.detail}{if TRUE, show more information}
+    \item{nthread}{specify the number of threads used in the model building;
+        if \code{TRUE}, use the number of threads returned from
+        \code{RcppParallel::defaultNumThreads()} (by default using all threads)}
+    \item{verbose}{if \code{TRUE}, show information}
+    \item{verbose.detail}{if \code{TRUE}, show more information}
 }
 \details{
     \code{mtry} (the number of variables randomly sampled as candidates
@@ -43,8 +47,10 @@ removed from the candidate SNP set for future searching. Parsimonious selection
 helps to improve the computational efficiency by reducing the searching times
 on non-informative SNP markers.
 
-    A parallel version of \code{hlaAttrBagging} is
-\code{\link{hlaParallelAttrBagging}}.
+    \code{\link{hlaParallelAttrBagging}} extends \code{hlaAttrBagging} to allow
+parallel computing with multiple compute nodes in a cluster. An autosave
+function is available in \code{\link{hlaParallelAttrBagging}} when an new
+individual classifier is built internally without completing the ensemble.
 }
 \value{
     Return an object of \code{\link{hlaAttrBagClass}}:
@@ -67,13 +73,14 @@ on non-informative SNP markers.
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;
     HIBAG -- HLA Genotype Imputation with Attribute Bagging.
     Pharmacogenomics Journal. doi: 10.1038/tpj.2013.18.
-    \url{http://www.nature.com/tpj/journal/v14/n2/full/tpj201318a.html}
+    \url{https://www.nature.com/articles/tpj201318}
 }
 \author{Xiuwen Zheng}
 \seealso{
     \code{\link{hlaClose}}, \code{\link{hlaParallelAttrBagging}},
     \code{\link{summary.hlaAttrBagClass}},
-    \code{\link{predict.hlaAttrBagClass}}, \code{\link{hlaPredict}}
+    \code{\link{predict.hlaAttrBagClass}}, \code{\link{hlaPredict}},
+    \code{\link{hlaSetKernelTarget}}
 }
 
 \examples{
@@ -115,7 +122,7 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 summary(pred)
 
 # compare
@@ -146,7 +153,7 @@ model <- hlaModelFromObj(mobj)
 test.geno <- get(load("testgeno.RData"))
 hlatab <- get(load("HLASplit.RData"))
 
-pred <- predict(model, test.geno, type="response")
+pred <- hlaPredict(model, test.geno, type="response")
 summary(pred)
 
 # compare

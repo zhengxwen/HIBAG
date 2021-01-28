@@ -1,0 +1,130 @@
+---
+title: "HIBAG -- an R Package for HLA Genotype Imputation with Attribute Bagging"
+author: "Dr. Xiuwen Zheng"
+date: "May 3, 2018"
+output:
+    html_document:
+        theme: default
+        highlight: tango
+        toc: yes
+    pdf_document:
+        toc: yes
+        toc_depth: 3
+bibliography: HIBAG_Ref.bib
+vignette: >
+    %\VignetteIndexEntry{HLA association vignette html}
+    %\VignetteKeywords{HLA, MHC, Imputation, SNP, GWAS}
+    %\VignetteEngine{knitr::rmarkdown}
+---
+
+
+# Overview
+
+The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation [@Shiina09]. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the *HLA--B* locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database [@Robinson13] ([http://www.ebi.ac.uk/imgt/hla/](http://www.ebi.ac.uk/imgt/hla/)).
+
+Classical HLA genotyping methodologies have been predominantly developed for tissue typing purposes, with sequence based typing (SBT) approaches currently considered the gold standard. While there is widespread availability of vendors offering HLA genotyping services, the complexities involved in performing this to the standard required for diagnostic purposes make using a SBT approach time-consuming and cost-prohibitive for most research studies wishing to look in detail at the involvement of classical HLA genes in disease.
+
+Here we introduce a new prediction method for **H**LA **I**mputation using attribute **BAG**ging, HIBAG, that is highly accurate, computationally tractable, and can be used with published parameter estimates, eliminating the need to access large training samples [@Zheng13]. It relies on a training set with known HLA and SNP genotypes, and combines the concepts of attribute bagging with haplotype inference from unphased SNPs and HLA types. Attribute bagging is a technique for improving the accuracy and stability of classifier ensembles using bootstrap aggregating and random variable selection [@Breiman96; @Breiman01; @Bryll03]. In this case, individual classifiers are created which utilize a subset of SNPs to predict HLA types and haplotype frequencies estimated from a training data set of SNPs and HLA types. Each of the classifiers employs a variable selection algorithm with a random component to select a subset of the SNPs. HLA type predictions are determined by maximizing the average posterior probabilities from all classifiers.
+
+
+# Association Tests
+
+In the association tests of HLA allele, four models (dominant, additive, recessive and genotype) are allowed, and linear/logistic regressions can be conducted according to the dependent variable.
+
+| Model     | Description (given a specific HLA allele h) |
+|:----------|:--------------------------------------------|
+| dominant  | [-/-] vs. [-/h,h/h] (0 vs. 1 in design matrix) |
+| additive  | [-] vs. [h] in Chi-squared and Fisher's exact test, the allele dosage in regressions (0: -/-, 1: -/h, 2: h/h in design matrix) |
+| recessive | [-/-,-/h] vs. [h/h] (0 vs. 1 in design matrix) |
+| genotype  | three categories: [-/-], [-/h], [h/h] |
+
+```{r echo=FALSE}
+library(HIBAG)
+
+fn <- system.file("doc", "case_control.txt", package="HIBAG")
+```
+
+```R
+# prepare data
+fn <- "case_control.txt"
+# or fn <- system.file("doc", "case_control.txt", package="HIBAG")
+```
+The example text file: [case_control.txt](case_control.txt).
+```{r}
+dat <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
+head(dat)
+
+# make an object for hlaAssocTest
+hla <- hlaAllele(dat$sample.id, H1=dat$A, H2=dat$A.1, locus="A", assembly="hg19", prob=dat$prob)
+summary(hla)
+```
+Or the best-guess HLA genotypes from `predict()` or `hlaPredict()`:
+```R
+hla <- hlaPredict(model, yourgeno)
+```
+
+### Allelic Association
+
+`h` in the formula is denoted for HLA genotypes. Pearson's Chi-squared and Fisher's exact test will be performed if the dependent variable is categorial, while two-sample t test or ANOVA F test will be used for continuous dependent variables.
+
+```{r}
+hlaAssocTest(hla, disease ~ h, data=dat)  # 95% confidence interval (h.2.5%, h.97.5%)
+
+# show details
+print(hlaAssocTest(hla, disease ~ h, data=dat, verbose=FALSE))
+
+hlaAssocTest(hla, disease ~ h, data=dat, prob.threshold=0.5)  # regression with a threshold
+
+hlaAssocTest(hla, disease ~ h, data=dat, showOR=TRUE)  # report odd ratio instead of log odd ratio
+
+hlaAssocTest(hla, disease ~ h + pc1, data=dat)  # confounding variable pc1
+
+hlaAssocTest(hla, disease ~ h, data=dat, model="additive")  # use an additive model
+
+hlaAssocTest(hla, trait ~ h, data=dat)  # continuous outcome
+```
+
+
+### Amino Acid Association
+
+We convert [P-coded](http://hla.alleles.org/alleles/p_groups.html) alleles to amino acid  sequences. `hlaConvSequence(..., code="P.code.merge")` returns the protein sequence in the 'antigen binding domains' (exons 2 and 3 for HLA Class I genes, exon 2 for HLA Class II genes).
+```{r}
+aa <- hlaConvSequence(hla, code="P.code.merge")
+```
+
+1. the sequence is displayed as a hyphen (-) where it is identical to the reference.
+2. an insertion or deletion is represented by a period (.).
+3. an unknown or ambiguous position in the alignment is represented by an asterisk (*).
+4. a capital X is used for the 'stop' codons in protein alignments.
+
+```{r}
+head(c(aa$value$allele1, aa$value$allele2))
+
+# show cross tabulation at each amino acid position
+summary(aa)
+
+# association tests
+hlaAssocTest(aa, disease ~ h, data=dat, model="dominant")  # try dominant models
+
+hlaAssocTest(aa, disease ~ h, data=dat, model="dominant", prob.threshold=0.5)  # try dominant models
+
+hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")  # try recessive models
+```
+
+
+# Resources
+
+* Allele Frequency Net Database (AFND): [http://www.allelefrequencies.net](http://www.allelefrequencies.net).
+* IMGT/HLA Database: [http://www.ebi.ac.uk/imgt/hla](http://www.ebi.ac.uk/imgt/hla).
+* HLA Nomenclature: [G Codes](http://hla.alleles.org/alleles/g_groups.html) and [P Codes](http://hla.alleles.org/alleles/p_groups.html) for reporting of ambiguous allele typings.
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
+
+
+# References

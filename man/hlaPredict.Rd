@@ -1,6 +1,6 @@
-\name{predict.hlaAttrBagClass}
-\alias{predict.hlaAttrBagClass}
+\name{hlaPredict}
 \alias{hlaPredict}
+\alias{predict.hlaAttrBagClass}
 \title{
     HIBAG model prediction (in parallel)
 }
@@ -8,11 +8,11 @@
     To predict HLA type based on a HIBAG model (in parallel).
 }
 \usage{
-hlaPredict(object, snp, cl=NULL,
+hlaPredict(object, snp, cl=FALSE,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
-\method{predict}{hlaAttrBagClass}(object, snp, cl,
+\method{predict}{hlaAttrBagClass}(object, snp, cl=FALSE,
     type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
@@ -20,9 +20,11 @@ hlaPredict(object, snp, cl=NULL,
 \arguments{
     \item{object}{a model of \code{\link{hlaAttrBagClass}}}
     \item{snp}{a genotypic object of \code{\link{hlaSNPGenoClass}}}
-    \item{cl}{if a cluster object, created by the package
-        \link{parallel-package}; if \code{NULL}, serial implementation will
-        be performed; if numeric, specify the number of cores}
+    \item{cl}{\code{FALSE}, \code{TRUE}, an integer, or a cluster object
+        created by the \link{parallel-package}; if \code{FALSE}, use the serial
+        implementation; if \code{TRUE}, use the number of threads returned from
+        \code{RcppParallel::defaultNumThreads()} (by default using all threads);
+        if an integer, specify the number of threads}
     \item{type}{"response": return the best-guess type plus its posterior
         probability; "prob": return all posterior probabilities;
         "response+prob": return the best-guess and all posterior probabilities}
@@ -32,14 +34,14 @@ hlaPredict(object, snp, cl=NULL,
         classifiers, where each classifier votes for an HLA type}
     \item{allele.check}{if \code{TRUE}, check and then switch allele pairs
         if needed}
-    \item{match.type}{\code{"RefSNP+Position"} (by default) -- using both of
-        RefSNP IDs and positions; \code{"RefSNP"} -- using RefSNP IDs only;
-        \code{"Position"} -- using positions only}
+    \item{match.type}{\code{"Position"} -- use positions only (by default);
+        \code{"RefSNP+Position"} -- use both of SNP IDs and positions;
+        \code{"RefSNP"} -- using SNP IDs only}
     \item{same.strand}{\code{TRUE} assuming alleles are on the same strand
         (e.g., forward strand); otherwise, \code{FALSE} not assuming whether
         on the same strand or not}
     \item{verbose}{if TRUE, show information}
-    \item{...}{further arguments passed to or from other methods}
+    \item{...}{unused}
 }
 \value{
     Return a \code{\link{hlaAlleleClass}} object with posterior probabilities
@@ -54,19 +56,20 @@ and \code{rownames} is an unordered pair of HLA alleles.
     If more than 50\% of SNP predictors are missing, a warning will be given.
 
     When \code{match.type="RefSNP+Position"}, the matching of SNPs requires
-both RefSNP IDs and positions. A lower missing fraction maybe gained by
-matching RefSNP IDs or positions only. Call
-    \code{predict(..., match.type="RefSNP")} or
-    \code{predict(..., match.type="Position")} for this purpose.
-It might be safe to assume that the SNPs with the same positions on the same
-genome reference (e.g., hg19) are the same variant albeit the different RefSNP
+both SNP IDs and positions. A lower missing fraction maybe gained by
+matching SNP IDs or positions only. Call
+    \code{hlaPredict(..., match.type="RefSNP")} or
+    \code{hlaPredict(..., match.type="Position")} for this purpose.
+It could be safe to assume that the SNPs with the same positions on the same
+genome reference (e.g., hg19) are the same variant albeit the different SNP
 IDs. Any concern about SNP mismatching should be emailed to the genotyping
 platform provider.
 }
 \author{Xiuwen Zheng}
 \seealso{
     \code{\link{hlaAttrBagging}}, \code{\link{hlaAllele}},
-    \code{\link{hlaCompareAllele}}, \code{\link{hlaParallelAttrBagging}}
+    \code{\link{hlaCompareAllele}}, \code{\link{hlaParallelAttrBagging}},
+    \code{\link{hlaSetKernelTarget}}
 }
 
 \examples{
@@ -107,7 +110,7 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- predict(model, test.geno)
+pred <- hlaPredict(model, test.geno)
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0))
