@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2020   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2021   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -148,7 +148,7 @@ static inline int thread_idx() { return 0; }
 // ========================================================================= //
 
 /// exp(cnt * log(MIN_RARE_FREQ)), cnt is the hamming distance
-double HLA_LIB::EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2];
+double HLA_LIB::EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2 + 1];
 
 class CInit
 {
@@ -157,12 +157,12 @@ public:
 	{
 		// initialize internal variables
 		const int n = 2 * HIBAG_MAXNUM_SNP_IN_CLASSIFIER;
-		for (int i=0; i < n; i++)
+		for (int i=0; i <= n; i++)
 			EXP_LOG_MIN_RARE_FREQ[i] = exp(i * log(MIN_RARE_FREQ));
 		EXP_LOG_MIN_RARE_FREQ[0] = 1;
-		for (int i=0; i < n; i++)
+		for (int i=0; i <= n; i++)
 		{
-			if (!R_finite(EXP_LOG_MIN_RARE_FREQ[i]))
+			if (!R_FINITE(EXP_LOG_MIN_RARE_FREQ[i]))
 				EXP_LOG_MIN_RARE_FREQ[i] = 0;
 		}
 		// select CPU target
