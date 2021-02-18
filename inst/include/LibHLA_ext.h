@@ -178,6 +178,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifndef HIBAG_STRUCTURE_HEAD_ONLY
+#   include <string>
+#endif
+
 #ifdef __cplusplus
 namespace HLA_LIB
 {
@@ -197,8 +201,126 @@ namespace HLA_LIB
 		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(INT64));
 
 
-    #ifdef
+	// ===================================================================== //
+	// ========                     Description                     ========
+	//
+	// Packed SNP storage strategy is used for faster matching
+	//
+	// HLA allele: start from 0
+	//
+	// THaplotype: packed SNP alleles (little endianness):
+	//     (s8 s7 s6 s5 s4 s3 s2 s1)
+	//     the 1st allele: (s1), the 2nd allele: (s2), ...
+	//     SNP allele: 0 (B allele), 1 (A allele)
+	//
+	// TGenotype: packed SNP genotype (little endianness):
+	//     array_1 = (s1_8 s1_7 s1_6 s1_5 s1_4 s1_3 s1_2 s1_1),
+	//     array_2 = (s2_8 s2_7 s2_6 s2_5 s2_4 s2_3 s2_2 s2_1),
+	//     array_3 = (s3_8 s3_7 s3_6 s3_5 s3_4 s3_3 s3_2 s3_1)
+	//     the 1st genotype: (s1_1 s2_1 s3_1),
+	//     the 2nd genotype: (s1_1 s2_1 s3_1), ...
+	//     SNP genotype: 0 (BB) -- (s1_1=0 s2_1=0 s3_1=1),
+	//                   1 (AB) -- (s1_1=1 s2_1=0 s3_1=1),
+	//                   2 (AA) -- (s1_1=1 s2_1=1 s3_1=1),
+	//                   -1 or other value (missing)
+	//                          -- (s1_1=0 s2_1=1 s3_1=0)
+	//
+	// ========                                                     ========
+	// ===================================================================== //
+
+	/// Packed bi-allelic SNP haplotype structure: 8 alleles in a byte
+	struct THaplotype
+	{
+	public:
+		friend class CHaplotypeList;
+
+		/// packed SNP alleles
+		INT64 PackedHaplo[HIBAG_PACKED_INT64_MAXNUM];
+		/// haplotype frequency
+		double Freq;
+		/// auxiliary variables, sizeof(THaplotype)=32
+		union type_aux
+		{
+			double OldFreq;  /// old haplotype frequency
+			struct type_aux2 {
+				float Freq_f32;  /// 32-bit haplotype frequency
+				int HLA_allele;  /// the associated HLA allele
+			} a2;
+		} aux;
+
+    #ifndef HIBAG_STRUCTURE_HEAD_ONLY
+		/// constructor
+		THaplotype();
+		THaplotype(double _freq);
+		THaplotype(const char *str, double _freq);
+
+		/// get SNP allele, idx starts from ZERO
+		UINT8 GetAllele(size_t idx) const;
+		/// set SNP allele, idx starts from ZERO
+		void SetAllele(size_t idx, UINT8 val);
+		/// get a string of "0" and "1" from packed SNP alleles
+		std::string HaploToStr(size_t Length) const;
+		/// set packed SNP alleles from a string of "0" and "1"
+		void StrToHaplo(const std::string &str);
+
+	private:
+		/// set SNP allele, idx starts from ZERO, without checking
+		inline void _SetAllele(size_t idx, UINT8 val);
     #endif
+	};
+
+
+	/// An unordered pair of HLA alleles
+	struct THLAType
+	{
+		int Allele1;  //< the first HLA allele
+		int Allele2;  //< the second HLA allele
+	};
+
+
+	/// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte
+	struct TGenotype
+	{
+	public:
+		friend class CGenotypeList;
+		friend class CAlg_EM;
+		friend class CAlg_Prediction;
+
+		/// packed SNP genotypes, allele 1
+		INT64 PackedSNP1[HIBAG_PACKED_INT64_MAXNUM];
+		/// packed SNP genotypes, allele 2
+		INT64 PackedSNP2[HIBAG_PACKED_INT64_MAXNUM];
+		/// the count in the bootstrapped data
+		int BootstrapCount;
+
+		/// auxiliary correct HLA type
+		THLAType aux_hla_type;
+		/// auxiliary integer to make sizeof(TGenotype)=64
+		int aux_temp;
+
+    #ifndef HIBAG_STRUCTURE_HEAD_ONLY
+		/// constructor
+		TGenotype();
+		/// get SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
+		int GetSNP(size_t idx) const;
+		/// set SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
+		void SetSNP(size_t idx, int val);
+		/// get a string of SNP genotypes, consisting of "0" or "1"
+		std::string SNPToString(size_t Length) const;
+		/// set SNP genotypes by a string of "0" and "1"
+		void StringToSNP(const std::string &str);
+		/// export SNPs to a vector of integers
+		void SNPToInt(size_t Length, int OutArray[]) const;
+		/// import SNPs from an integer vector 'GenoBase' with 'Index'
+		void IntToSNP(size_t Length, const int GenoBase[], const int Index[]);
+		/// compute the Hamming distance between SNPs and H1+H2
+		int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
+
+	protected:
+		/// set SNP genotype (0, 1, 2) without checking
+		void _SetSNP(size_t idx, int val);
+	#endif
+	};
 
 }
 #endif

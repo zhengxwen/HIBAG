@@ -35,7 +35,6 @@
 #include <cmath>
 #include <vector>
 #include <list>
-#include <string>
 #include <algorithm>
 
 
@@ -75,44 +74,14 @@ namespace HLA_LIB
 	// ========                                                     ========
 	// ===================================================================== //
 
-	/// Packed bi-allelic SNP haplotype structure: 8 alleles in a byte
-	struct THaplotype
-	{
-	public:
-		friend class CHaplotypeList;
+	// Packed bi-allelic SNP haplotype structure: 8 alleles in a byte
+	// struct THaplotype, defined LibHLA_ext.h
 
-		/// packed SNP alleles
-		INT64 PackedHaplo[HIBAG_PACKED_INT64_MAXNUM];
-		/// haplotype frequency
-		double Freq;
-		/// auxiliary variables, sizeof(THaplotype)=32
-		union type_aux
-		{
-			double OldFreq;  /// old haplotype frequency
-			struct type_aux2 {
-				float Freq_f32;  /// 32-bit haplotype frequency
-				int HLA_allele;  /// the associated HLA allele
-			} a2;
-		} aux;
+	// An unordered pair of HLA alleles
+	// struct THLAType, defined LibHLA_ext.h
 
-		/// constructor
-		THaplotype();
-		THaplotype(double _freq);
-		THaplotype(const char *str, double _freq);
-
-		/// get SNP allele, idx starts from ZERO
-		UINT8 GetAllele(size_t idx) const;
-		/// set SNP allele, idx starts from ZERO
-		void SetAllele(size_t idx, UINT8 val);
-		/// get a string of "0" and "1" from packed SNP alleles
-		string HaploToStr(size_t Length) const;
-		/// set packed SNP alleles from a string of "0" and "1"
-		void StrToHaplo(const string &str);
-
-	private:
-		/// set SNP allele, idx starts from ZERO, without checking
-		inline void _SetAllele(size_t idx, UINT8 val);
-	};
+	// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte
+	// struct TGenotype, defined LibHLA_ext.h
 
 
 	/// Haplotype list with an HLA gene and SNP alleles
@@ -171,57 +140,6 @@ namespace HLA_LIB
 
 		/// allocate 32-aligned memory internally
 		inline void alloc_mem(size_t num);
-	};
-
-
-	/// A pair of HLA alleles
-	struct THLAType
-	{
-		int Allele1;  //< the first HLA allele
-		int Allele2;  //< the second HLA allele
-	};
-
-
-	/// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte
-	struct TGenotype
-	{
-	public:
-		friend class CGenotypeList;
-		friend class CAlg_EM;
-		friend class CAlg_Prediction;
-
-		/// packed SNP genotypes, allele 1
-		INT64 PackedSNP1[HIBAG_PACKED_INT64_MAXNUM];
-		/// packed SNP genotypes, allele 2
-		INT64 PackedSNP2[HIBAG_PACKED_INT64_MAXNUM];
-		/// the count in the bootstrapped data
-		int BootstrapCount;
-
-		/// auxiliary correct HLA type
-		THLAType aux_hla_type;
-		/// auxiliary integer to make sizeof(TGenotype)=64
-		int aux_temp;
-
-		/// constructor
-		TGenotype();
-		/// get SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
-		int GetSNP(size_t idx) const;
-		/// set SNP genotype (0, 1, 2) at the specified locus, idx starts from ZERO
-		void SetSNP(size_t idx, int val);
-		/// get a string of SNP genotypes, consisting of "0" or "1"
-		string SNPToString(size_t Length) const;
-		/// set SNP genotypes by a string of "0" and "1"
-		void StringToSNP(const string &str);
-		/// export SNPs to a vector of integers
-		void SNPToInt(size_t Length, int OutArray[]) const;
-		/// import SNPs from an integer vector 'GenoBase' with 'Index'
-		void IntToSNP(size_t Length, const int GenoBase[], const int Index[]);
-		/// compute the Hamming distance between SNPs and H1+H2
-		int HammingDistance(size_t Length, const THaplotype &H1, const THaplotype &H2) const;
-
-	protected:
-		/// set SNP genotype (0, 1, 2) without checking
-		void _SetSNP(size_t idx, int val);
 	};
 
 
