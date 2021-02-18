@@ -29,8 +29,6 @@
 #define LIBHLA_H_
 
 #include "LibHLA_ext.h"
-#include <stdint.h>
-#include <cstdlib>
 #include <cstring>
 #include <cstdarg>
 #include <ctime>
@@ -44,24 +42,6 @@
 namespace HLA_LIB
 {
 	using namespace std;
-
-	/// Kernel Version, Major Number (0x01) / Minor Number (0x05)
-	#define HIBAG_KERNEL_VERSION    0x0105
-
-	/// Define 8-bit and 64-bit integers
-	typedef uint8_t     UINT8;
-	typedef int64_t     INT64;
-
-	/// The max number of SNP markers in an individual classifier.
-	//  Don't modify this value since the code is optimized for this value!!!
-	const size_t HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128;
-
-	/// The max number of INT64 for packed SNP genotypes.
-	const size_t HIBAG_PACKED_INT64_MAXNUM =
-		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(INT64));
-
-
-	// ===================================================================== //
 
 	/// macro for checking error
 	#define HIBAG_CHECKING(x, msg)	{ if (x) throw ErrHLA(msg); }

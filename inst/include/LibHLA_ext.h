@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2020   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2020-2021   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -172,6 +172,35 @@
 #endif
 #if defined(__AVX512BW__) && !defined(HIBAG_CPU_ARCH_X86_AVX512BW)
 #   define HIBAG_CPU_ARCH_X86_AVX512BW
+#endif
+
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#ifdef __cplusplus
+namespace HLA_LIB
+{
+	/// Kernel Version, Major Number (0x01) / Minor Number (0x05)
+	#define HIBAG_KERNEL_VERSION    0x0105
+
+	/// Define 8-bit and 64-bit integers
+	typedef uint8_t     UINT8;
+	typedef int64_t     INT64;
+
+	/// The max number of SNP markers in an individual classifier.
+	//  Don't modify this value since the code is optimized for this value!!!
+	const size_t HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128;
+
+	/// The max number of INT64 for packed SNP genotypes.
+	const size_t HIBAG_PACKED_INT64_MAXNUM =
+		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(INT64));
+
+
+    #ifdef
+    #endif
+
+}
 #endif
 
 

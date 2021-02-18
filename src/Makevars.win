@@ -15,7 +15,7 @@ FIXED_REG_64 = $(if $(filter ${R_ARCH_BIN},/x64),${FIXED_REG})
 
 
 # additional preprocessor options
-PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
+PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1 -I../inst/include
 
 # to set flags for the linker
 PKG_LIBS = \

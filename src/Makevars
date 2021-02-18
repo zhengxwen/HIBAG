@@ -10,6 +10,7 @@ GCC_FLAG = $(shell $(CC) -dM -E - < /dev/null |grep -Eo '__GNUC__|__clang__|ICC'
 	|tr '\n' ' ' |grep GNUC |grep -v -e clang -e ICC)
 LIB_GCC = $(if ${GCC_FLAG},-lgcc)
 
+PKG_CPPFLAGS = -I../inst/include
 
 # to set flags for the linker
 PKG_LIBS = \
