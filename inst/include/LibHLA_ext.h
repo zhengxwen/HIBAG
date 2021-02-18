@@ -322,6 +322,39 @@ namespace HLA_LIB
 	#endif
 	};
 
+
+	// ===================================================================== //
+
+	/// the data structure of functions using GPU
+	struct TypeGPUExtProc
+	{
+		/// initialize the internal structure for building a model
+		void (*build_init)(int nHLA, int nSample);
+		/// finalize the structure for building a model
+		void (*build_done)();
+		/// initialize bottstrapping
+		void (*build_set_bootstrap)(const int oob_cnt[]);
+		/// initialize haplotypes and SNPs genotypes
+		void (*build_set_haplo_geno)(const THaplotype haplo[], int n_haplo,
+			const TGenotype geno[], int n_snp);
+		/// calculate the out-of-bag accuracy (the number of correct alleles)
+		int (*build_acc_oob)();
+		/// calculate the in-bag log likelihood
+		double (*build_acc_ib)();
+
+		/// initialize the internal structure for predicting
+		//    nHaplo[2*nClassifier]:
+		//    nHaplo[0] -- total # of haplotypes
+		//    nHaplo[1] -- # of SNPs
+		void (*predict_init)(int nHLA, int nClassifier,
+			const THaplotype *const pHaplo[], const int nHaplo[]);
+		/// finalize the structure for predicting
+		void (*predict_done)();
+		/// average the posterior probabilities among classifiers for predicting
+		void (*predict_avg_prob)(const TGenotype geno[], const double weight[],
+			double out_prob[], double out_match[]);
+	};
+
 }
 #endif
 
