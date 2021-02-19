@@ -587,11 +587,9 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 			Rprintf("[-] %s\n", date_text());
 		}
 
-		if (!Rf_isNull(proc_ptr))
-		{
-			error("GPU is disable, and will be enable in future version.");
+		GPUExtProcPtr = NULL;
+		if (!Rf_isNull(proc_ptr)) 
 			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
-		}
 		try {
 			_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
 				prune, verbose, verbose_detail);

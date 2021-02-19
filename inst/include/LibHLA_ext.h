@@ -278,7 +278,7 @@ namespace HLA_LIB
 	};
 
 
-	/// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte
+	/// Packed bi-allelic SNP genotype structure: 8 SNPs in a byte, sizeof(TGenotype)=48
 	struct TGenotype
 	{
 	public:
@@ -295,7 +295,7 @@ namespace HLA_LIB
 
 		/// auxiliary correct HLA type
 		THLAType aux_hla_type;
-		/// auxiliary integer to make sizeof(TGenotype)=64
+		/// auxiliary integer to make sizeof(TGenotype)=48
 		int aux_temp;
 
     #ifndef HIBAG_STRUCTURE_HEAD_ONLY
