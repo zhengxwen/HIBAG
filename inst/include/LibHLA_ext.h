@@ -243,8 +243,8 @@ namespace HLA_LIB
 		{
 			double OldFreq;  /// old haplotype frequency
 			struct type_aux2 {
-				float Freq_f32;  /// 32-bit haplotype frequency
-				int HLA_allele;  /// the associated HLA allele
+				float Freq_f32;  /// 32-bit haplotype frequency, used in GPU
+				int HLA_allele;  /// the associated HLA allele, used in GPU
 			} a2;
 		} aux;
 
