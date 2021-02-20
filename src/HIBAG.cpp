@@ -573,6 +573,10 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 		_Check_HIBAG_Model(midx);
 		GetRNGstate();
 
+		GPUExtProcPtr = NULL;
+		if (!Rf_isNull(proc_ptr)) 
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(abs(nthread));
 	#endif
@@ -583,13 +587,11 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 		#else
 			int n = 1;
 		#endif
-			Rprintf("# of threads: %d\n", n);
+			if (!GPUExtProcPtr)
+				Rprintf("# of threads: %d\n", n);
 			Rprintf("[-] %s\n", date_text());
 		}
 
-		GPUExtProcPtr = NULL;
-		if (!Rf_isNull(proc_ptr)) 
-			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
 			_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
 				prune, verbose, verbose_detail);
