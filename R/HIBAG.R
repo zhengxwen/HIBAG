@@ -699,8 +699,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
         if (is.na(nthread) || nthread<1L) nthread <- 1L
 
         # pointer to functions for an extensible component
-        pm <- list()
-        pm <- pm$proc_ptr
+        pm <- attr(cl, "proc_ptr")
 
         # predict HLA genotypes
         if (type %in% c("response", "response+prob"))

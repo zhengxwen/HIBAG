@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2020   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2021   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -632,6 +632,10 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
+		GPUExtProcPtr = NULL;
+		if (!Rf_isNull(proc_ptr)) 
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(nthread);
 	#endif
@@ -642,7 +646,8 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		#else
 			int n = 1;
 		#endif
-			Rprintf("# of threads: %d\n", n);
+			if (!GPUExtProcPtr)
+				Rprintf("# of threads: %d\n", n);
 		}
 
 		rv_ans = PROTECT(NEW_LIST(4));
@@ -655,8 +660,6 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
 
-		if (!Rf_isNull(proc_ptr))
-			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
 			M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
@@ -698,6 +701,10 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 
+		GPUExtProcPtr = NULL;
+		if (!Rf_isNull(proc_ptr)) 
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(nthread);
 	#endif
@@ -708,7 +715,8 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		#else
 			int n = 1;
 		#endif
-			Rprintf("# of threads: %d\n", n);
+			if (!GPUExtProcPtr)
+				Rprintf("# of threads: %d\n", n);
 		}
 
 		rv_ans = PROTECT(NEW_LIST(5));
@@ -723,8 +731,6 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_MatProb = allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
-		if (!Rf_isNull(proc_ptr))
-			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
 		try {
 			M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
