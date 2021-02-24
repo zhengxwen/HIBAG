@@ -616,7 +616,6 @@ namespace HLA_LIB
 
 	private:
 		std::vector<TGenotype> gpu_geno_buf;
-		std::vector<int> gpu_num_haplo;
 	};
 
 

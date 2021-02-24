@@ -347,7 +347,7 @@ namespace HLA_LIB
 		//    nHaplo[0] -- total # of haplotypes
 		//    nHaplo[1] -- # of SNPs
 		void (*predict_init)(int nHLA, int nClassifier,
-			const THaplotype *const pHaplo[], const int nHaplo[]);
+			const THaplotype *const pHaplo[], const int nHaplo[], const int nSNP[]);
 		/// finalize the structure for predicting
 		void (*predict_done)();
 		/// average the posterior probabilities among classifiers for predicting

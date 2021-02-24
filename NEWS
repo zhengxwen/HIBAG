@@ -1,4 +1,4 @@
-CHANGES IN VERSION 1.27.1
+CHANGES IN VERSION 1.27.2
 -------------------------
 
     o the hlaAttrBagging object can be removed in garbage collection without
