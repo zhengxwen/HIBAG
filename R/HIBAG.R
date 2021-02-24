@@ -745,7 +745,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
             m <- outer(object$hla.allele, object$hla.allele,
                 function(x, y) paste(x, y, sep="/"))
             rownames(res) <- m[lower.tri(m, diag=TRUE)]
-            NA.cnt <- sum(colSums(res) <= 0L)
+            NA.cnt <- sum(colSums(res) <= 0L, na.rm=TRUE)
         }
     } else {
 
@@ -787,7 +787,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
                     res <- cbind(res, rv[[i]])
             }
             colnames(res) <- geno.sampid
-            NA.cnt <- sum(colSums(res) <= 0L)
+            NA.cnt <- sum(colSums(res) <= 0L, na.rm=TRUE)
         }
     } 
 
