@@ -2220,8 +2220,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 		// initialize probability
 		pred.InitSumPostProb();
 		TGenotype Geno;
-		double sum_matching=0;
-		int num_matching=0;
+		double sum_matching=0, num_matching=0;
 
 		p = _ClassifierList.begin();
 		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
@@ -2233,8 +2232,8 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 			double pm;
 			pred.PredictPostProb(p->_Haplo, Geno, pm);
 			// add matching probability
-			sum_matching += pm;
-			num_matching ++;
+			sum_matching += pm * c_weight[w_i];
+			num_matching += c_weight[w_i];
 			// add prob to the ensemble
 			if (vote_method == 1)
 			{
