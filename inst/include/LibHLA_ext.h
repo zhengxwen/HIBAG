@@ -200,6 +200,9 @@ namespace HLA_LIB
 	const size_t HIBAG_PACKED_INT64_MAXNUM =
 		HIBAG_MAXNUM_SNP_IN_CLASSIFIER / (8*sizeof(INT64));
 
+	/// The minimum rare frequency to store haplotypes
+	const double MIN_RARE_FREQ = 1e-5;
+
 
 	// ===================================================================== //
 	// ========                     Description                     ========

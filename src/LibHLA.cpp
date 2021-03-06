@@ -91,8 +91,6 @@ double HLA_LIB::EM_FuncRelTol = sqrt(DBL_EPSILON);
 
 // Parameters -- reduce the number of possible haplotypes
 
-/// The minimum rare frequency to store haplotypes
-static const double MIN_RARE_FREQ = 1e-5;
 /// The fraction of one haplotype that can be ignored
 static const double FRACTION_HAPLO = 1.0/10;
 
@@ -2077,7 +2075,7 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	bool verbose, bool verbose_detail)
 {
-	if (GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_init)
 		(*GPUExtProcPtr->build_init)(nHLA(), nSamp());
 
 	CSamplingWithoutReplace VarSampling;
@@ -2111,7 +2109,7 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		}
 	}
 
-	if (GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_done)
 		(*GPUExtProcPtr->build_done)();
 }
 
@@ -2294,14 +2292,17 @@ void CAttrBag_Model::_Init_PredictHLA()
 		}
 
 		// call the external function
-		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,
-			p_n_haplo, p_n_snp);
+		if (*GPUExtProcPtr->predict_init)
+		{
+			(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,
+				p_n_haplo, p_n_snp);
+		}
 	}
 }
 
 void CAttrBag_Model::_Done_PredictHLA()
 {
-	if (GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->predict_done)
 	{
 		(*GPUExtProcPtr->predict_done)();
 	}
