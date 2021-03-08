@@ -67,6 +67,13 @@ extern const bool HIBAG_ALGORITHM_AVX2;
 extern const bool HIBAG_ALGORITHM_AVX512F;
 extern const bool HIBAG_ALGORITHM_AVX512BW;
 
+// target-specific functions
+static CAlg_Prediction::F_PrepHaploMatch fc_PrepHaploMatch = NULL;
+static CAlg_Prediction::F_BestGuess fc_BestGuess = NULL;
+static CAlg_Prediction::F_PostProb  fc_PostProb  = NULL;
+static CAlg_Prediction::F_PostProb2 fc_PostProb2 = NULL;
+
+
 // indicate CPU flags and selection of target-specific functions
 static string HIBAG_CPU_Info;
 
@@ -967,14 +974,12 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	_SampHaploPair.reserve(GenoList.nSamp());
 	CurHaplo.DoubleHaplos(NextHaplo);
 
-	vector<int> DiffList(GenoList.nSamp()*(2*GenoList.nSamp() + 1));
+	vector<short> DiffList(GenoList.nSamp()*(2*GenoList.nSamp() + 1));
 
 	// get haplotype pairs for each sample
 	for (int iSamp=0; iSamp < GenoList.nSamp(); iSamp++)
 	{
-		const TGenotype &pG   = GenoList.List[iSamp];
-		const THLAType  &pHLA = HLAList.List[iSamp];
-
+		const TGenotype &pG = GenoList.List[iSamp];
 		if (pG.BootstrapCount > 0)
 		{
 			_SampHaploPair.push_back(THaploPairList());
@@ -982,80 +987,24 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 			HP.BootstrapCount = pG.BootstrapCount;
 			HP.SampIndex = iSamp;
 
-			size_t pH1_st = NextHaplo.StartHaploHLA(pHLA.Allele1);
-			size_t pH1_n  = NextHaplo.LenPerHLA[pHLA.Allele1];
-			size_t pH2_st = NextHaplo.StartHaploHLA(pHLA.Allele2);
-			size_t pH2_n  = NextHaplo.LenPerHLA[pHLA.Allele2];
-			THaplotype *p1, *p2;
-			int MinDiff = GenoList.Num_SNP * 4;
+			const THLAType &pHLA = HLAList.List[iSamp];
+			const size_t pH1_st = NextHaplo.StartHaploHLA(pHLA.Allele1);
+			const size_t pH1_n  = NextHaplo.LenPerHLA[pHLA.Allele1];
+			const size_t pH2_st = NextHaplo.StartHaploHLA(pHLA.Allele2);
+			const size_t pH2_n  = NextHaplo.LenPerHLA[pHLA.Allele2];
+			const size_t Num_SNP = NextHaplo.Num_SNP - 1;
 
 			if (pHLA.Allele1 != pHLA.Allele2)
 			{
 				const size_t m = pH1_n * pH2_n;
 				if (m > DiffList.size()) DiffList.resize(m);
-				int *pD = &DiffList[0];
-
-				p1 = &NextHaplo.List[pH1_st];
-				for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
-				{
-					p2 = &NextHaplo.List[pH2_st];
-					for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
-					{
-						int d = *pD++ = hamm_d(CurHaplo.Num_SNP, pG, *p1, *p2);
-						if (d < MinDiff) MinDiff = d;
-						if (d == 0)
-							HP.PairList.push_back(THaploPair(p1, p2));
-					}
-				}
-
-				if (MinDiff > 0)
-				{
-					int *pD = &DiffList[0];
-					p1 = &NextHaplo.List[pH1_st];
-					for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
-					{
-						p2 = &NextHaplo.List[pH2_st];
-						for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
-						{
-							if (*pD++ == MinDiff)
-								HP.PairList.push_back(THaploPair(p1, p2));
-						}
-					}
-				}
-
 			} else {
 				const size_t m = pH1_n * (pH1_n + 1) / 2;
 				if (m > DiffList.size()) DiffList.resize(m);
-				int *pD = &DiffList[0];
-
-				p1 = &NextHaplo.List[pH1_st];
-				for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
-				{
-					p2 = p1;
-					for (size_t n2=n1; n2 > 0; n2--, p2++)
-					{
-						int d = *pD++ = hamm_d(CurHaplo.Num_SNP, pG, *p1, *p2);
-						if (d < MinDiff) MinDiff = d;
-						if (d == 0)
-							HP.PairList.push_back(THaploPair(p1, p2));
-					}
-				}
-
-				if (MinDiff > 0)
-				{
-					int *pD = &DiffList[0];
-					p1 = &NextHaplo.List[pH1_st];
-					for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
-					{
-						p2 = p1;
-						for (size_t n2=n1; n2 > 0; n2--, p2++)
-						{
-							if (*pD++ == MinDiff)
-								HP.PairList.push_back(THaploPair(p1, p2));
-						}
-					}
-				}
 			}
+
+			(*fc_PrepHaploMatch)(pG, &NextHaplo.List[pH1_st], pH1_n,
+				&NextHaplo.List[pH2_st], pH2_n, Num_SNP, HP.PairList, &DiffList[0]);
 		}
 	}
 }
@@ -1182,10 +1131,6 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 // -------------------------------------------------------------------------
 // The algorithm of prediction
 
-// target-specific functions
-static CAlg_Prediction::F_BestGuess fc_BestGuess = NULL;
-static CAlg_Prediction::F_PostProb  fc_PostProb  = NULL;
-static CAlg_Prediction::F_PostProb2 fc_PostProb2 = NULL;
 static bool need_auxiliary_haplo = false;
 
 CAlg_Prediction::CAlg_Prediction() { }
@@ -1275,6 +1220,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_avx512bw)
 			error("Not support AVX512F+AVX512BW.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512bw;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
@@ -1282,6 +1228,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		need_aux_haplo = true;
 	} else if (strcmp(cpu, "base")==0)
 	{
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_def;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_def;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
@@ -1292,6 +1239,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_avx2)
 			error("Not support AVX2.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx2;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx2;
@@ -1301,6 +1249,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_avx)
 			error("Not support AVX.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx;
@@ -1310,6 +1259,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_sse4)
 			error("Not support SSE4.2.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_sse4_2;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse4_2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse4_2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse4_2;
@@ -1319,6 +1269,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_sse2)
 			error("Not support SSE2.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_sse2;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse2;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
@@ -1328,6 +1279,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_avx512bw)
 			error("Not support AVX512F+AVX512BW.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512bw;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
@@ -1337,12 +1289,14 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	{
 		if (!has_avx512bw)
 			error("Not support AVX512F.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512f;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512f;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512f;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512f;
 		cpu_info.append(", AVX512F");
 		need_aux_haplo = true;
 	} else {
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_def;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_def;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
@@ -1446,6 +1400,77 @@ inline THLAType CAlg_Prediction::_BestGuess(double hla_prob[])
 		}
 	}
 	return rv;
+}
+
+
+void CAlg_Prediction::_PrepHaploMatch_def(const TGenotype &Geno,
+	THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
+	size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[])
+{
+	int MinDiff = Num_SNP * 4;
+	short *pD = DiffList;
+
+	if (pH1_st != pH2_st)
+	{
+		THaplotype *p1 = pH1_st;
+		for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+		{
+			THaplotype *p2 = pH2_st;
+			for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
+			{
+				int d = hamm_d(Num_SNP, Geno, *p1, *p2);
+				*pD++ = d;
+				if (d < MinDiff) MinDiff = d;
+				if (d == 0)
+					HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+			}
+		}
+
+		if (MinDiff > 0)
+		{
+			pD = DiffList;
+			THaplotype *p1 = pH1_st;
+			for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+			{
+				THaplotype *p2 = pH2_st;
+				for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
+				{
+					if (*pD++ == MinDiff)
+						HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+				}
+			}
+		}
+
+	} else {
+		THaplotype *p1 = pH1_st;
+		for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+		{
+			THaplotype *p2 = p1;
+			for (size_t n2=n1; n2 > 0; n2--, p2++)
+			{
+				int d = hamm_d(Num_SNP, Geno, *p1, *p2);
+				*pD++ = d;
+				if (d < MinDiff) MinDiff = d;
+				if (d == 0)
+					HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+			}
+		}
+
+		if (MinDiff > 0)
+		{
+			pD = DiffList;
+			THaplotype *p1 = pH1_st;
+			for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+			{
+				THaplotype *p2 = p1;
+				for (size_t n2=n1; n2 > 0; n2--, p2++)
+				{
+					if (*pD++ == MinDiff)
+						HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+				}
+			}
+		}
+	}
 }
 
 THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,

@@ -229,6 +229,78 @@ static inline TARGET_AVX
 }
 
 
+void SIMD_NAME(CAlg_Prediction::_PrepHaploMatch)(const TGenotype &Geno,
+	THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
+	size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[])
+{
+	const TGenoStruct_avx GS(Num_SNP, Geno);
+	int MinDiff = Num_SNP * 4;
+	short *pD = DiffList;
+
+	if (pH1_st != pH2_st)
+	{
+		THaplotype *p1 = pH1_st;
+		for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+		{
+			THaplotype *p2 = pH2_st;
+			for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
+			{
+				int d = hamm_d(GS, *p1, *p2);
+				*pD++ = d;
+				if (d < MinDiff) MinDiff = d;
+				if (d == 0)
+					HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+			}
+		}
+
+		if (MinDiff > 0)
+		{
+			pD = DiffList;
+			THaplotype *p1 = pH1_st;
+			for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+			{
+				THaplotype *p2 = pH2_st;
+				for (size_t n2=pH2_n; n2 > 0; n2--, p2++)
+				{
+					if (*pD++ == MinDiff)
+						HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+				}
+			}
+		}
+
+	} else {
+		THaplotype *p1 = pH1_st;
+		for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+		{
+			THaplotype *p2 = p1;
+			for (size_t n2=n1; n2 > 0; n2--, p2++)
+			{
+				int d = hamm_d(GS, *p1, *p2);
+				*pD++ = d;
+				if (d < MinDiff) MinDiff = d;
+				if (d == 0)
+					HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+			}
+		}
+
+		if (MinDiff > 0)
+		{
+			pD = DiffList;
+			THaplotype *p1 = pH1_st;
+			for (size_t n1=pH1_n; n1 > 0; n1--, p1++)
+			{
+				THaplotype *p2 = p1;
+				for (size_t n2=n1; n2 > 0; n2--, p2++)
+				{
+					if (*pD++ == MinDiff)
+						HP_PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+				}
+			}
+		}
+	}
+}
+
+
 THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno)
 {
@@ -444,6 +516,13 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 
 
 #else
+
+void SIMD_NAME(_PrepHaploMatch)(const TGenotype &pG,
+	THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
+	size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[])
+{
+	THROW_ERROR;
+}
 
 THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno)
