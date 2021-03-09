@@ -95,14 +95,28 @@ public:
 	bool Low64b;     ///< whether length <= 64 or not
 	int64_t *p_H_0, *p_H_1;
 	double *p_Freq;
+
 	/// constructor
+	inline TGenoStruct_512f(const CHaplotypeList &Haplo, const TGenotype &G)
+	{
+		init(Haplo.Num_SNP, G);
+		p_H_0 = Haplo.aux_haplo;
+		p_H_1 = Haplo.aux_haplo + Haplo.Num_Haplo;
+		p_Freq = Haplo.aux_freq;
+	}
+	inline TGenoStruct_512f(const size_t Num_SNP, const TGenotype &G)
+	{
+		init(Num_SNP, G);
+		p_H_0 = p_H_1 = NULL; p_Freq = NULL;
+	}
+
 #ifndef __ICC
 	TARGET_AVX512
 #endif
-	inline TGenoStruct_512f(const CHaplotypeList &Haplo, const TGenotype &G)
+	inline void init(const size_t Num_SNP, const TGenotype &G)
 	{
 		const INT64 *s1 = G.PackedSNP1, *s2 = G.PackedSNP2;
-		Low64b = (Haplo.Num_SNP <= 64);
+		Low64b = (Num_SNP <= 64);
 		if (Low64b)
 		{
 			__m128i I1 = { s1[0], s2[0] }, I2 = { s2[0], s1[0] };  // genotypes
@@ -117,9 +131,6 @@ public:
 			S1_1 = _mm512_set1_epi64(s1[1]);
 			S2_1 = _mm512_set1_epi64(s2[1]);
 		}
-		p_H_0 = Haplo.aux_haplo;
-		p_H_1 = Haplo.aux_haplo + Haplo.Num_Haplo;
-		p_Freq = Haplo.aux_freq;
 	}
 };
 
