@@ -172,6 +172,26 @@ static ALWAYS_INLINE TARGET_AVX2
 }
 
 
+static ALWAYS_INLINE bool hamm_d_min_zero(const TGenoStruct_avx2 &G,
+	const THaplotype &H)
+{
+	if (G.Low64b)
+	{
+		return false;
+	} else {
+		// here, MAX_NUM_MUTANTS_NONZERO=64, HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
+		const INT64 *h  = H.PackedHaplo;
+		__m128i hh = { h[0], h[1] };   // a haplotype
+		__m128i S1 = G.S1, S2 = G.S2;  // genotypes
+		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
+		__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
+		__m128i v = _mm_andnot_si128((hh ^ S1) & (hh ^ S2), M);
+		// popcount
+		return (U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]) > MAX_NUM_MUTANTS_NONZERO);
+	}
+}
+
+
 static inline TARGET_AVX2
 	size_t add_geno_freq4(size_t n, const THaplotype *i1, size_t i2,
 		const TGenoStruct_avx2 &GS, double &prob)
@@ -350,12 +370,15 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
+		bool zero_flag[n1+1];
 
 		// diagonal
 		double prob = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
+			zero_flag[m1] = hamm_d_min_zero(GS, *i1);
+			if (zero_flag[m1]) continue;
 			// i2 = i1
 			ADD_FREQ_MUTANT(prob, i1->Freq * i1->Freq, hamm_d(GS, *i1, *i1));
 			// i2 > i1
@@ -384,6 +407,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			prob = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				if (zero_flag[m1]) continue;
 				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				size_t m2 = n2;
@@ -425,12 +449,15 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
+		bool zero_flag[n1+1];
 
 		// diagonal
 		double prob = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
+			zero_flag[m1] = hamm_d_min_zero(GS, *i1);
+			if (zero_flag[m1]) continue;
 			// i2 = i1
 			ADD_FREQ_MUTANT(prob, i1->Freq * i1->Freq, hamm_d(GS, *i1, *i1));
 			// i2 > i1
@@ -456,6 +483,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 			prob = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				if (zero_flag[m1]) continue;
 				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				size_t m2 = n2;

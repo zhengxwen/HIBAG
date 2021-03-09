@@ -708,10 +708,6 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 	#endif
 #endif
 
-#if !(defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__))
-static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
-#endif
-
 #ifndef U_POPCOUNT
 #   define U_POPCOUNT  u_popcount
 #   ifdef HIBAG_CPU_LP64
@@ -767,6 +763,7 @@ static ALWAYS_INLINE int hamm_d(size_t Length, const TGenotype &G,
 			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
 	}
 #else
+	const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
 	size_t ans = 0;
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{
@@ -781,6 +778,41 @@ static ALWAYS_INLINE int hamm_d(size_t Length, const TGenotype &G,
 	return ans;
 #endif
 }
+
+static ALWAYS_INLINE bool hamm_d_min_zero(size_t Len, const TGenotype &G,
+	const THaplotype &H)
+{
+	if (Len <= MAX_NUM_MUTANTS_NONZERO)
+		return false;
+	const UTYPE *h  = (const UTYPE*)H.PackedHaplo;
+	const UTYPE *s1 = (const UTYPE*)G.PackedSNP1;
+	const UTYPE *s2 = (const UTYPE*)G.PackedSNP2;
+#if defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__)
+	// here, MAX_NUM_MUTANTS_NONZERO=64, UTYPE = int64_t
+	// since HIBAG_MAXNUM_SNP_IN_CLASSIFIER = 128
+	__m128i hh = { h[0],  h[1] };  // a haplotype
+	__m128i S1 = { s1[0], s1[1] }, S2 = { s2[0], s2[1] };  // genotypes
+	// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
+	__m128i M = _mm_andnot_si128(S1, S2);  // missing value, 1 is missing
+	__m128i v = _mm_andnot_si128((hh ^ S1) & (hh ^ S2), M);
+	// popcount
+	return (U_POPCOUNT(v[0]) + U_POPCOUNT(v[1]) > MAX_NUM_MUTANTS_NONZERO);
+#else
+	const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
+	size_t ans = 0;
+	for (ssize_t n=Len; n > 0; n -= UTYPE_BIT_NUM)
+	{
+		UTYPE hh = *h++;               // a haplotype
+		UTYPE S1 = *s1++, S2 = *s2++;  // genotypes
+		// worry about n < UTYPE_BIT_NUM? unused bits are set to be a missing flag
+		UTYPE M = S2 & ~S1;  // missing value, 1 is missing
+		// popcount
+		ans += U_POPCOUNT((hh ^ S1) & (hh ^ S2) & ~M);
+	}
+	return (ans > MAX_NUM_MUTANTS_NONZERO);
+#endif
+}
+
 
 // --------------------------------
 
@@ -1478,19 +1510,22 @@ THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 {
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
-	double max=0, prob;
+	double max=0;
 	const int nHLA = Haplo.nHLA();
-	THaplotype *I1=Haplo.List, *I2;
+	THaplotype *I1=Haplo.List;
 
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
+		bool zero_flag[n1+1];  // check stack?
 
 		// diagonal
-		prob = 0;
+		double prob = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
+			zero_flag[m1] = hamm_d_min_zero(Haplo.Num_SNP, Geno, *i1);
+			if (zero_flag[m1]) continue;
 			// i2 = i1
 			ADD_FREQ_MUTANT(prob, i1->Freq * i1->Freq,
 				hamm_d(Haplo.Num_SNP, Geno, *i1, *i1));
@@ -1503,7 +1538,7 @@ THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 					hamm_d(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
-		I2 = I1 + n1;
+		THaplotype *I2 = I1 + n1;
 		if (max < prob)
 		{
 			max = prob;
@@ -1514,10 +1549,10 @@ THLAType CAlg_Prediction::_BestGuess_def(const CHaplotypeList &Haplo,
 		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
-			prob = 0;
-			THaplotype *i1 = I1;
+			prob = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				if (zero_flag[m1]) continue;
 				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
@@ -1548,18 +1583,21 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 	const int nHLA = Haplo.nHLA();
 	int IxHLA = H2 + H1*(2*nHLA-H1-1)/2;
 	int idx = 0;
-	double sum=0, hlaProb=0, prob;
-	THaplotype *I1=Haplo.List, *I2;
+	double sum=0, hlaProb=0;
+	THaplotype *I1=Haplo.List;
 
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
+		bool zero_flag[n1+1];
 
 		// diagonal
-		prob = 0;
+		double prob = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
+			zero_flag[m1] = hamm_d_min_zero(Haplo.Num_SNP, Geno, *i1);
+			if (zero_flag[m1]) continue;
 			// i2 = i1
 			ADD_FREQ_MUTANT(prob, i1->Freq * i1->Freq,
 				hamm_d(Haplo.Num_SNP, Geno, *i1, *i1));
@@ -1572,7 +1610,7 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 					hamm_d(Haplo.Num_SNP, Geno, *i1, *i2));
 			}
 		}
-		I2 = I1 + n1;
+		THaplotype *I2 = I1 + n1;
 		if (IxHLA == idx) hlaProb = prob;
 		idx ++; sum += prob;
 
@@ -1580,10 +1618,10 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
-			prob = 0;
-			THaplotype *i1 = I1;
+			prob = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
+				if (zero_flag[m1]) continue;
 				const double ff = 2 * i1->Freq;
 				THaplotype *i2 = I2;
 				for (size_t m2=n2; m2 > 0; m2--, i2++)
@@ -1606,16 +1644,16 @@ double CAlg_Prediction::_PostProb_def(const CHaplotypeList &Haplo,
 double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double Prob[])
 {
-	double *p = Prob, sum;
+	double *p = Prob;
 	const int nHLA = Haplo.nHLA();
-	THaplotype *I1=Haplo.List, *I2;
+	THaplotype *I1=Haplo.List;
 
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
-		sum = 0;
+		double sum = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
@@ -1632,14 +1670,13 @@ double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 			}
 		}
 		*p++ = sum;
-		I2 = I1 + n1;
+		THaplotype *I2 = I1 + n1;
 
 		// off-diagonal
 		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
-			sum = 0;
-			THaplotype *i1 = I1;
+			sum = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
 				const double ff = 2 * i1->Freq;
@@ -1659,7 +1696,7 @@ double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 
 	// normalize
 	const size_t n = nHLA*(nHLA+1)/2;
-	sum = 0;
+	double sum = 0;
 	for (size_t i=0; i < n; i++) sum += Prob[i];
 	const double ff = 1 / sum;
 	for (size_t i=0; i < n; i++) Prob[i] *= ff;

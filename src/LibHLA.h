@@ -225,6 +225,9 @@ namespace HLA_LIB
 	/// Frequency with mutants and errors
 	extern double EXP_LOG_MIN_RARE_FREQ[HIBAG_MAXNUM_SNP_IN_CLASSIFIER*2 + 1];
 
+	/// Max. number of mutants for nonzero probability according to MIN_RARE_FREQ (double-precision)
+	#define MAX_NUM_MUTANTS_NONZERO    64
+
 
 	/// variable sampling
 	class CBaseSampling
