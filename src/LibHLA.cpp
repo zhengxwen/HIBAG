@@ -1287,7 +1287,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		need_aux_haplo = true;
 	} else if (strcmp(cpu, "avx512f")==0 || (cpu_auto && has_avx512f))
 	{
-		if (!has_avx512bw)
+		if (!has_avx512f)
 			error("Not support AVX512F.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512f;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512f;
