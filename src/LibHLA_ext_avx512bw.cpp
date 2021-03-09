@@ -421,16 +421,16 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 	const TGenoStruct_512bw GS(Haplo, Geno);
 	THLAType rv;
 	rv.Allele1 = rv.Allele2 = NA_INTEGER;
-	double max=0, prob;
+	double max=0;
 	const int nHLA = Haplo.nHLA();
-	THaplotype *base=Haplo.List, *I1=base, *I2;
+	THaplotype *base=Haplo.List, *I1=base;
 
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
-		prob = 0;
+		double prob = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
@@ -448,7 +448,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 			for (; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
-		I2 = I1 + n1;
+		THaplotype *I2 = I1 + n1;
 		if (max < prob)
 		{
 			max = prob;
@@ -459,8 +459,7 @@ THLAType SIMD_NAME(CAlg_Prediction::_BestGuess)(const CHaplotypeList &Haplo,
 		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
-			prob = 0;
-			THaplotype *i1 = I1;
+			prob = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
 				const double ff = 2 * i1->Freq;
@@ -498,15 +497,15 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 	const int nHLA = Haplo.nHLA();
 	int IxHLA = H2 + H1*(2*nHLA-H1-1)/2;
 	int idx = 0;
-	double sum=0, hlaProb=0, prob;
-	THaplotype *base=Haplo.List, *I1=base, *I2;
+	double sum=0, hlaProb=0;
+	THaplotype *base=Haplo.List, *I1=base;
 
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
-		prob = 0;
+		double prob = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
@@ -524,7 +523,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 			for (; m2 > 0; m2--, i2++)
 				ADD_FREQ_MUTANT(prob, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
-		I2 = I1 + n1;
+		THaplotype *I2 = I1 + n1;
 		if (IxHLA == idx) hlaProb = prob;
 		idx ++; sum += prob;
 
@@ -532,8 +531,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb)(const CHaplotypeList &Haplo,
 		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
-			prob = 0;
-			THaplotype *i1 = I1;
+			prob = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
 				const double ff = 2 * i1->Freq;
@@ -563,16 +561,16 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 	const TGenotype &Geno, double Prob[])
 {
 	const TGenoStruct_512bw GS(Haplo, Geno);
-	double *p = Prob, sum;
+	double *p = Prob;
 	const int nHLA = Haplo.nHLA();
-	THaplotype *base=Haplo.List, *I1=base, *I2;
+	THaplotype *base=Haplo.List, *I1=base;
 
 	for (int h1=0; h1 < nHLA; h1++)
 	{
 		const size_t n1 = Haplo.LenPerHLA[h1];
 
 		// diagonal
-		sum = 0;
+		double sum = 0;
 		THaplotype *i1 = I1;
 		for (size_t m1=n1; m1 > 0; m1--, i1++)
 		{
@@ -591,14 +589,13 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 				ADD_FREQ_MUTANT(sum, ff * i2->Freq, hamm_d(GS, *i1, *i2));
 		}
 		*p++ = sum;
-		I2 = I1 + n1;
+		THaplotype *I2 = I1 + n1;
 
 		// off-diagonal
 		for (int h2=h1+1; h2 < nHLA; h2++)
 		{
 			const size_t n2 = Haplo.LenPerHLA[h2];
-			sum = 0;
-			THaplotype *i1 = I1;
+			sum = 0; i1 = I1;
 			for (size_t m1=n1; m1 > 0; m1--, i1++)
 			{
 				const double ff = 2 * i1->Freq;
@@ -621,7 +618,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 
 	// normalize
 	const size_t n = nHLA*(nHLA+1)/2;
-	sum = 0;
+	double sum = 0;
 	for (size_t i=0; i < n; i++) sum += Prob[i];
 	const double ff = 1 / sum;
 	for (size_t i=0; i < n; i++) Prob[i] *= ff;
