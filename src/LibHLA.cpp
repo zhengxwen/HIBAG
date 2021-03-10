@@ -1046,14 +1046,14 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 		int geno = SNPMat.Get(it->SampIndex, NewSNP);
 		if ((0<=geno) && (geno<=2))
 		{
-			// for -- loop
+			// check for each pair
 			for (p = it->PairList.begin(); p != it->PairList.end(); p++)
 			{
 				p->Flag = ((p->H1->GetAllele(IdxNewSNP) +
 					p->H2->GetAllele(IdxNewSNP)) == geno);
 			}
 		} else {
-			// for -- loop
+			// missing genotype
 			for (p = it->PairList.begin(); p != it->PairList.end(); p++)
 				p->Flag = true;
 		}
