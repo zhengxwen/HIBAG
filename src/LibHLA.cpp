@@ -972,6 +972,13 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 	// create a next set of haplotypes
 	CurHaplo.DoubleHaplos(NextHaplo);
+	int nhla = NextHaplo.nHLA(), st = 0;
+	vector<int> StartIdx(nhla);
+	for (int i=0; i < nhla; i++)
+	{
+		StartIdx[i] = st;
+		st += NextHaplo.LenPerHLA[i];
+	}
 
 	// prepare data
 	const size_t ntol_samp = GenoList.nSamp();
@@ -1009,10 +1016,10 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 		HP.SampIndex = k;
 
 		const THLAType &pHLA = HLAList.List[k];
-		const size_t pH1_st = NextHaplo.StartHaploHLA(pHLA.Allele1);
-		const size_t pH1_n  = NextHaplo.LenPerHLA[pHLA.Allele1];
-		const size_t pH2_st = NextHaplo.StartHaploHLA(pHLA.Allele2);
-		const size_t pH2_n  = NextHaplo.LenPerHLA[pHLA.Allele2];
+		const size_t pH1_st  = StartIdx[pHLA.Allele1];
+		const size_t pH1_n   = NextHaplo.LenPerHLA[pHLA.Allele1];
+		const size_t pH2_st  = StartIdx[pHLA.Allele2];
+		const size_t pH2_n   = NextHaplo.LenPerHLA[pHLA.Allele2];
 		const size_t Num_SNP = NextHaplo.Num_SNP - 1;
 
 		(*fc_PrepHaploMatch)(pG, &NextHaplo.List[pH1_st], pH1_n,
