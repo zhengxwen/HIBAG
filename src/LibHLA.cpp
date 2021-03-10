@@ -970,43 +970,56 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	HIBAG_CHECKING(GenoList.nSamp() != HLAList.nSamp(),
 		"CAlg_EM::PrepareHaplotypes, GenoList and HLAList should have the same number of samples.");
 
-	_SampHaploPair.clear();
-	_SampHaploPair.reserve(GenoList.nSamp());
+	// create a next set of haplotypes
 	CurHaplo.DoubleHaplos(NextHaplo);
 
-	vector<short> DiffList(GenoList.nSamp()*(2*GenoList.nSamp() + 1));
-
-	// get haplotype pairs for each sample
-	for (int iSamp=0; iSamp < GenoList.nSamp(); iSamp++)
+	// prepare data
+	const size_t ntol_samp = GenoList.nSamp();
+	vector<int> samp_idx(ntol_samp);
+	size_t n_max_diff=0, n_samp_ib=0;
+	for (size_t i=0; i < ntol_samp; i++)
 	{
-		const TGenotype &pG = GenoList.List[iSamp];
-		if (pG.BootstrapCount > 0)
+		if (GenoList.List[i].BootstrapCount > 0)
 		{
-			_SampHaploPair.push_back(THaploPairList());
-			THaploPairList &HP = _SampHaploPair.back();
-			HP.BootstrapCount = pG.BootstrapCount;
-			HP.SampIndex = iSamp;
-
-			const THLAType &pHLA = HLAList.List[iSamp];
-			const size_t pH1_st = NextHaplo.StartHaploHLA(pHLA.Allele1);
-			const size_t pH1_n  = NextHaplo.LenPerHLA[pHLA.Allele1];
-			const size_t pH2_st = NextHaplo.StartHaploHLA(pHLA.Allele2);
-			const size_t pH2_n  = NextHaplo.LenPerHLA[pHLA.Allele2];
-			const size_t Num_SNP = NextHaplo.Num_SNP - 1;
-
+			const THLAType &pHLA = HLAList.List[i];
+			size_t m, pH1_n = NextHaplo.LenPerHLA[pHLA.Allele1];
 			if (pHLA.Allele1 != pHLA.Allele2)
 			{
-				const size_t m = pH1_n * pH2_n;
-				if (m > DiffList.size()) DiffList.resize(m);
+				size_t pH2_n = NextHaplo.LenPerHLA[pHLA.Allele2];
+				m = pH1_n * pH2_n;
 			} else {
-				const size_t m = pH1_n * (pH1_n + 1) / 2;
-				if (m > DiffList.size()) DiffList.resize(m);
+				m = pH1_n * (pH1_n + 1) / 2;
 			}
-
-			(*fc_PrepHaploMatch)(pG, &NextHaplo.List[pH1_st], pH1_n,
-				&NextHaplo.List[pH2_st], pH2_n, Num_SNP, HP.PairList, &DiffList[0]);
+			if (m > n_max_diff) n_max_diff = m;
+			samp_idx[n_samp_ib++] = i;
 		}
 	}
+
+	_SampHaploPair.clear();
+	_SampHaploPair.resize(n_samp_ib);
+	vector<short> DiffList(n_max_diff*thread_num());
+
+	// get haplotype pairs for each in-bag sample
+	PARALLEL_FOR(i, n_samp_ib)
+	{
+		size_t k = samp_idx[i];
+		const TGenotype &pG = GenoList.List[k];
+		THaploPairList &HP = _SampHaploPair[i];
+		HP.BootstrapCount = pG.BootstrapCount;
+		HP.SampIndex = k;
+
+		const THLAType &pHLA = HLAList.List[k];
+		const size_t pH1_st = NextHaplo.StartHaploHLA(pHLA.Allele1);
+		const size_t pH1_n  = NextHaplo.LenPerHLA[pHLA.Allele1];
+		const size_t pH2_st = NextHaplo.StartHaploHLA(pHLA.Allele2);
+		const size_t pH2_n  = NextHaplo.LenPerHLA[pHLA.Allele2];
+		const size_t Num_SNP = NextHaplo.Num_SNP - 1;
+
+		(*fc_PrepHaploMatch)(pG, &NextHaplo.List[pH1_st], pH1_n,
+			&NextHaplo.List[pH2_st], pH2_n, Num_SNP, HP.PairList,
+			&DiffList[n_max_diff*thread_idx()]);
+	}
+	PARALLEL_END
 }
 
 bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
