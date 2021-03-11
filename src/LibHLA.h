@@ -113,7 +113,7 @@ namespace HLA_LIB
 		size_t Num_SNP;
 		/// SNP haplotype list
 		THaplotype *List;
-		/// the number of SNP  haplotypes for each unique HLA allele
+		/// the number of SNP haplotypes for each unique HLA allele
 		std::vector<size_t> LenPerHLA;
 
 		/// the auxiliary haplotypes created in SetHaploAux()
