@@ -1690,7 +1690,7 @@ double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 // -------------------------------------------------------------------------
 // The algorithm of variable selection
 
-CVariableSelection::CVariableSelection() // : _EM(*this)
+CVariableSelection::CVariableSelection(): _EM(*this)
 {
 	_SNPMat = NULL;
 	_HLAList = NULL;
