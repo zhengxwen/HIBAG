@@ -280,6 +280,8 @@ namespace HLA_LIB
 	};
 
 
+	class CVariableSelection;
+
 	/// Expectation Maximization algorithm for estimating haplotype frequencies
 	class CAlg_EM
 	{
@@ -305,7 +307,7 @@ namespace HLA_LIB
 		};
 
 		/// constructor
-		CAlg_EM();
+		CAlg_EM() {}
 
 		// call PrepareHaplotypes first, and then call PrepareNewSNP
 
@@ -323,6 +325,8 @@ namespace HLA_LIB
 		void ExpectationMaximization(CHaplotypeList &NextHaplo);
 
 	protected:
+		/// selection
+		// CVariableSelection &vs;
 		/// pairs of haplotypes for individuals
 		std::vector<THaploPairList> _SampHaploPair;
 	};
@@ -462,6 +466,8 @@ namespace HLA_LIB
 	class CVariableSelection
 	{
 	public:
+		friend class CAlg_EM;
+
 		/// constructor
 		CVariableSelection();
 
@@ -529,7 +535,7 @@ namespace HLA_LIB
 		CAttrBag_Classifier(CAttrBag_Model &_owner);
 
 		/// initialize the bootstrap sample
-		void InitBootstrapCount(int SampCnt[]);
+		void InitBootstrapCount(const int SampCnt[]);
 		/// assign the haplotype frequencies
 		void Assign(int n_snp, const int snpidx[], const int samp_num[],
 			int n_haplo, const double *freq, const int *hla,

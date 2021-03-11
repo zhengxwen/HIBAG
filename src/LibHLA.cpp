@@ -961,8 +961,6 @@ int &CSamplingWithoutReplace::operator[] (int idx)
 // -------------------------------------------------------------------------
 // The class of SNP genotype list
 
-CAlg_EM::CAlg_EM() {}
-
 void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
 	CHaplotypeList &NextHaplo)
@@ -1039,7 +1037,7 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 		"CAlg_EM::PrepareNewSNP, SNPMat and GenoList should have the same number of SNPs.");
 
 	// compute the allele frequency of NewSNP
-	int allele_cnt = 0, valid_cnt = 0;
+	int allele_cnt=0, valid_cnt=0;
 	for (int iSamp=0; iSamp < SNPMat.Num_Total_Samp; iSamp++)
 	{
 		int dup = GenoList.List[iSamp].BootstrapCount;
@@ -1050,7 +1048,8 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 				{ allele_cnt += g*dup; valid_cnt += 2*dup; }
 		}
 	}
-	if ((allele_cnt==0) || (allele_cnt==valid_cnt)) return false;
+	if ((allele_cnt==0) || (allele_cnt==valid_cnt))
+		return false;
 
 	// initialize the haplotype frequencies in NextHaplo
 	CurHaplo.DoubleHaplosInitFreq(NextHaplo, double(allele_cnt)/valid_cnt);
@@ -1691,7 +1690,7 @@ double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 // -------------------------------------------------------------------------
 // The algorithm of variable selection
 
-CVariableSelection::CVariableSelection()
+CVariableSelection::CVariableSelection() // : _EM(*this)
 {
 	_SNPMat = NULL;
 	_HLAList = NULL;
@@ -1739,11 +1738,12 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 	const size_t n_hla = _HLAList->Num_HLA_Allele();
 	vector<int> tmp(n_hla, 0);
 	int SumCnt = 0;
-	for (int i=0; i < nSamp(); i++)
+	for (vector<int>::const_iterator p=idx_inbag.begin(); p != idx_inbag.end(); p++)
 	{
-		int cnt = _GenoList.List[i].BootstrapCount;
-		tmp[_HLAList->List[i].Allele1] += cnt;
-		tmp[_HLAList->List[i].Allele2] += cnt;
+		const TGenotype &G = _GenoList.List[*p];
+		const int cnt = G.BootstrapCount;
+		tmp[G.aux_hla_type.Allele1] += cnt;
+		tmp[G.aux_hla_type.Allele2] += cnt;
 		SumCnt += cnt;
 	}
 
@@ -1847,17 +1847,9 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	OutSNPIndex.clear();
 
 	// initialize internal variables
+	const int NumOOB = idx_outbag.size();
 	int Global_Max_OutOfBagAcc = 0;  // # of correct alleles
 	double Global_Min_Loss = 1e+30;
-	int NumOOB = 0;
-	{
-		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
-		for (; p != _GenoList.List.end(); p++)
-		{
-			if (p->BootstrapCount <= 0) NumOOB ++;
-		}
-		if (NumOOB <= 0) NumOOB = 1;
-	}
 
 	// reserve memory for haplotype lists
 	const size_t reserve_num_haplo = nSamp() * 2;
@@ -1996,7 +1988,7 @@ CAttrBag_Classifier::CAttrBag_Classifier(CAttrBag_Model &_owner)
 	_OutOfBag_Accuracy = 0;
 }
 
-void CAttrBag_Classifier::InitBootstrapCount(int SampCnt[])
+void CAttrBag_Classifier::InitBootstrapCount(const int SampCnt[])
 {
 	_BootstrapCount.assign(&SampCnt[0], &SampCnt[_Owner->nSamp()]);
 	_SNPIndex.clear();
@@ -2134,7 +2126,8 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		{
 			const vector<int> &bc = I->BootstrapCount();
 			int nOOB = 0;
-			for (size_t i=0; i < bc.size(); i++) if (bc[i] == 0) nOOB++;
+			for (size_t i=0; i < bc.size(); i++)
+				if (bc[i] == 0) nOOB++;
 			Rprintf("=== building individual classifier %d, out-of-bag (%d/%.1f%%) ===\n",
 				(int)_ClassifierList.size(), nOOB, 100.0*nOOB/bc.size());
 		}
