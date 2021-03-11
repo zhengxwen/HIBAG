@@ -1000,10 +1000,10 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				samp_idx[n_samp_ib++] = i;
 		}
 
-		// call GPU
+		// call GPU (have called 'build_set_bootstrap')
 		size_t n_buf=0;
 		UINT32 *buf = (*GPUExtProcPtr->build_haplomatch)(NextHaplo.List, StartIdx,
-			CurHaplo.Num_SNP, n_samp_ib, &samp_idx[0], &GenoList.List[0], n_buf);
+			CurHaplo.Num_SNP, &GenoList.List[0], n_buf);
 
 		// set pair lists from the GPU output
 		_SampHaploPair.clear();
@@ -2194,7 +2194,7 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		}
 
 		// initialize bootstrap samples in GPU implementation
-		if (GPUExtProcPtr)
+		if (GPUExtProcPtr && *GPUExtProcPtr->build_set_bootstrap)
 			(*GPUExtProcPtr->build_set_bootstrap)(&(I->BootstrapCount()[0]));
 
 		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
