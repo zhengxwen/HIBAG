@@ -975,6 +975,9 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 		StartIdx[i+1] = st;
 	}
 
+	// the number of in-bag samples
+	const size_t n_samp_ib = vs.idx_inbag.size();
+
 	if (GPUExtProcPtr && *GPUExtProcPtr->build_haplomatch)
 	{
 		// check first
@@ -984,20 +987,10 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				throw "There are too many HLA allele-specific haplotypes (# > 65535).";
 		}
 
-		// prepare data
-		const size_t ntol_samp = GenoList.nSamp();
-		vector<int> samp_idx(ntol_samp);
-		int n_samp_ib=0;
-		for (size_t i=0; i < ntol_samp; i++)
-		{
-			if (GenoList.List[i].BootstrapCount > 0)
-				samp_idx[n_samp_ib++] = i;
-		}
-
 		// call GPU (have called 'build_set_bootstrap')
 		size_t n_buf=0;
 		UINT32 *buf = (*GPUExtProcPtr->build_haplomatch)(NextHaplo.List, StartIdx,
-			CurHaplo.Num_SNP, &GenoList.List[0], n_buf);
+			NextHaplo.Num_SNP-1, &GenoList.List[0], n_buf);
 
 		// set pair lists from the GPU output
 		_SampHaploPair.clear();
@@ -1006,15 +999,15 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 		while (p < pEnd)
 		{
 			const size_t k = p[0];  // in-bag sample index
-			const TGenotype &pG = GenoList.List[samp_idx[k]];
+			const TGenotype &pG = GenoList.List[vs.idx_inbag[k]];
 			const size_t pH1_st = StartIdx[pG.aux_hla_type.Allele1];
 			const size_t pH2_st = StartIdx[pG.aux_hla_type.Allele2];
 			std::vector<CAlg_EM::THaploPair> &PairList = _SampHaploPair[k].PairList;
-			int n = p[1];  // # of haplotype pair followed
+			const int n = p[1];  // # of haplotype pair followed
 			p += 2;
 			for (int j=0; j < n; j++)
 			{
-				unsigned int v = *p++;
+				UINT32 v = *p++;
 				THaplotype *p1 = &NextHaplo.List[pH1_st + (v & 0xFFFF)];
 				THaplotype *p2 = &NextHaplo.List[pH2_st + (v >> 16)];
 				PairList.push_back(CAlg_EM::THaploPair(p1, p2));
@@ -1027,7 +1020,6 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	} else {
 
 		// prepare data
-		const size_t n_samp_ib = vs.idx_inbag.size();
 		size_t n_max_diff = 0;
 		vector<int>::const_iterator pEnd = vs.idx_inbag.end();
 		for (vector<int>::const_iterator p=vs.idx_inbag.begin(); p != pEnd; p++)
