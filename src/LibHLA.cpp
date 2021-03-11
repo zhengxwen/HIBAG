@@ -1769,18 +1769,18 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 void CVariableSelection::_Init_EvalAcc(CHaplotypeList &Haplo,
 	CGenotypeList &Geno)
 {
-	if (!GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_set_haplo_geno)
 	{
+		Haplo.SetHaploAux_GPU();
+		(*GPUExtProcPtr->build_set_haplo_geno)(Haplo.List, Haplo.Num_Haplo,
+			&Geno.List[0], Haplo.Num_SNP);
+	} else {
 		if (need_auxiliary_haplo)
 		{
 			aux_haplo.resize(Haplo.Num_Haplo*2);
 			aux_freq.resize(Haplo.Num_Haplo);
 			Haplo.SetHaploAux(&aux_haplo[0], &aux_freq[0]);
 		}
-	} else {
-		Haplo.SetHaploAux_GPU();
-		(*GPUExtProcPtr->build_set_haplo_geno)(Haplo.List, Haplo.Num_Haplo,
-			&Geno.List[0], Haplo.Num_SNP);
 	}
 }
 
@@ -1791,8 +1791,10 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 {
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_OutOfBagAccuracy, Haplo and GenoList should have the same number of SNP markers.");
-	if (!GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_acc_oob)
 	{
+		return (*GPUExtProcPtr->build_acc_oob)();
+	} else {
 		const int nthread = thread_num();
 		vector<int> cnt(nthread, 0);
 		PARALLEL_FOR(i, idx_outbag.size())
@@ -1805,8 +1807,6 @@ int CVariableSelection::_OutOfBagAccuracy(CHaplotypeList &Haplo)
 		int CorrectCnt = 0;
 		for (int i=0; i < nthread; i++) CorrectCnt += cnt[i];
 		return CorrectCnt;
-	} else {
-		return (*GPUExtProcPtr->build_acc_oob)();
 	}
 }
 
@@ -1814,8 +1814,10 @@ double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 {
 	HIBAG_CHECKING(Haplo.Num_SNP != _GenoList.Num_SNP,
 		"CVariableSelection::_InBagLogLik, Haplo and GenoList should have the same number of SNP markers.");
-	if (!GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_acc_ib)
 	{
+		return (*GPUExtProcPtr->build_acc_ib)();
+	} else {
 		const size_t n = idx_inbag.size();
 		PARALLEL_FOR(i, n)
 		{
@@ -1829,8 +1831,6 @@ double CVariableSelection::_InBagLogLik(CHaplotypeList &Haplo)
 		for (size_t i=0; i < n; i++) LogLik += log_inbag[i];
 		LogLik *= -2;
 		return LogLik;
-	} else {
-		return (*GPUExtProcPtr->build_acc_ib)();
 	}
 }
 
@@ -2250,7 +2250,7 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 		c_weight[w_i++] = (sum > 0) ? (double(nw) / sum) : 0;
 	}
 
-	if (GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->predict_avg_prob)
 	{
 		p = _ClassifierList.begin();
 		for (size_t w_i=0; p != _ClassifierList.end(); p++, w_i++)
@@ -2317,7 +2317,7 @@ void CAttrBag_Model::_GetSNPWeights(int OutSNPWeight[])
 
 void CAttrBag_Model::_Init_PredictHLA()
 {
-	if (GPUExtProcPtr)
+	if (GPUExtProcPtr && *GPUExtProcPtr->predict_init)
 	{
 		// prepare data structure for GPU
 		const size_t n_classifier = _ClassifierList.size();
@@ -2337,11 +2337,8 @@ void CAttrBag_Model::_Init_PredictHLA()
 		}
 
 		// call the external function
-		if (*GPUExtProcPtr->predict_init)
-		{
-			(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,
-				p_n_haplo, p_n_snp);
-		}
+		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,
+			p_n_haplo, p_n_snp);
 	}
 }
 
