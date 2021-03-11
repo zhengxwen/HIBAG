@@ -1038,14 +1038,16 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 
 	// compute the allele frequency of NewSNP
 	int allele_cnt=0, valid_cnt=0;
-	for (int iSamp=0; iSamp < SNPMat.Num_Total_Samp; iSamp++)
+	vector<int>::const_iterator pEnd = vs.idx_inbag.end();
+	for (vector<int>::const_iterator p=vs.idx_inbag.begin(); p != pEnd; p++)
 	{
-		int dup = GenoList.List[iSamp].BootstrapCount;
-		if (dup > 0)
+		const size_t i = *p;
+		int dup = GenoList.List[i].BootstrapCount;
+		int g = SNPMat.Get(i, NewSNP);
+		if ((0<=g) && (g<=2))
 		{
-			int g = SNPMat.Get(iSamp, NewSNP);
-			if ((0<=g) && (g<=2))
-				{ allele_cnt += g*dup; valid_cnt += 2*dup; }
+			allele_cnt += g*dup;
+			valid_cnt  += 2*dup;
 		}
 	}
 	if ((allele_cnt==0) || (allele_cnt==valid_cnt))
