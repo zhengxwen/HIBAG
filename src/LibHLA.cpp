@@ -961,15 +961,9 @@ int &CSamplingWithoutReplace::operator[] (int idx)
 // -------------------------------------------------------------------------
 // The class of SNP genotype list
 
-CAlg_EM::CAlg_EM() {}
-
 void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
-	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
-	CHaplotypeList &NextHaplo)
+	const CGenotypeList &GenoList, CHaplotypeList &NextHaplo)
 {
-	HIBAG_CHECKING(GenoList.nSamp() != HLAList.nSamp(),
-		"CAlg_EM::PrepareHaplotypes, GenoList and HLAList should have the same number of samples.");
-
 	// create a next set of haplotypes
 	CurHaplo.DoubleHaplos(NextHaplo);
 	const int nhla = NextHaplo.nHLA();  // # of unique HLA alleles, not too large
@@ -1033,28 +1027,23 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	} else {
 
 		// prepare data
-		const size_t ntol_samp = GenoList.nSamp();
-		vector<int> samp_idx(ntol_samp);
-		size_t n_max_diff=0, n_samp_ib=0;
-		for (size_t i=0; i < ntol_samp; i++)
+		const size_t n_samp_ib = vs.idx_inbag.size();
+		size_t n_max_diff = 0;
+		vector<int>::const_iterator pEnd = vs.idx_inbag.end();
+		for (vector<int>::const_iterator p=vs.idx_inbag.begin(); p != pEnd; p++)
 		{
-			if (GenoList.List[i].BootstrapCount > 0)
+			const THLAType &pHLA = GenoList.List[*p].aux_hla_type;
+			size_t m, pH1_n = NextHaplo.LenPerHLA[pHLA.Allele1];
+			if (pHLA.Allele1 != pHLA.Allele2)
 			{
-				const THLAType &pHLA = HLAList.List[i];
-				size_t m, pH1_n = NextHaplo.LenPerHLA[pHLA.Allele1];
-				if (pHLA.Allele1 != pHLA.Allele2)
-				{
-					size_t pH2_n = NextHaplo.LenPerHLA[pHLA.Allele2];
-					m = pH1_n * pH2_n;
-				} else {
-					m = pH1_n * (pH1_n + 1) / 2;
-				}
-				if (m > n_max_diff) n_max_diff = m;
-				samp_idx[n_samp_ib++] = i;
+				size_t pH2_n = NextHaplo.LenPerHLA[pHLA.Allele2];
+				m = pH1_n * pH2_n;
+			} else {
+				m = pH1_n * (pH1_n + 1) / 2;
 			}
+			if (m > n_max_diff) n_max_diff = m;
 		}
 
-		// initialize pair lists
 		_SampHaploPair.clear();
 		_SampHaploPair.resize(n_samp_ib);
 		vector<short> DiffList(n_max_diff*thread_num());
@@ -1062,13 +1051,13 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 		// get haplotype pairs for each in-bag sample
 		PARALLEL_FOR(i, n_samp_ib)
 		{
-			size_t k = samp_idx[i];
+			size_t k = vs.idx_inbag[i];
 			const TGenotype &pG = GenoList.List[k];
 			THaploPairList &HP = _SampHaploPair[i];
 			HP.BootstrapCount = pG.BootstrapCount;
 			HP.SampIndex = k;
 
-			const THLAType &pHLA = HLAList.List[k];
+			const THLAType &pHLA = pG.aux_hla_type;
 			const size_t pH1_st  = StartIdx[pHLA.Allele1];
 			const size_t pH1_n   = NextHaplo.LenPerHLA[pHLA.Allele1];
 			const size_t pH2_st  = StartIdx[pHLA.Allele2];
@@ -1093,18 +1082,21 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 		"CAlg_EM::PrepareNewSNP, SNPMat and GenoList should have the same number of SNPs.");
 
 	// compute the allele frequency of NewSNP
-	int allele_cnt = 0, valid_cnt = 0;
-	for (int iSamp=0; iSamp < SNPMat.Num_Total_Samp; iSamp++)
+	int allele_cnt=0, valid_cnt=0;
+	vector<int>::const_iterator pEnd = vs.idx_inbag.end();
+	for (vector<int>::const_iterator p=vs.idx_inbag.begin(); p != pEnd; p++)
 	{
-		int dup = GenoList.List[iSamp].BootstrapCount;
-		if (dup > 0)
+		const size_t i = *p;
+		int dup = GenoList.List[i].BootstrapCount;
+		int g = SNPMat.Get(i, NewSNP);
+		if ((0<=g) && (g<=2))
 		{
-			int g = SNPMat.Get(iSamp, NewSNP);
-			if ((0<=g) && (g<=2))
-				{ allele_cnt += g*dup; valid_cnt += 2*dup; }
+			allele_cnt += g*dup;
+			valid_cnt  += 2*dup;
 		}
 	}
-	if ((allele_cnt==0) || (allele_cnt==valid_cnt)) return false;
+	if ((allele_cnt==0) || (allele_cnt==valid_cnt))
+		return false;
 
 	// initialize the haplotype frequencies in NextHaplo
 	CurHaplo.DoubleHaplosInitFreq(NextHaplo, double(allele_cnt)/valid_cnt);
@@ -1745,7 +1737,7 @@ double CAlg_Prediction::_PostProb2_def(const CHaplotypeList &Haplo,
 // -------------------------------------------------------------------------
 // The algorithm of variable selection
 
-CVariableSelection::CVariableSelection()
+CVariableSelection::CVariableSelection(): _EM(*this)
 {
 	_SNPMat = NULL;
 	_HLAList = NULL;
@@ -1793,11 +1785,12 @@ void CVariableSelection::_InitHaplotype(CHaplotypeList &Haplo)
 	const size_t n_hla = _HLAList->Num_HLA_Allele();
 	vector<int> tmp(n_hla, 0);
 	int SumCnt = 0;
-	for (int i=0; i < nSamp(); i++)
+	for (vector<int>::const_iterator p=idx_inbag.begin(); p != idx_inbag.end(); p++)
 	{
-		int cnt = _GenoList.List[i].BootstrapCount;
-		tmp[_HLAList->List[i].Allele1] += cnt;
-		tmp[_HLAList->List[i].Allele2] += cnt;
+		const TGenotype &G = _GenoList.List[*p];
+		const int cnt = G.BootstrapCount;
+		tmp[G.aux_hla_type.Allele1] += cnt;
+		tmp[G.aux_hla_type.Allele2] += cnt;
 		SumCnt += cnt;
 	}
 
@@ -1901,17 +1894,9 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 	OutSNPIndex.clear();
 
 	// initialize internal variables
+	const int NumOOB = idx_outbag.size();
 	int Global_Max_OutOfBagAcc = 0;  // # of correct alleles
 	double Global_Min_Loss = 1e+30;
-	int NumOOB = 0;
-	{
-		vector<TGenotype>::const_iterator p = _GenoList.List.begin();
-		for (; p != _GenoList.List.end(); p++)
-		{
-			if (p->BootstrapCount <= 0) NumOOB ++;
-		}
-		if (NumOOB <= 0) NumOOB = 1;
-	}
 
 	// reserve memory for haplotype lists
 	const size_t reserve_num_haplo = nSamp() * 2;
@@ -1923,7 +1908,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 		OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER)
 	{
 		// prepare for growing the individual classifier
-		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);
+		_EM.PrepareHaplotypes(OutHaplo, _GenoList, NextHaplo);
 
 		int max_OutOfBagAcc = Global_Max_OutOfBagAcc;
 		double min_loss = Global_Min_Loss;
@@ -2050,7 +2035,7 @@ CAttrBag_Classifier::CAttrBag_Classifier(CAttrBag_Model &_owner)
 	_OutOfBag_Accuracy = 0;
 }
 
-void CAttrBag_Classifier::InitBootstrapCount(int SampCnt[])
+void CAttrBag_Classifier::InitBootstrapCount(const int SampCnt[])
 {
 	_BootstrapCount.assign(&SampCnt[0], &SampCnt[_Owner->nSamp()]);
 	_SNPIndex.clear();
@@ -2188,14 +2173,17 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		{
 			const vector<int> &bc = I->BootstrapCount();
 			int nOOB = 0;
-			for (size_t i=0; i < bc.size(); i++) if (bc[i] == 0) nOOB++;
+			for (size_t i=0; i < bc.size(); i++)
+				if (bc[i] == 0) nOOB++;
 			Rprintf("=== building individual classifier %d, out-of-bag (%d/%.1f%%) ===\n",
 				(int)_ClassifierList.size(), nOOB, 100.0*nOOB/bc.size());
 		}
 
 		// initialize bootstrap samples in GPU implementation
 		if (GPUExtProcPtr && *GPUExtProcPtr->build_set_bootstrap)
+		{
 			(*GPUExtProcPtr->build_set_bootstrap)(&(I->BootstrapCount()[0]));
+		}
 
 		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
 		if (verbose)
