@@ -962,42 +962,35 @@ int &CSamplingWithoutReplace::operator[] (int idx)
 // The class of SNP genotype list
 
 void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
-	const CGenotypeList &GenoList, const CHLATypeList &HLAList,
-	CHaplotypeList &NextHaplo)
+	const CGenotypeList &GenoList, CHaplotypeList &NextHaplo)
 {
-	HIBAG_CHECKING(GenoList.nSamp() != HLAList.nSamp(),
-		"CAlg_EM::PrepareHaplotypes, GenoList and HLAList should have the same number of samples.");
-
 	// create a next set of haplotypes
 	CurHaplo.DoubleHaplos(NextHaplo);
-	int nhla = NextHaplo.nHLA(), st = 0;
-	vector<int> StartIdx(nhla);
+	const int nhla = NextHaplo.nHLA();
+	int st=0, StartIdx[nhla+1];    // # of unique HLA alleles is not too large
+	StartIdx[0] = 0;
 	for (int i=0; i < nhla; i++)
 	{
-		StartIdx[i] = st;
 		st += NextHaplo.LenPerHLA[i];
+		StartIdx[i+1] = st;
 	}
 
 	// prepare data
-	const size_t ntol_samp = GenoList.nSamp();
-	vector<int> samp_idx(ntol_samp);
-	size_t n_max_diff=0, n_samp_ib=0;
-	for (size_t i=0; i < ntol_samp; i++)
+	const size_t n_samp_ib = vs.idx_inbag.size();
+	size_t n_max_diff = 0;
+	vector<int>::const_iterator pEnd = vs.idx_inbag.end();
+	for (vector<int>::const_iterator p=vs.idx_inbag.begin(); p != pEnd; p++)
 	{
-		if (GenoList.List[i].BootstrapCount > 0)
+		const THLAType &pHLA = GenoList.List[*p].aux_hla_type;
+		size_t m, pH1_n = NextHaplo.LenPerHLA[pHLA.Allele1];
+		if (pHLA.Allele1 != pHLA.Allele2)
 		{
-			const THLAType &pHLA = HLAList.List[i];
-			size_t m, pH1_n = NextHaplo.LenPerHLA[pHLA.Allele1];
-			if (pHLA.Allele1 != pHLA.Allele2)
-			{
-				size_t pH2_n = NextHaplo.LenPerHLA[pHLA.Allele2];
-				m = pH1_n * pH2_n;
-			} else {
-				m = pH1_n * (pH1_n + 1) / 2;
-			}
-			if (m > n_max_diff) n_max_diff = m;
-			samp_idx[n_samp_ib++] = i;
+			size_t pH2_n = NextHaplo.LenPerHLA[pHLA.Allele2];
+			m = pH1_n * pH2_n;
+		} else {
+			m = pH1_n * (pH1_n + 1) / 2;
 		}
+		if (m > n_max_diff) n_max_diff = m;
 	}
 
 	_SampHaploPair.clear();
@@ -1007,13 +1000,13 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	// get haplotype pairs for each in-bag sample
 	PARALLEL_FOR(i, n_samp_ib)
 	{
-		size_t k = samp_idx[i];
+		size_t k = vs.idx_inbag[i];
 		const TGenotype &pG = GenoList.List[k];
 		THaploPairList &HP = _SampHaploPair[i];
 		HP.BootstrapCount = pG.BootstrapCount;
 		HP.SampIndex = k;
 
-		const THLAType &pHLA = HLAList.List[k];
+		const THLAType &pHLA = pG.aux_hla_type;
 		const size_t pH1_st  = StartIdx[pHLA.Allele1];
 		const size_t pH1_n   = NextHaplo.LenPerHLA[pHLA.Allele1];
 		const size_t pH2_st  = StartIdx[pHLA.Allele2];
@@ -1863,7 +1856,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 		OutSNPIndex.size() < HIBAG_MAXNUM_SNP_IN_CLASSIFIER)
 	{
 		// prepare for growing the individual classifier
-		_EM.PrepareHaplotypes(OutHaplo, _GenoList, *_HLAList, NextHaplo);
+		_EM.PrepareHaplotypes(OutHaplo, _GenoList, NextHaplo);
 
 		int max_OutOfBagAcc = Global_Max_OutOfBagAcc;
 		double min_loss = Global_Min_Loss;

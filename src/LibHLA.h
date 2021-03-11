@@ -313,8 +313,7 @@ namespace HLA_LIB
 
 		/// prepare a new haplotype list
 		void PrepareHaplotypes(const CHaplotypeList &CurHaplo,
-			const CGenotypeList &GenoList, const CHLATypeList &HLAList,
-			CHaplotypeList &NextHaplo);
+			const CGenotypeList &GenoList, CHaplotypeList &NextHaplo);
 
 		/// , return true if the new SNP is not monomorphic
 		bool PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
