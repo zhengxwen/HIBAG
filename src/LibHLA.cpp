@@ -987,36 +987,46 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				throw "There are too many HLA allele-specific haplotypes (# > 65535).";
 		}
 
+		// initialize pair lists
+		_SampHaploPair.clear();
+		_SampHaploPair.resize(n_samp_ib);
+		for (size_t i=0; i < n_samp_ib; i++)
+		{
+			size_t k = vs.idx_inbag[i];
+			THaploPairList &HP = _SampHaploPair[i];
+			HP.BootstrapCount = GenoList.List[k].BootstrapCount;
+			HP.SampIndex = k;
+		}
+
 		// call GPU (have called 'build_set_bootstrap')
 		size_t n_buf=0;
 		UINT32 *buf = (*GPUExtProcPtr->build_haplomatch)(NextHaplo.List, StartIdx,
 			NextHaplo.Num_SNP-1, &GenoList.List[0], n_buf);
-
 		// set pair lists from the GPU output
-		_SampHaploPair.clear();
-		_SampHaploPair.resize(n_samp_ib);
-		const UINT32 *p = buf, *pEnd = buf + n_buf;
-		while (p < pEnd)
+		if (buf)
 		{
-			const size_t k = p[0];  // in-bag sample index
-			const TGenotype &pG = GenoList.List[vs.idx_inbag[k]];
-			const size_t pH1_st = StartIdx[pG.aux_hla_type.Allele1];
-			const size_t pH2_st = StartIdx[pG.aux_hla_type.Allele2];
-			std::vector<CAlg_EM::THaploPair> &PairList = _SampHaploPair[k].PairList;
-			const int n = p[1];  // # of haplotype pair followed
-			p += 2;
-			for (int j=0; j < n; j++)
+			const UINT32 *p    = buf + 1;
+			const UINT32 *pEnd = buf + n_buf;
+			while (p < pEnd)
 			{
-				UINT32 v = *p++;
-				THaplotype *p1 = &NextHaplo.List[pH1_st + (v & 0xFFFF)];
-				THaplotype *p2 = &NextHaplo.List[pH2_st + (v >> 16)];
-				PairList.push_back(CAlg_EM::THaploPair(p1, p2));
+				const size_t k = p[0];  // in-bag sample index
+				const TGenotype &pG = GenoList.List[vs.idx_inbag[k]];
+				const size_t pH1_st = StartIdx[pG.aux_hla_type.Allele1];
+				const size_t pH2_st = StartIdx[pG.aux_hla_type.Allele2];
+				std::vector<CAlg_EM::THaploPair> &PL = _SampHaploPair[k].PairList;
+				const int n = p[1];  // # of haplotype pair followed
+				p += 2;
+				for (int j=0; j < n; j++)
+				{
+					UINT32 v = *p++;
+					THaplotype *p1 = &NextHaplo.List[pH1_st + (v & 0xFFFF)];
+					THaplotype *p2 = &NextHaplo.List[pH2_st + (v >> 16)];
+					PL.push_back(CAlg_EM::THaploPair(p1, p2));
+				}
 			}
+			// free the buffer
+			free(buf);
 		}
-
-		// free the buffer
-		if (buf) free(buf);
-
 	} else {
 
 		// prepare data
