@@ -2128,8 +2128,10 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		}
 
 		// initialize bootstrap samples in GPU implementation
-		if (GPUExtProcPtr)
+		if (GPUExtProcPtr && *GPUExtProcPtr->build_set_bootstrap)
+		{
 			(*GPUExtProcPtr->build_set_bootstrap)(&(I->BootstrapCount()[0]));
+		}
 
 		I->Grow(VarSampling, mtry, prune, verbose, verbose_detail);
 		if (verbose)
