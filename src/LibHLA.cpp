@@ -132,6 +132,12 @@ static inline int RandomNum(int n)
 	{  \
 		for (size_t i=rng.begin(); i < rng.end(); i++)
 
+#define PARALLEL_FOR_CHUNK(i, SIZE, CHUNK)    \
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, SIZE, CHUNK),  \
+		[&](const tbb::blocked_range<size_t> &rng)  \
+	{  \
+		for (size_t i=rng.begin(); i < rng.end(); i++)
+
 #define PARALLEL_END    });
 
 static inline int thread_num() { return tbb::this_task_arena::max_concurrency(); }
@@ -139,9 +145,8 @@ static inline int thread_idx() { return tbb::this_task_arena::current_thread_ind
 
 #else
 
-#define PARALLEL_FOR(i, SIZE)    \
-	{  \
-		for (size_t i=0; i < SIZE; i++)
+#define PARALLEL_FOR(i, SIZE)                 {  for (size_t i=0; i < SIZE; i++)
+#define PARALLEL_FOR_CHUNK(i, SIZE, CHUNK)    {  for (size_t i=0; i < SIZE; i++)
 #define PARALLEL_END    }
 
 static inline int thread_num() { return 1; }
@@ -1118,7 +1123,7 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 	// update haplotype pair
 	const size_t IdxNewSNP = NextHaplo.Num_SNP - 1;
 	const size_t num = _SampHaploPair.size();
-	PARALLEL_FOR(i, num)
+	PARALLEL_FOR_CHUNK(i, num, 16)
 	{
 		THaploPairList &PL = _SampHaploPair[i];
 		// SNP genotype
@@ -1163,7 +1168,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 
 		// for-loop each in-bag sample
 		const size_t num = _SampHaploPair.size();
-		PARALLEL_FOR(i, num)
+		PARALLEL_FOR_CHUNK(i, num, 16)
 		{
 			THaploPairList &PL = _SampHaploPair[i];
 			double psum = 0;
@@ -1179,7 +1184,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 				}
 			}
 			// always "PL.BootstrapCount > 0"
-			log_buf[i]  = PL.BootstrapCount * log(psum);
+			log_buf[i] = PL.BootstrapCount * log(psum);
 			psum = PL.BootstrapCount / psum;
 			// update
 			for (p = PL.PairList.begin(); p != PL.PairList.end(); p++)
