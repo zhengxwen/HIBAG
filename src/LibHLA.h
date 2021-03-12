@@ -307,7 +307,7 @@ namespace HLA_LIB
 		};
 
 		/// constructor
-		CAlg_EM(CVariableSelection &v): vs(v) {}
+		CAlg_EM(CVariableSelection &v);
 
 		// call PrepareHaplotypes first, and then call PrepareNewSNP
 
@@ -328,6 +328,8 @@ namespace HLA_LIB
 		CVariableSelection &vs;
 		/// pairs of haplotypes for individuals
 		std::vector<THaploPairList> _SampHaploPair;
+		/// LogLik buffer
+		std::vector<double> log_buf;
 	};
 
 

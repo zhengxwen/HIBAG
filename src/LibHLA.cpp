@@ -962,6 +962,8 @@ int &CSamplingWithoutReplace::operator[] (int idx)
 // -------------------------------------------------------------------------
 // The class of SNP genotype list
 
+CAlg_EM::CAlg_EM(CVariableSelection &v): vs(v) { }
+
 void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	const CGenotypeList &GenoList, CHaplotypeList &NextHaplo)
 {
@@ -1017,7 +1019,7 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				std::vector<CAlg_EM::THaploPair> &PL = _SampHaploPair[k].PairList;
 				const int n = p[1];  // # of haplotype pair followed
 				p += 2;
-				std::sort(&p[0], &p[n]);  // only for debugging, could be removed
+				// std::sort(&p[0], &p[n]);  // only for debugging, could be removed
 				for (int j=0; j < n; j++)
 				{
 					UINT32 v = *p++;
@@ -1144,8 +1146,11 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 
 void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 {
-	// the converage tolerance
-	double ConvTol = 0, LogLik = -1e+30;
+	const int TotalNumSamp = vs.nSamp();  // sum of BootstrapCount = total # of samples
+	double ConvTol = 0, LogLik = -1e+30;  // the converage tolerance
+
+	if (log_buf.size()  < TotalNumSamp)
+		log_buf.resize(TotalNumSamp);
 
 	// iterate ...
 	for (int iter=0; iter <= EM_MaxNum_Iterations; iter++)
@@ -1156,19 +1161,14 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 		// save old haplotype frequencies
 		NextHaplo.SaveClearFrequency();
 
-		// for-loop each sample
-		vector<THaploPairList>::iterator s;
-		vector<THaploPair>::iterator p;
-		int TotalNumSamp = 0;
-		LogLik = 0;
-
-		for (s = _SampHaploPair.begin(); s != _SampHaploPair.end(); s++)
+		// for-loop each in-bag sample
+		const size_t num = _SampHaploPair.size();
+		PARALLEL_FOR(i, num)
 		{
-			// always "s->BootstrapCount > 0"
-			TotalNumSamp += s->BootstrapCount;
-
+			THaploPairList &PL = _SampHaploPair[i];
 			double psum = 0;
-			for (p = s->PairList.begin(); p != s->PairList.end(); p++)
+			vector<THaploPair>::iterator p;
+			for (p = PL.PairList.begin(); p != PL.PairList.end(); p++)
 			{
 				if (p->Flag)
 				{
@@ -1178,15 +1178,26 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 					psum += p->GenoFreq;
 				}
 			}
-			LogLik += s->BootstrapCount * log(psum);
-			psum = s->BootstrapCount / psum;
-
+			// always "PL.BootstrapCount > 0"
+			log_buf[i]  = PL.BootstrapCount * log(psum);
+			psum = PL.BootstrapCount / psum;
 			// update
-			for (p = s->PairList.begin(); p != s->PairList.end(); p++)
+			for (p = PL.PairList.begin(); p != PL.PairList.end(); p++)
+				if (p->Flag) p->GenoFreq *= psum;
+		}
+		PARALLEL_END
+
+		// update
+		LogLik = 0;
+		for (size_t i=0; i < num; i++)
+		{
+			LogLik += log_buf[i];
+			vector<THaploPair> &PL = _SampHaploPair[i].PairList;
+			for (vector<THaploPair>::iterator p=PL.begin(); p != PL.end(); p++)
 			{
 				if (p->Flag)
 				{
-					double r = p->GenoFreq * psum;
+					double r = p->GenoFreq;
 					p->H1->Freq += r; p->H2->Freq += r;
 				}
 			}
@@ -1194,7 +1205,6 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 
 		// finally
 		NextHaplo.ScaleFrequency(0.5/TotalNumSamp);
-
 		if (iter > 0)
 		{
 			if (fabs(LogLik - Old_LogLik) <= ConvTol)
