@@ -1114,28 +1114,30 @@ bool CAlg_EM::PrepareNewSNP(const int NewSNP, const CHaplotypeList &CurHaplo,
 	CurHaplo.DoubleHaplosInitFreq(NextHaplo, double(allele_cnt)/valid_cnt);
 
 	// update haplotype pair
-	const int IdxNewSNP = NextHaplo.Num_SNP - 1;
-	vector<THaploPairList>::iterator it;
-
-	for (it = _SampHaploPair.begin(); it != _SampHaploPair.end(); it++)
+	const size_t IdxNewSNP = NextHaplo.Num_SNP - 1;
+	const size_t num = _SampHaploPair.size();
+	PARALLEL_FOR(i, num)
 	{
-		vector<THaploPair>::iterator p;
+		THaploPairList &PL = _SampHaploPair[i];
 		// SNP genotype
-		int geno = SNPMat.Get(it->SampIndex, NewSNP);
+		int geno = SNPMat.Get(PL.SampIndex, NewSNP);
 		if ((0<=geno) && (geno<=2))
 		{
 			// check for each pair
-			for (p = it->PairList.begin(); p != it->PairList.end(); p++)
+			vector<THaploPair>::iterator p;
+			for (p = PL.PairList.begin(); p != PL.PairList.end(); p++)
 			{
 				p->Flag = ((p->H1->GetAllele(IdxNewSNP) +
 					p->H2->GetAllele(IdxNewSNP)) == geno);
 			}
 		} else {
 			// missing genotype
-			for (p = it->PairList.begin(); p != it->PairList.end(); p++)
+			vector<THaploPair>::iterator p;
+			for (p = PL.PairList.begin(); p != PL.PairList.end(); p++)
 				p->Flag = true;
 		}
 	}
+	PARALLEL_END
 
 	return true;
 }
