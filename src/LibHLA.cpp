@@ -47,6 +47,7 @@
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
 #include <mutex>
+#include <algorithm>
 
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE
@@ -1005,8 +1006,8 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 		// set pair lists from the GPU output
 		if (buf)
 		{
-			const UINT32 *p    = buf + 1;
-			const UINT32 *pEnd = buf + n_buf;
+			UINT32 *p    = buf + 1;
+			UINT32 *pEnd = buf + n_buf;
 			while (p < pEnd)
 			{
 				const size_t k = p[0];  // in-bag sample index
@@ -1016,17 +1017,26 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				std::vector<CAlg_EM::THaploPair> &PL = _SampHaploPair[k].PairList;
 				const int n = p[1];  // # of haplotype pair followed
 				p += 2;
+				std::sort(&p[0], &p[n]);  // only for debugging, could be removed
 				for (int j=0; j < n; j++)
 				{
 					UINT32 v = *p++;
-					THaplotype *p1 = &NextHaplo.List[pH1_st + (v & 0xFFFF)];
-					THaplotype *p2 = &NextHaplo.List[pH2_st + (v >> 16)];
+					THaplotype *p1 = &NextHaplo.List[pH1_st + (v >> 16)];
+					THaplotype *p2 = &NextHaplo.List[pH2_st + (v & 0xFFFF)];
 					PL.push_back(CAlg_EM::THaploPair(p1, p2));
 				}
 			}
 			// free the buffer
 			free(buf);
 		}
+
+		// check in case GPU does not work appropriately
+		for (size_t i=0; i < n_samp_ib; i++)
+		{
+			if (_SampHaploPair[i].PairList.empty())
+				throw "PairList should not be empty in PrepareHaplotypes().";
+		}
+
 	} else {
 
 		// prepare data
