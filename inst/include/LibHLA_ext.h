@@ -340,7 +340,7 @@ namespace HLA_LIB
 		void (*build_set_bootstrap)(const int oob_cnt[]);
 		/// find the matched pairs of haplotypes for given genotypes
 		UINT32 *(*build_haplomatch)(const THaplotype haplo[],
-			const int HaploStartIdx[], int n_snp, const TGenotype geno[], size_t &out_n);
+			const size_t nHaplo[], int n_snp, const TGenotype geno[], size_t &out_n);
 		/// initialize haplotypes and SNPs genotypes
 		void (*build_set_haplo_geno)(const THaplotype haplo[], int n_haplo,
 			const TGenotype geno[], int n_snp);

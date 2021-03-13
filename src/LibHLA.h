@@ -296,6 +296,16 @@ namespace HLA_LIB
 
 			THaploPair() { Flag = true; H1 = H2 = NULL; }
 			THaploPair(THaplotype *i1, THaplotype *i2) { Flag = true; H1 = i1; H2 = i2; }
+
+			static bool Less(const THaploPair &L, const THaploPair &R)
+			{
+				if (L.H1 < R.H1)
+					return true;
+				else if (L.H1 == R.H1)
+					return (L.H2 < R.H2);
+				else
+					return false;
+			}
 		};
 
 		/// A list of haplotype pairs

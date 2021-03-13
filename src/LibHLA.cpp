@@ -975,24 +975,20 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	// create a next set of haplotypes
 	CurHaplo.DoubleHaplos(NextHaplo);
 	const int nhla = NextHaplo.nHLA();  // # of unique HLA alleles, not too large
-	int st=0, StartIdx[nhla+1];
-	StartIdx[0] = 0;
-	for (int i=0; i < nhla; i++)
-	{
-		st += NextHaplo.LenPerHLA[i];
-		StartIdx[i+1] = st;
-	}
 
 	// the number of in-bag samples
 	const size_t n_samp_ib = vs.idx_inbag.size();
 
 	if (GPUExtProcPtr && *GPUExtProcPtr->build_haplomatch)
 	{
-		// check first
+		// prepare data and check
+		int StartIdx[nhla], st=0;
 		for (int i=0; i < nhla; i++)
 		{
-			if (NextHaplo.LenPerHLA[i] > 65535)
+			if (CurHaplo.LenPerHLA[i] > 65535)
 				throw "There are too many HLA allele-specific haplotypes (# > 65535).";
+			StartIdx[i] = st;
+			st += CurHaplo.LenPerHLA[i];
 		}
 
 		// initialize pair lists
@@ -1008,30 +1004,28 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 		// call GPU (have called 'build_set_bootstrap')
 		size_t n_buf=0;
-		UINT32 *buf = (*GPUExtProcPtr->build_haplomatch)(NextHaplo.List, StartIdx,
-			NextHaplo.Num_SNP-1, &GenoList.List[0], n_buf);
+		UINT32 *buf = (*GPUExtProcPtr->build_haplomatch)(CurHaplo.List,
+			&CurHaplo.LenPerHLA[0], CurHaplo.Num_SNP, &GenoList.List[0], n_buf);
 		// set pair lists from the GPU output
 		if (buf)
 		{
-			UINT32 *p    = buf + 1;
-			UINT32 *pEnd = buf + n_buf;
-			while (p < pEnd)
+			UINT32 n = *buf >> 1;
+			for (UINT32 *p=buf+1; n > 0; n--, p+=2)
 			{
 				const size_t k = p[0];  // in-bag sample index
+				std::vector<CAlg_EM::THaploPair> &PL = _SampHaploPair[k].PairList;
 				const TGenotype &pG = GenoList.List[vs.idx_inbag[k]];
 				const size_t pH1_st = StartIdx[pG.aux_hla_type.Allele1];
 				const size_t pH2_st = StartIdx[pG.aux_hla_type.Allele2];
-				std::vector<CAlg_EM::THaploPair> &PL = _SampHaploPair[k].PairList;
-				const int n = p[1];  // # of haplotype pair followed
-				p += 2;
-				// std::sort(&p[0], &p[n]);  // only for debugging, could be removed
-				for (int j=0; j < n; j++)
-				{
-					UINT32 v = *p++;
-					THaplotype *p1 = &NextHaplo.List[pH1_st + (v >> 16)];
-					THaplotype *p2 = &NextHaplo.List[pH2_st + (v & 0xFFFF)];
-					PL.push_back(CAlg_EM::THaploPair(p1, p2));
-				}
+				const UINT32 v = p[1];
+				THaplotype *p1 = &NextHaplo.List[2*(pH1_st + (v & 0xFFFF))];
+				THaplotype *p2 = &NextHaplo.List[2*(pH2_st + (v >> 16))];
+				// always p1 <= p2
+				PL.push_back(CAlg_EM::THaploPair(p1, p2));
+				PL.push_back(CAlg_EM::THaploPair(p1, p2+1));
+				if (p1+1 <= p2)
+					PL.push_back(CAlg_EM::THaploPair(p1+1, p2));
+				PL.push_back(CAlg_EM::THaploPair(p1+1, p2+1));
 			}
 			// free the buffer
 			free(buf);
@@ -1040,13 +1034,22 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 		// check in case GPU does not work appropriately
 		for (size_t i=0; i < n_samp_ib; i++)
 		{
-			if (_SampHaploPair[i].PairList.empty())
+			vector<THaploPair> &PL = _SampHaploPair[i].PairList;
+			// std::sort(PL.begin(), PL.end(), THaploPair::Less);  // enable when debugging
+			if (PL.empty())
 				throw "PairList should not be empty in PrepareHaplotypes().";
 		}
 
 	} else {
 
 		// prepare data
+		int StartIdx[nhla], st=0;
+		for (int i=0; i < nhla; i++)
+		{
+			StartIdx[i] = st;
+			st += NextHaplo.LenPerHLA[i];
+		}
+
 		size_t n_max_diff = 0;
 		vector<int>::const_iterator pEnd = vs.idx_inbag.end();
 		for (vector<int>::const_iterator p=vs.idx_inbag.begin(); p != pEnd; p++)
@@ -1088,6 +1091,13 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				&DiffList[n_max_diff*thread_idx()]);
 		}
 		PARALLEL_END
+
+/*
+		// check the numbers of pair lists
+		for (size_t i=0; i < n_samp_ib; i++)
+			Rprintf("%d,", (int)_SampHaploPair[i].PairList.size());
+		Rprintf("\n");
+*/
 	}
 }
 
