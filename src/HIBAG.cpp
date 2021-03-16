@@ -786,6 +786,21 @@ SEXP HIBAG_NewClassifierHaplo(SEXP model, SEXP snpidx,
 
 
 /**
+ *  Clear the individual classifier(s) in the model
+ *
+ *  \param model        the model index
+**/
+SEXP HIBAG_ClearClassifier(SEXP model)
+{
+	int midx = Rf_asInteger(model);
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		_HIBAG_MODELS_[midx]->ClearClassifierList();
+	CORE_CATCH
+}
+
+
+/**
  *  Get the number of individual component classifiers
  *
  *  \param model        the model index

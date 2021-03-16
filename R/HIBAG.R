@@ -260,7 +260,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 .show_model_obj <- function(mobj, autosave)
 {
     z <- summary(mobj, show=FALSE)
-    cat(ifelse(autosave, "[Saved]", " --"),
+    cat(ifelse(autosave, "==Saved==", " --"),
         paste0("#", length(mobj$classifier), ","), " avg OOB acc:",
         sprintf("%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
         z$info["accuracy", "Mean"], z$info["accuracy", "SD"],

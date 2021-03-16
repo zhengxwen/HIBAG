@@ -622,6 +622,9 @@ namespace HLA_LIB
 			int OutH1[], int OutH2[], double OutMaxProb[],
 			double OutMatching[], double OutProbArray[], bool verbose);
 
+		// remove all individual classifiers in the model
+		void ClearClassifierList() { _ClassifierList.clear(); }
+
 		/// the number of samples
 		inline int nSamp() const { return _SNPMat.Num_Total_Samp; }
 		/// the number of SNPs
