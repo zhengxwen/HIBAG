@@ -311,14 +311,13 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
             cat("[-] ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n", sep="")
         # set random number for the cluster
         RNGkind("L'Ecuyer-CMRG")
-        rand <- eval(parse(text=".Random.seed"))
+        rand <- .Random.seed
         parallel::clusterSetRNGStream(cl)
 
         total <- 0L
         ans <- .DynamicClusterCall(cl,
             fun = function(job, hla, snp, mtry, prune, na.rm, mono.rm)
             {
-                eval(parse(text="library(HIBAG)"))
                 model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=-1L,
                     mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
                     verbose=FALSE, verbose.detail=FALSE)
@@ -364,7 +363,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         parallel::nextRNGSubStream(rand)
         if (stop.cluster) cl <- NULL
         if (auto.save != "")
-            ans <- get(load(auto.save))
+            ans <- .fn_obj_load(auto.save)
         mod <- hlaModelFromObj(ans)
 
     } else {
