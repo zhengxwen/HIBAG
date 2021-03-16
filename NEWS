@@ -1,10 +1,18 @@
-CHANGES IN VERSION 1.27.2
+CHANGES IN VERSION 1.27.4
+-------------------------
+
+    o 
+
+
+CHANGES IN VERSION 1.26.1
 -------------------------
 
     o the hlaAttrBagging object can be removed in garbage collection without
       calling `hlaClose()`
 
-    o enable GPU API
+    o enable internal GPU API
+
+    o improved multithreaded performance compared with v1.26.0
 
 
 CHANGES IN VERSION 1.26.0
