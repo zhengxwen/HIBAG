@@ -907,6 +907,35 @@ SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 
 
 /**
+ *  Get the number of SNPs, the number of haplotypes and out-of-bag accuracy
+ *
+ *  \param model         the model index
+ *  \return a real vector
+**/
+SEXP HIBAG_GetLastClassifierInfo(SEXP model)
+{
+	int midx = Rf_asInteger(model);
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		CAttrBag_Model *AB = _HIBAG_MODELS_[midx];
+		rv_ans = PROTECT(NEW_NUMERIC(3));
+		double *p = REAL(rv_ans);
+		const size_t nc = AB->ClassifierList().size();
+		if (nc > 0)
+		{
+			const CAttrBag_Classifier &M = AB->ClassifierList()[nc-1];
+			p[0] = M.nSNP();
+			p[1] = M.nHaplo();
+			p[2] = M.OutOfBag_Accuracy() * 100;
+		} else {
+			p[0] = p[1] = p[2] = R_NaN;
+		}
+		UNPROTECT(1);
+	CORE_CATCH
+}
+
+
+/**
  *  Estimate the confusion matrix
  *
  *  \param n_hla         the number of different HLA alleles
