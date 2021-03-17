@@ -64,6 +64,10 @@ extern "C"
 /// the last error information
 static std::string _LastError;
 
+static SEXP hibag_data_frame = R_NilValue;
+static SEXP hibag_clr_nm = R_NilValue;
+static SEXP hibag_clr_haplo_nm = R_NilValue;
+
 
 // ===========================================================
 // the public functions
@@ -820,58 +824,83 @@ SEXP HIBAG_GetNumClassifiers(SEXP model)
  *  Get the details of a specified individual classifier
  *
  *  \param model         the model index
- *  \param idx           the index of individual classifier
- *  \return the haplotype frequencies, the HLA alleles, the haplotype list,
- *          the indices of SNP markers, the indices of samples and
- *          the out-of-bag accuracy
+ *  \return a list of individual classifiers
 **/
-SEXP HIBAG_Classifier_GetHaplos(SEXP model, SEXP idx)
+SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 {
 	int midx = Rf_asInteger(model);
-	int cidx = Rf_asInteger(idx);
-
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model *AB = _HIBAG_MODELS_[midx];
 
-		const CAttrBag_Classifier &Voter = AB->ClassifierList()[cidx - 1];
-		const size_t nHaplo = Voter.nHaplo();
-		const CHaplotypeList &Haplo = Voter.Haplotype();
-		const vector<int> &Num = Voter.BootstrapCount();
-
-		rv_ans = PROTECT(NEW_LIST(6));
-		SEXP out_Freq  = PROTECT(NEW_NUMERIC(nHaplo));
-		SET_ELEMENT(rv_ans, 0, out_Freq);
-		SEXP out_HLA   = PROTECT(NEW_INTEGER(nHaplo));
-		SET_ELEMENT(rv_ans, 1, out_HLA);
-		SEXP out_Haplo = PROTECT(NEW_CHARACTER(nHaplo));
-		SET_ELEMENT(rv_ans, 2, out_Haplo);
-
-		for (size_t i=0; i < nHaplo; i++)
+		const size_t nc = AB->ClassifierList().size();
+		rv_ans = PROTECT(NEW_LIST(nc));
+		for (size_t k=0; k < nc; k++)
 		{
-			REAL(out_Freq)[i] = Haplo.List[i].Freq;
-			SET_STRING_ELT(out_Haplo, i,
-				mkChar(Haplo.List[i].HaploToStr(Voter.nSNP()).c_str()));
+			const CAttrBag_Classifier &M = AB->ClassifierList()[k];
+			SEXP lst = NEW_LIST(4);
+			SET_ELEMENT(rv_ans, k, lst);
+			SET_NAMES(lst, hibag_clr_nm);
+			{ // samp.num
+				const vector<int> &ns = M.BootstrapCount();
+				SEXP nl = NEW_INTEGER(ns.size());
+				SET_ELEMENT(lst, 0, nl);
+				memcpy(INTEGER(nl), &ns[0], sizeof(int)*ns.size());
+			}
+			{ // haplos
+				SEXP dt = NEW_LIST(3);
+				SET_ELEMENT(lst, 1, dt);
+				const size_t nHaplo = M.nHaplo();
+				const CHaplotypeList &Haplo = M.Haplotype();
+
+				// haplos$freq
+				SEXP freq = NEW_NUMERIC(nHaplo);
+				SET_ELEMENT(dt, 0, freq);
+				double *pF = REAL(freq);
+				for (size_t i=0; i < nHaplo; i++)
+					pF[i] = Haplo.List[i].Freq;
+
+				// haplos$hla
+				SEXP hla = NEW_CHARACTER(nHaplo);
+				SET_ELEMENT(dt, 1, hla);
+				size_t hla_i = 0;
+				for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
+				{
+					SEXP s = STRING_ELT(hla_str, i);
+					for (size_t j=Haplo.LenPerHLA[i]; j > 0; j--)
+						SET_STRING_ELT(hla, hla_i++, s);
+				}
+
+				// haplos$haplo
+				SEXP haplo = NEW_CHARACTER(nHaplo);
+				SET_ELEMENT(dt, 2, haplo);
+				const size_t nsnp = M.nSNP();
+				for (size_t i=0; i < nHaplo; i++)
+				{
+					SET_STRING_ELT(haplo, i,
+						mkChar(Haplo.List[i].HaploToStr(nsnp).c_str()));
+				}
+
+				// convert to data.frame
+				SET_NAMES(dt, hibag_clr_haplo_nm);
+				SET_CLASS(dt, hibag_data_frame);
+				SEXP rs = NEW_INTEGER(nHaplo);
+				Rf_setAttrib(dt, R_RowNamesSymbol, rs);
+				int *pR = INTEGER(rs);
+				for (size_t i=0; i < nHaplo; i++) pR[i] = i+1;
+			}
+			{ // snpidx
+				const vector<int> &I = M.SNPIndex();
+				SEXP idx = NEW_INTEGER(I.size());
+				SET_ELEMENT(lst, 2, idx);
+				int *p = INTEGER(idx);
+				for (size_t i=0; i < I.size(); i++) p[i] = I[i] + 1;
+			}
+			{ // outofbag.acc
+				SET_ELEMENT(lst, 3, ScalarReal(M.OutOfBag_Accuracy()));
+			}
 		}
-		size_t idx = 0;
-		for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
-		{
-			for (size_t k=Haplo.LenPerHLA[i]; k > 0; k--)
-				INTEGER(out_HLA)[idx++] = i + 1;
-		}
-
-		SEXP out_SNPIdx = PROTECT(NEW_INTEGER(Voter.SNPIndex().size()));
-		SET_ELEMENT(rv_ans, 3, out_SNPIdx);
-		for (size_t i=0; i < Voter.SNPIndex().size(); i++)
-			INTEGER(out_SNPIdx)[i] = Voter.SNPIndex()[i] + 1;
-
-		SEXP out_SampNum = PROTECT(NEW_INTEGER(Num.size()));
-		SET_ELEMENT(rv_ans, 4, out_SampNum);
-		for (size_t i=0; i < Num.size(); i++)
-			INTEGER(out_SampNum)[i] = Num[i];
-
-		SET_ELEMENT(rv_ans, 5, ScalarReal(Voter.OutOfBag_Accuracy()));
-		UNPROTECT(6);
+		UNPROTECT(1);
 
 	CORE_CATCH
 }
@@ -1328,6 +1357,18 @@ SEXP HIBAG_Clear_GPU()
 }
 
 
+/**
+ *  Call by .onLoad()
+**/
+SEXP HIBAG_Init(SEXP data_lst)
+{
+	hibag_data_frame = VECTOR_ELT(data_lst, 0);
+	hibag_clr_nm = VECTOR_ELT(data_lst, 1);
+	hibag_clr_haplo_nm = VECTOR_ELT(data_lst, 2);
+	return R_NilValue;
+}
+
+
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
 
@@ -1338,11 +1379,12 @@ void R_init_HIBAG(DllInfo *info)
 
 	static R_CallMethodDef callMethods[] =
 	{
+		CALL(HIBAG_Init, 1),
 		CALL(HIBAG_AlleleStrand, 8),
 		CALL(HIBAG_AlleleStrand2, 2),
 		CALL(HIBAG_BEDFlag, 1),
 		CALL(HIBAG_GetNumClassifiers, 1),
-		CALL(HIBAG_Classifier_GetHaplos, 2),
+		CALL(HIBAG_GetClassifierList, 2),
 		CALL(HIBAG_Close, 1),
 		CALL(HIBAG_Confusion, 4),
 		CALL(HIBAG_ConvBED, 5),

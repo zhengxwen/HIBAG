@@ -951,24 +951,10 @@ hlaModelToObj <- function(model)
     # check
     stopifnot(inherits(model, "hlaAttrBagClass"))
 
-    # get the number of classifiers
-    CNum <- .Call(HIBAG_GetNumClassifiers, model$model)
+    # get a list of classifiers
+    clr <- .Call(HIBAG_GetClassifierList, model$model, model$hla.allele)
 
-    # for each tree
-    res <- vector("list", CNum)
-    for (i in seq_len(CNum))
-    {
-        # get freq. and haplotypes, etc
-        v <- .Call(HIBAG_Classifier_GetHaplos, model$model, i)
-        names(v) <- c("freq", "hla", "haplo", "snpidx", "samp.num", "acc")
-        res[[i]] <- list(
-            samp.num = v$samp.num,
-            haplos = data.frame(freq = v$freq, hla = model$hla.allele[v$hla],
-                haplo = v$haplo, stringsAsFactors=FALSE),
-            snpidx = v$snpidx,
-            outofbag.acc = v$acc)
-    }
-
+    # output
     rv <- list(n.samp = model$n.samp, n.snp = model$n.snp,
         sample.id = model$sample.id, snp.id = model$snp.id,
         snp.position = model$snp.position, snp.allele = model$snp.allele,
@@ -976,7 +962,7 @@ hlaModelToObj <- function(model)
         hla.locus = model$hla.locus,
         hla.allele = model$hla.allele, hla.freq = model$hla.freq,
         assembly = model$assembly,
-        classifiers = res,
+        classifiers = clr,
         matching = model$matching,
         appendix = model$appendix)
     class(rv) <- "hlaAttrBagObj"
@@ -1607,5 +1593,16 @@ hlaSetKernelTarget <- function(cpu=c("max", "auto.avx2", "base",
         info[[2L]][1L]))
     if (is.na(info[[3L]]))
         packageStartupMessage("No Intel Threading Building Blocks (TBB)")
+    TRUE
+}
+
+.hibag_data_list <- list(
+	data.frame = "data.frame",
+	clr_nm = c("samp.num", "haplos", "snpidx", "outofbag.acc"),
+	clr_haplo_nm = c("freq", "hla", "haplo"))
+
+.onLoad <- function(lib, pkg)
+{
+    .Call(HIBAG_Init, .hibag_data_list)
     TRUE
 }
