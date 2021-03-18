@@ -1164,7 +1164,7 @@ void CAlg_EM::ExpectationMaximization(CHaplotypeList &NextHaplo)
 	const int TotalNumSamp = vs.nSamp();  // sum of BootstrapCount = total # of samples
 	double ConvTol = 0, LogLik = -1e+30;  // the converage tolerance
 
-	if (log_buf.size()  < TotalNumSamp)
+	if (log_buf.size() < (size_t)TotalNumSamp)
 		log_buf.resize(TotalNumSamp);
 
 	// iterate ...
