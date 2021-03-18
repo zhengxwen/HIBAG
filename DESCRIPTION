@@ -5,7 +5,7 @@ Version: 1.27.5
 Date: 2021-03-16
 Depends: R (>= 3.2.0)
 Imports: methods, RcppParallel
-Suggests: parallel, knitr, gdsfmt, SNPRelate, SeqArray, ggplot2, reshape2
+Suggests: parallel, knitr, gdsfmt, SNPRelate, ggplot2, reshape2
 LinkingTo: RcppParallel
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu", comment=c(ORCID="0000-0002-1390-0708")),
