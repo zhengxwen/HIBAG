@@ -1404,10 +1404,6 @@ SEXP HIBAG_Init(SEXP data_lst)
 /// Initialize the package
 void R_init_HIBAG(DllInfo *info)
 {
-	static const char *pkg_name = "HIBAG";
-	#define REG(nm)    \
-		R_RegisterCCallable(pkg_name, #nm, (DL_FUNC)&nm)
-
 	#define CALL(name, num)    { #name, (DL_FUNC)&name, num }
 
 	static R_CallMethodDef callMethods[] =
@@ -1438,11 +1434,6 @@ void R_init_HIBAG(DllInfo *info)
 
 	R_registerRoutines(info, NULL, callMethods, NULL, NULL);
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
-
-	REG(HIBAG_NewClassifiers);
-	REG(HIBAG_GetLastClassifierInfo);
-	REG(HIBAG_GetClassifierList);
-	REG(HIBAG_ClearClassifier);
 }
 
 /// Finalize the package
