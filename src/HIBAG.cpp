@@ -926,7 +926,7 @@ SEXP HIBAG_GetLastClassifierInfo(SEXP model)
 			const CAttrBag_Classifier &M = AB->ClassifierList()[nc-1];
 			p[0] = M.nSNP();
 			p[1] = M.nHaplo();
-			p[2] = M.OutOfBag_Accuracy() * 100;
+			p[2] = M.OutOfBag_Accuracy();
 		} else {
 			p[0] = p[1] = p[2] = R_NaN;
 		}
