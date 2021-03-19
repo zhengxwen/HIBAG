@@ -1091,13 +1091,6 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 				&DiffList[n_max_diff*thread_idx()]);
 		}
 		PARALLEL_END
-
-/*
-		// check the numbers of pair lists
-		for (size_t i=0; i < n_samp_ib; i++)
-			Rprintf("%d,", (int)_SampHaploPair[i].PairList.size());
-		Rprintf("\n");
-*/
 	}
 }
 
@@ -2045,7 +2038,7 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			// show ...
 			if (verbose_detail)
 			{
-				Rprintf("    %2d, SNP: %d, Loss: %g, OOB Acc: %0.2f%%, # of Haplo: %d\n",
+				Rprintf("    %2d, SNP: %d, loss: %g, oob acc: %0.2f%%, # of haplo: %d\n",
 					OutSNPIndex.size(), OutSNPIndex.back()+1,
 					Global_Min_Loss,
 					double(Global_Max_OutOfBagAcc) / NumOOB * 50,
@@ -2228,7 +2221,7 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 		if (verbose)
 		{
 			Rprintf(
-				"[%d] %s, OOB Acc: %0.2f%%, # of SNPs: %d, # of Haplo: %d\n",
+				"[%d] %s, oob acc: %0.2f%%, # of SNPs: %d, # of haplo: %d\n",
 				(int)_ClassifierList.size(), date_text(),
 				I->OutOfBag_Accuracy()*100, I->nSNP(), I->nHaplo());
 			CheckInterrupt();

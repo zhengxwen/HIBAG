@@ -261,7 +261,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 {
     z <- summary(mobj, show=FALSE)
     cat(ifelse(autosave, "==Saved==", " --"),
-        paste0("#", length(mobj$classifier), ","), "avg OOB acc:",
+        paste0("#", length(mobj$classifier), ","), "avg oob acc:",
         sprintf("%0.2f%%, sd: %0.2f%%, min: %0.2f%%, max: %0.2f%%\n",
         z$info["accuracy", "Mean"], z$info["accuracy", "SD"],
         z$info["accuracy", "Min"], z$info["accuracy", "Max"]))
@@ -346,7 +346,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
                     z <- summary(obj, show=FALSE)
                     total <<- total + 1L
                     cat(sprintf(
-                        "[%d] %s, worker%3d, # of SNPs: %g, # of haplo: %g, acc: %0.1f%%\n",
+                        "[%d] %s, worker%3d, # of SNPs: %g, # of haplo: %g, oob acc: %0.1f%%\n",
                         total, format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                         as.integer(job), z$info["num.snp", "Mean"],
                         z$info["num.haplo", "Mean"],
