@@ -21,7 +21,7 @@ vignette: >
 library(HIBAG)
 library(ggplot2)
 
-version <- c("v1.24.0", "v1.24.0\n(POPCNT)", "v1.26.1\n(SSE2)",
+version <- c("v1.24.0\n(baseline)", "v1.24.0\n(POPCNT)", "v1.26.1\n(SSE2)",
     "v1.26.1\n(SSE4&POPCNT)", "v1.26.1\n(AVX)", "v1.26.1\n(AVX2)", "v1.26.1\n(AVX512F)",
     "v1.26.1\n(AVX512BW)")
 vs <- factor(version, version)
@@ -143,6 +143,9 @@ b <- read.table(text=s, header=TRUE)
 x <- unname(unlist(b[,-1]))
 nt <- c(rep(paste("AVX2:", c(1,8,16)), each=nrow(b)), rep(paste("AVX512BW:", c(1,8,16)), each=nrow(b)))
 nt <- factor(nt, c("AVX2: 1", "AVX2: 8", "AVX2: 16", "AVX512BW: 1", "AVX512BW: 8", "AVX512BW: 16"))
+ss <- levels(nt)
+ss[1L] <- "AVX2: 1 (baseline)"
+levels(nt) <- ss
 dat <- data.frame(Speedup=x, Threads=nt,
     Gene=factor(rep(b$HLAgenes, 6), b$HLAgenes))
 ggplot(dat, aes(x=Gene, y=Speedup, fill=Threads)) +
