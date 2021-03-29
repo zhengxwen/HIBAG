@@ -99,10 +99,8 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 |:-----------------------|:----------|-------:|
 | CPU (AVX2, 1 thread)   | double    | 1      |
 | CPU (AVX2, 20 threads) | double    | 17.5   |
-|------------------------|-----------|--------|
 | 1x NVIDIA Tesla T4     | mixed     | 75.8   |
 | 1x NVIDIA Tesla T4     | single    | 63.6   |
-|------------------------|-----------|--------|
 | 1x NVIDIA Tesla V100   | mixed     | 104.9  |
 | 1x NVIDIA Tesla V100   | single    | 97.9   |
 | 1x NVIDIA Tesla V100   | double    | 18.6   |
@@ -113,7 +111,6 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 |:-----------------------|:----------|-------:|
 | CPU (AVX2, 1 thread)   | double    | 1      |
 | CPU (AVX2, 20 threads) | double    | 19.5   |
-|------------------------|-----------|--------|
 | 1x NVIDIA Tesla V100   | mixed     | 497.6  |
 | 1x NVIDIA Tesla V100   | single    | 403.7  |
 | 1x NVIDIA Tesla V100   | double    | 41.4   |
