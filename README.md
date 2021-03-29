@@ -20,7 +20,7 @@ HIBAG is a state of the art software package for imputing HLA types using SNP da
 
 ## Bioconductor Package
 
-Release Version: 1.26.0
+Release Version: 1.26.1
 
 [http://www.bioconductor.org/packages/HIBAG/](http://www.bioconductor.org/packages/HIBAG/)
 
@@ -99,11 +99,25 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 |:-----------------------|:----------|-------:|
 | CPU (AVX2, 1 thread)   | double    | 1      |
 | CPU (AVX2, 20 threads) | double    | 17.5   |
-| 1x NVIDIA Tesla T4     | mixed     | 72.0   |
-| 1x NVIDIA Tesla V100   | mixed     | 98.9   |
-| 1x NVIDIA Tesla T4     | single    | 60.8   |
-| 1x NVIDIA Tesla V100   | single    | 92.4   |
-| 1x NVIDIA Tesla V100   | double    | 18.4   |
+|:-----------------------|:----------|-------:|
+| 1x NVIDIA Tesla T4     | mixed     | 75.8   |
+| 1x NVIDIA Tesla T4     | single    | 63.6   |
+|:-----------------------|:----------|-------:|
+| 1x NVIDIA Tesla V100   | mixed     | 104.9  |
+| 1x NVIDIA Tesla V100   | single    | 97.9   |
+| 1x NVIDIA Tesla V100   | double    | 18.6   |
+
+**Speedup factors using medium training sets (~10,000 samples)**
+
+| CPU / GPU              | Precision | Factor |
+|:-----------------------|:----------|-------:|
+| CPU (AVX2, 1 thread)   | double    | 1      |
+| CPU (AVX2, 20 threads) | double    | 19.5   |
+|:-----------------------|:----------|-------:|
+| 1x NVIDIA Tesla V100   | mixed     | 497.6  |
+| 1x NVIDIA Tesla V100   | single    | 403.7  |
+| 1x NVIDIA Tesla V100   | double    | 41.4   |
+
 
 *† 'mixed' is a mixed precision between half and single*
 
