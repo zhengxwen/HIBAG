@@ -551,6 +551,21 @@ SEXP HIBAG_Close(SEXP model)
 }
 
 
+/// show the number of threads
+static void verbose_num_thread(bool verbose)
+{
+	if (verbose)
+	{
+	#if RCPP_PARALLEL_USE_TBB
+		const int n = tbb::this_task_arena::max_concurrency();
+	#else
+		const int n = 1;
+	#endif
+		if (!GPUExtProcPtr)
+			Rprintf("# of threads: %d\n", n);
+	}
+}
+
 /**
  *  Add individual classifiers
  *
@@ -586,13 +601,7 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 	#endif
 		if (verbose && nthread>0)
 		{
-		#if RCPP_PARALLEL_USE_TBB
-			int n = tbb::this_task_arena::max_concurrency();
-		#else
-			int n = 1;
-		#endif
-			if (!GPUExtProcPtr)
-				Rprintf("# of threads: %d\n", n);
+			verbose_num_thread(true);
 			Rprintf("[-] %s\n", date_text());
 		}
 
@@ -643,16 +652,7 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(nthread);
 	#endif
-		if (verbose)
-		{
-		#if RCPP_PARALLEL_USE_TBB
-			int n = tbb::this_task_arena::max_concurrency();
-		#else
-			int n = 1;
-		#endif
-			if (!GPUExtProcPtr)
-				Rprintf("# of threads: %d\n", n);
-		}
+		verbose_num_thread(verbose);
 
 		rv_ans = PROTECT(NEW_LIST(4));
 		SEXP out_H1 = NEW_INTEGER(nSamp);
@@ -712,16 +712,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(nthread);
 	#endif
-		if (verbose)
-		{
-		#if RCPP_PARALLEL_USE_TBB
-			int n = tbb::this_task_arena::max_concurrency();
-		#else
-			int n = 1;
-		#endif
-			if (!GPUExtProcPtr)
-				Rprintf("# of threads: %d\n", n);
-		}
+		verbose_num_thread(verbose);
 
 		rv_ans = PROTECT(NEW_LIST(5));
 		SEXP out_H1 = NEW_INTEGER(nSamp);
