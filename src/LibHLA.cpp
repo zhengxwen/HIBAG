@@ -2188,12 +2188,22 @@ CAttrBag_Classifier *CAttrBag_Model::NewClassifierAllSamp()
 	return I;
 }
 
+CAttrBag_Model::try_final_train_gpu::try_final_train_gpu(CAttrBag_Model *m)
+{
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_init)
+		(*GPUExtProcPtr->build_init)(m->nHLA(), m->nSamp());
+}
+
+CAttrBag_Model::try_final_train_gpu::~try_final_train_gpu()
+{
+	if (GPUExtProcPtr && *GPUExtProcPtr->build_done)
+		(*GPUExtProcPtr->build_done)();
+}
+
 void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 	bool verbose, bool verbose_detail)
 {
-	if (GPUExtProcPtr && *GPUExtProcPtr->build_init)
-		(*GPUExtProcPtr->build_init)(nHLA(), nSamp());
-
+	try_final_train_gpu gpu(this);
 	CSamplingWithoutReplace VarSampling;
 
 	for (int k=0; k < nclassifier; k++)
@@ -2227,9 +2237,16 @@ void CAttrBag_Model::BuildClassifiers(int nclassifier, int mtry, bool prune,
 			CheckInterrupt();
 		}
 	}
+}
 
-	if (GPUExtProcPtr && *GPUExtProcPtr->build_done)
-		(*GPUExtProcPtr->build_done)();
+CAttrBag_Model::try_final_pred_gpu::try_final_pred_gpu(CAttrBag_Model *m)
+{
+	(owner = m)->_Init_GPU_PredHLA();
+}
+
+CAttrBag_Model::try_final_pred_gpu::~try_final_pred_gpu()
+{
+	owner->_Done_GPU_PredHLA();
 }
 
 void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
@@ -2276,7 +2293,7 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	Progress.Info = "Predicting";
 	Progress.Init(n_samp, verbose);
 
-	try_final_gpu gpu(this);
+	try_final_pred_gpu gpu(this);
 	PARALLEL_FOR(i, n_samp)
 	{
 		const int idx = thread_idx();

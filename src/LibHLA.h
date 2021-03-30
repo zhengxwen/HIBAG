@@ -665,12 +665,20 @@ namespace HLA_LIB
 		/// SNP genotypes for a GPU buffer
 		std::vector<TGenotype> gpu_geno_buf;
 
-		/// try-final block for _Init_GPU_PredHLA() and _Done_GPU_PredHLA()
-		struct try_final_gpu
+		/// try-final block for GPU training
+		struct try_final_train_gpu
 		{
 		public:
-			try_final_gpu(CAttrBag_Model *m) { (owner = m)->_Init_GPU_PredHLA(); }
-			~try_final_gpu() { owner->_Done_GPU_PredHLA(); }
+			try_final_train_gpu(CAttrBag_Model *m);
+			~try_final_train_gpu();
+		};
+
+		/// try-final block for _Init_GPU_PredHLA() and _Done_GPU_PredHLA()
+		struct try_final_pred_gpu
+		{
+		public:
+			try_final_pred_gpu(CAttrBag_Model *m);
+			~try_final_pred_gpu();
 		private:
 			CAttrBag_Model *owner;
 		};
