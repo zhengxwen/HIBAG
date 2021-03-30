@@ -551,6 +551,23 @@ SEXP HIBAG_Close(SEXP model)
 }
 
 
+/// set and clear GPUExtProcPtr for a try-final block
+struct set_gpu_ptr
+{
+	/// constructor
+	set_gpu_ptr(SEXP proc_ptr)
+	{
+		GPUExtProcPtr = NULL;
+		if (!Rf_isNull(proc_ptr))
+			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+	}
+	/// destructor
+	~set_gpu_ptr()
+	{
+		GPUExtProcPtr = NULL;
+	}
+};
+
 /// show the number of threads
 static void verbose_num_thread(bool verbose)
 {
@@ -591,10 +608,7 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		GetRNGstate();
-
-		GPUExtProcPtr = NULL;
-		if (!Rf_isNull(proc_ptr)) 
-			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		set_gpu_ptr set(proc_ptr);
 
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(abs(nthread));
@@ -605,15 +619,8 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 			Rprintf("[-] %s\n", date_text());
 		}
 
-		try {
-			_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
-				prune, verbose, verbose_detail);
-			GPUExtProcPtr = NULL;
-		}
-		catch(...) {
-			GPUExtProcPtr = NULL;
-			throw;
-		}
+		_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
+			prune, verbose, verbose_detail);
 
 		PutRNGstate();
 	CORE_CATCH
@@ -644,10 +651,7 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
-
-		GPUExtProcPtr = NULL;
-		if (!Rf_isNull(proc_ptr)) 
-			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		set_gpu_ptr set(proc_ptr);
 
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(nthread);
@@ -664,16 +668,9 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
 
-		try {
-			M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
-				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-				REAL(out_Matching), NULL, verbose);
-			GPUExtProcPtr = NULL;
-		}
-		catch(...) {
-			GPUExtProcPtr = NULL;
-			throw;
-		}
+		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
+			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+			REAL(out_Matching), NULL, verbose);
 
 		UNPROTECT(1);
 	CORE_CATCH
@@ -704,10 +701,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
-
-		GPUExtProcPtr = NULL;
-		if (!Rf_isNull(proc_ptr)) 
-			GPUExtProcPtr = (TypeGPUExtProc *)R_ExternalPtrAddr(proc_ptr);
+		set_gpu_ptr set(proc_ptr);
 
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(nthread);
@@ -726,16 +720,9 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_MatProb = allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
-		try {
-			M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
-				INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-				REAL(out_Matching), REAL(out_MatProb), verbose);
-			GPUExtProcPtr = NULL;
-		}
-		catch(...) {
-			GPUExtProcPtr = NULL;
-			throw;
-		}
+		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
+			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+			REAL(out_Matching), REAL(out_MatProb), verbose);
 
 		UNPROTECT(1);
 	CORE_CATCH
