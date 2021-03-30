@@ -656,11 +656,24 @@ namespace HLA_LIB
 		/// get weight with respect to the SNP frequencies in the model for missing SNPs
 		void _GetSNPWeights(int OutSNPWeight[]);
 
-		void _Init_PredictHLA();
-		void _Done_PredictHLA();
+		/// initialize GPU calculation
+		void _Init_GPU_PredHLA();
+		/// finalize GPU calculation
+		void _Done_GPU_PredHLA();
 
 	private:
+		/// SNP genotypes for a GPU buffer
 		std::vector<TGenotype> gpu_geno_buf;
+
+		/// try-final block for _Init_GPU_PredHLA() and _Done_GPU_PredHLA()
+		struct try_final_gpu
+		{
+		public:
+			try_final_gpu(CAttrBag_Model *m) { (owner = m)->_Init_GPU_PredHLA(); }
+			~try_final_gpu() { owner->_Done_GPU_PredHLA(); }
+		private:
+			CAttrBag_Model *owner;
+		};
 	};
 
 

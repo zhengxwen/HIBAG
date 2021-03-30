@@ -2276,7 +2276,7 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	Progress.Info = "Predicting";
 	Progress.Init(n_samp, verbose);
 
-	_Init_PredictHLA();
+	try_final_gpu gpu(this);
 	PARALLEL_FOR(i, n_samp)
 	{
 		const int idx = thread_idx();
@@ -2302,7 +2302,6 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 		if (idx == 0) CheckInterrupt();  // run on the baseline thread
 	}
 	PARALLEL_END
-	_Done_PredictHLA();
 }
 
 void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
@@ -2389,7 +2388,7 @@ void CAttrBag_Model::_GetSNPWeights(int OutSNPWeight[])
 	}
 }
 
-void CAttrBag_Model::_Init_PredictHLA()
+void CAttrBag_Model::_Init_GPU_PredHLA()
 {
 	if (GPUExtProcPtr && *GPUExtProcPtr->predict_init)
 	{
@@ -2416,7 +2415,7 @@ void CAttrBag_Model::_Init_PredictHLA()
 	}
 }
 
-void CAttrBag_Model::_Done_PredictHLA()
+void CAttrBag_Model::_Done_GPU_PredHLA()
 {
 	if (GPUExtProcPtr && *GPUExtProcPtr->predict_done)
 	{
