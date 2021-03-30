@@ -613,11 +613,9 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_scheduler_init init(abs(nthread));
 	#endif
+		verbose_num_thread(verbose && nthread>0);
 		if (verbose && nthread>0)
-		{
-			verbose_num_thread(true);
 			Rprintf("[-] %s\n", date_text());
-		}
 
 		_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
 			prune, verbose, verbose_detail);
@@ -670,7 +668,59 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 
 		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			REAL(out_Matching), NULL, verbose);
+			REAL(out_Matching), NULL, NULL, verbose);
+
+		UNPROTECT(1);
+	CORE_CATCH
+}
+
+
+/**
+ *  Predict HLA types, output the best-guess and the dosages.
+ *
+ *  \param Model        the model index
+ *  \param GenoMat      the pointer to the SNP genotypes
+ *  \param NumSamp      the number of samples in GenoMat
+ *  \param VoteMethod   the voting method
+ *  \param NThread      the number of threads
+ *  \param Verbose      whether showing information
+ *  \param proc_ptr     pointer to functions for an extensible component
+ *  \return H1, H2 and dosages.
+**/
+SEXP HIBAG_Predict_Dosage(SEXP Model, SEXP GenoMat, SEXP NumSamp,
+	SEXP VoteMethod, SEXP NThread, SEXP Verbose, SEXP proc_ptr)
+{
+	const int midx = Rf_asInteger(Model);
+	const int nSamp = Rf_asInteger(NumSamp);
+	const int vote_method = Rf_asInteger(VoteMethod);
+	const int nthread = Rf_asInteger(NThread);
+	const bool verbose = Rf_asLogical(Verbose)==TRUE;
+
+	CORE_TRY
+		_Check_HIBAG_Model(midx);
+		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
+		set_gpu_ptr set(proc_ptr);
+
+	#if RCPP_PARALLEL_USE_TBB
+		tbb::task_scheduler_init init(nthread);
+	#endif
+		verbose_num_thread(verbose);
+
+		rv_ans = PROTECT(NEW_LIST(5));
+		SEXP out_H1 = NEW_INTEGER(nSamp);
+		SET_ELEMENT(rv_ans, 0, out_H1);
+		SEXP out_H2 = NEW_INTEGER(nSamp);
+		SET_ELEMENT(rv_ans, 1, out_H2);
+		SEXP out_Prob = NEW_NUMERIC(nSamp);
+		SET_ELEMENT(rv_ans, 2, out_Prob);
+		SEXP out_Matching = NEW_NUMERIC(nSamp);
+		SET_ELEMENT(rv_ans, 3, out_Matching);
+		SEXP out_MatDosage = Rf_allocMatrix(REALSXP, M.nHLA(), nSamp);
+		SET_ELEMENT(rv_ans, 4, out_MatDosage);
+
+		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
+			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
+			REAL(out_Matching), REAL(out_MatDosage), NULL, verbose);
 
 		UNPROTECT(1);
 	CORE_CATCH
@@ -717,12 +767,12 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SET_ELEMENT(rv_ans, 2, out_Prob);
 		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
-		SEXP out_MatProb = allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
+		SEXP out_MatProb = Rf_allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
 		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			REAL(out_Matching), REAL(out_MatProb), verbose);
+			REAL(out_Matching), NULL, REAL(out_MatProb), verbose);
 
 		UNPROTECT(1);
 	CORE_CATCH
@@ -937,7 +987,7 @@ SEXP HIBAG_Confusion(SEXP n_hla, SEXP init_mat, SEXP n_DConfusion,
 
 		#define INDEX(T, P, var) var[(nHLA+1)*T + P]
 
-		rv_ans = allocMatrix(REALSXP, nHLA+1, nHLA);
+		rv_ans = Rf_allocMatrix(REALSXP, nHLA+1, nHLA);
 		double *out_mat = REAL(rv_ans);
 
 		vector<double> TmpMat(nHLA*(nHLA+1));
@@ -1062,7 +1112,7 @@ SEXP HIBAG_ConvBED(SEXP bedfn, SEXP n_samp, SEXP n_snp, SEXP n_save_snp,
 		int I_SNP = 0;
 
 		// output
-		rv_ans = allocMatrix(INTSXP, NumSvSNP, NumSamp);
+		rv_ans = Rf_allocMatrix(INTSXP, NumSvSNP, NumSamp);
 
 		// for - loop
 		for (int i=0; i < nNum; i++)

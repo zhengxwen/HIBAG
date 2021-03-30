@@ -2251,7 +2251,7 @@ CAttrBag_Model::try_final_pred_gpu::~try_final_pred_gpu()
 
 void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	int OutH1[], int OutH2[], double OutMaxProb[], double OutMatching[],
-	double OutProbArray[], bool verbose)
+	double OutDosage[], double OutProbArray[], bool verbose)
 {
 	if ((vote_method < 1) || (vote_method > 2))
 		throw ErrHLA("Invalid 'vote_method'.");
@@ -2296,27 +2296,32 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 	try_final_pred_gpu gpu(this);
 	PARALLEL_FOR(i, n_samp)
 	{
-		const int idx = thread_idx();
-		CAlg_Prediction &pred = pred_lst[idx];
+		const int th_idx = thread_idx();
+		CAlg_Prediction &pred = pred_lst[th_idx];
 		double match_prob;
 		_PredictHLA(pred, genomat + i*nSNP(), &snp_weight[0], vote_method,
-			match_prob, &c_weight[idx*_ClassifierList.size()]);
+			match_prob, &c_weight[th_idx*_ClassifierList.size()]);
 
 		THLAType HLA = pred.BestGuessEnsemble();
-		OutH1[i] = HLA.Allele1;
-		OutH2[i] = HLA.Allele2;
-
-		if ((HLA.Allele1 != NA_INTEGER) && (HLA.Allele2 != NA_INTEGER))
-			OutMaxProb[i] = pred.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
-		else
-			OutMaxProb[i] = 0;
-
+		if (OutH1 && OutH2)
+		{
+			OutH1[i] = HLA.Allele1;
+			OutH2[i] = HLA.Allele2;
+		}
+		if (OutMaxProb)
+		{
+			if ((HLA.Allele1 != NA_INTEGER) && (HLA.Allele2 != NA_INTEGER))
+				OutMaxProb[i] = pred.IndexSumPostProb(HLA.Allele1, HLA.Allele2);
+			else
+				OutMaxProb[i] = 0;
+		}
+		if (OutMatching)
+			OutMatching[i] = match_prob;
 		if (OutProbArray)
 			memcpy(OutProbArray+i*nn, &pred._SumPostProb[0], sizeof(double)*nn);
-		if (OutMatching) OutMatching[i] = match_prob;
 
 		Progress.Forward(1, verbose);
-		if (idx == 0) CheckInterrupt();  // run on the baseline thread
+		if (th_idx == 0) CheckInterrupt();  // run on the baseline thread
 	}
 	PARALLEL_END
 }
