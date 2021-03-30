@@ -5,7 +5,7 @@ useDynLib(HIBAG,
     HIBAG_GetNumClassifiers, HIBAG_GetClassifierList, HIBAG_GetLastClassifierInfo,
     HIBAG_New, HIBAG_NewClassifiers, HIBAG_NewClassifierHaplo,
     HIBAG_SortAlleleStr, HIBAG_Kernel_Version, HIBAG_Kernel_SetTarget,
-    HIBAG_Predict_Resp, HIBAG_Predict_Resp_Prob,
+    HIBAG_Predict_Resp, HIBAG_Predict_Dosage, HIBAG_Predict_Resp_Prob,
     HIBAG_Training, HIBAG_SeqMerge, HIBAG_SeqRmDot
 )
 
