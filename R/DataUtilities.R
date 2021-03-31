@@ -391,20 +391,19 @@ hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
 
 #######################################################################
 # Get the overlapping SNPs between target and template with
-#   corrected strand.
+#   corrected strand or A/B allele order.
 #
 
 hlaGenoSwitchStrand <- function(target, template,
-    match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 {
     # check
     stopifnot(inherits(target, "hlaSNPGenoClass"))
     stopifnot(inherits(template, "hlaSNPGenoClass") |
-        inherits(template, "hlaAttrBagClass") |
-        inherits(template, "hlaAttrBagObj"))
-    stopifnot(is.logical(same.strand))
-    stopifnot(is.logical(verbose))
+        inherits(template, "hlaAttrBagClass") | inherits(template, "hlaAttrBagObj"))
+    stopifnot(is.logical(same.strand), length(same.strand)==1L)
+    stopifnot(is.logical(verbose), length(verbose)==1L)
     match.type <- match.arg(match.type)
 
     # initialize
@@ -417,28 +416,22 @@ hlaGenoSwitchStrand <- function(target, template,
         if (all(s1 == s2, na.rm=TRUE))
         {
             s <- s1
-            I1 <- I2 <- seq_len(length(s1))
+            I1 <- I2 <- seq_along(s1)
             flag <- FALSE
         }
     }
     if (flag)
     {
-        s <- intersect(s1, s2)
+        s <- unique(intersect(s1, s2))
         if (length(s) <= 0L) stop("There is no common SNP.")
         I1 <- match(s, s1); I2 <- match(s, s2)
     }
 
     # compute allele frequencies
-    if (inherits(template, "hlaSNPGenoClass"))
-    {
+    target.afreq <- rowMeans(target$genotype, na.rm=TRUE) * 0.5
+    template.afreq <- template$snp.allele.freq
+    if (is.null(template.afreq))
         template.afreq <- rowMeans(template$genotype, na.rm=TRUE) * 0.5
-    } else {
-        template.afreq <- template$snp.allele.freq
-    }
-    if (inherits(target, "hlaSNPGenoClass"))
-    {
-        target.afreq <- rowMeans(target$genotype, na.rm=TRUE) * 0.5
-    }
 
     # call
     gz <- .Call(HIBAG_AlleleStrand,
@@ -498,20 +491,16 @@ hlaGenoSwitchStrand <- function(target, template,
     }
 
     # output
-    geno <- target$genotype[I2, ]
-    if (is.vector(geno))
-        geno <- matrix(geno, ncol=1L)
-    for (i in which(gz$flag))
-        geno[i, ] <- 2L - geno[i, ]
-
-    rv <- list(genotype = geno)
-    rv$sample.id <- target$sample.id
-    rv$snp.id <- target$snp.id[I2]
-    rv$snp.position <- target$snp.position[I2]
-    rv$snp.allele <- template$snp.allele[I1]
-    rv$assembly <- template$assembly
+    geno <- target$genotype[I2, drop=FALSE]
+    for (i in which(gz$flag)) geno[i,] <- 2L - geno[i,]
+    colnames(geno) <- rownames(geno) <- NULL
+    rv <- list(genotype = geno,
+        sample.id = target$sample.id,
+        snp.id    = target$snp.id[I2],
+        snp.position = target$snp.position[I2],
+        snp.allele   = template$snp.allele[I1],
+        assembly     = template$assembly)
     class(rv) <- "hlaSNPGenoClass"
-
     rv
 }
 
@@ -520,14 +509,14 @@ hlaGenoSwitchStrand <- function(target, template,
 # Get the information of SNP ID and position
 #
 
-hlaSNPID <- function(obj, type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"))
+hlaSNPID <- function(obj, type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"))
 {
     stopifnot( inherits(obj, "hlaSNPGenoClass") |
         inherits(obj, "hlaAttrBagClass") | inherits(obj, "hlaAttrBagObj") )
     type <- match.arg(type)
     switch(type,
         "Position"        = obj$snp.position,
-        "Pos+RefAlt"     = paste(obj$snp.position, obj$snp.allele, sep="-"),
+        "Pos+Allele"     = paste(obj$snp.position, obj$snp.allele, sep="-"),
         "RefSNP+Position" = paste(obj$snp.id, obj$snp.position, sep="-"),
         "RefSNP"          = obj$snp.id,
         invisible()
@@ -540,7 +529,7 @@ hlaSNPID <- function(obj, type=c("Position", "Pos+RefAlt", "RefSNP+Position", "R
 #
 
 hlaGenoCombine <- function(geno1, geno2,
-    match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
     allele.check=TRUE, same.strand=FALSE, verbose=TRUE)
 {
     # check
