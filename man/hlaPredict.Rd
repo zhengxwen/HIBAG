@@ -9,11 +9,11 @@
 }
 \usage{
 hlaPredict(object, snp, cl=FALSE,
-    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 \method{predict}{hlaAttrBagClass}(object, snp, cl=FALSE,
-    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
 }
@@ -25,8 +25,9 @@ hlaPredict(object, snp, cl=FALSE,
         implementation; if \code{TRUE}, use the number of threads returned from
         \code{RcppParallel::defaultNumThreads()} (by default using all threads);
         if an integer, specify the number of threads}
-    \item{type}{"response": return the best-guess type plus its posterior
-        probability; "prob": return all posterior probabilities;
+    \item{type}{"response": return the best-guess types with its posterior probability;
+        "dosage": return the best-guess types and dosages for each allele;
+        "prob": return all posterior probabilities;
         "response+prob": return the best-guess and all posterior probabilities}
     \item{vote}{\code{"prob"} (default behavior) -- make a prediction based on
         the averaged posterior probabilities from all individual classifiers;

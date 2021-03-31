@@ -445,7 +445,7 @@ hlaClose <- function(model)
 #
 
 predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
-    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
 {
@@ -455,7 +455,7 @@ predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
 }
 
 hlaPredict <- function(object, snp, cl=FALSE,
-    type=c("response", "prob", "response+prob"), vote=c("prob", "majority"),
+    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 {
@@ -701,7 +701,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
         pm <- attr(cl, "proc_ptr")
 
         # predict HLA genotypes
-        if (type %in% c("response", "response+prob"))
+        if (type %in% c("response", "dosage", "response+prob"))
         {
             # the best-guess prediction
             if (type == "response")
@@ -709,6 +709,11 @@ hlaPredict <- function(object, snp, cl=FALSE,
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
                     n.samp, vote_method, nthread, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "matching")
+            } else if (type == "dosage")
+            {
+                rv <- .Call(HIBAG_Predict_Dosage, object$model, as.integer(snp),
+                    n.samp, vote_method, nthread, verbose, pm)
+                names(rv) <- c("H1", "H2", "prob", "matching", "dosage")
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
                     as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
@@ -722,12 +727,18 @@ hlaPredict <- function(object, snp, cl=FALSE,
                 locus = object$hla.locus, prob = rv$prob,
                 na.rm = FALSE, assembly = assembly)
             res$value$matching <- rv$matching
+            if (!is.null(rv$dosage))
+            {
+                res$dosage <- rv$dosage
+                rownames(res$dosage) <- object$hla.allele
+                colnames(res$dosage) <- geno.sampid
+            }
             if (!is.null(rv$postprob))
             {
                 res$postprob <- rv$postprob
                 colnames(res$postprob) <- geno.sampid
                 m <- outer(object$hla.allele, object$hla.allele,
-                    function(x, y) paste(x, y, sep="/"))
+                    function(x, y) paste(y, x, sep="/"))
                 rownames(res$postprob) <- m[lower.tri(m, diag=TRUE)]
             }
             NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
@@ -742,7 +753,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
             res <- rv$postprob
             colnames(res) <- geno.sampid
             m <- outer(object$hla.allele, object$hla.allele,
-                function(x, y) paste(x, y, sep="/"))
+                function(x, y) paste(y, x, sep="/"))
             rownames(res) <- m[lower.tri(m, diag=TRUE)]
             NA.cnt <- sum(colSums(res) <= 0L, na.rm=TRUE)
         }
@@ -766,7 +777,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
         )
 
         # merge the results
-        if (type %in% c("response", "response+prob"))
+        if (type %in% c("response", "dosage", "response+prob"))
         {
             res <- rv[[1L]]
             for (i in 2L:length(rv))
@@ -775,6 +786,8 @@ hlaPredict <- function(object, snp, cl=FALSE,
                     res <- hlaCombineAllele(res, rv[[i]])
             }
             res$value$sample.id <- geno.sampid
+            if (!is.null(res$dosage))
+                colnames(res$dosage) <- geno.sampid
             if (!is.null(res$postprob))
                 colnames(res$postprob) <- geno.sampid
             NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))

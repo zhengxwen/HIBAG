@@ -16,7 +16,7 @@ hla.list <- c("A", "B", "C", "DQA1", "DQB1", "DRB1")
 hla.acc <- c(0.9, 0.8, 0.8, 0.8, 0.8, 0.7)
 
 
-for (hla.idx in seq_len(length(hla.list)))
+for (hla.idx in seq_along(hla.list))
 {
 	hla.id <- hla.list[hla.idx]
 
@@ -52,7 +52,7 @@ for (hla.idx in seq_len(length(hla.list)))
 	summary(model)
 
 	# validation
-	pred <- predict(model, test.geno)
+	pred <- hlaPredict(model, test.geno)
 	summary(pred)
 
 	# compare
@@ -62,10 +62,7 @@ for (hla.idx in seq_len(length(hla.list)))
 
 	# check
 	if (comp$overall$acc.haplo < hla.acc[hla.idx])
-	{
-		stop("HLA - ", hla.id, ", 'acc.haplo' should be >= ",
-			hla.acc[hla.idx], ".")
-	}
+		stop("HLA - ", hla.id, ", 'acc.haplo' should be >= ", hla.acc[hla.idx], ".")
 
 	cat("\n\n")
 }

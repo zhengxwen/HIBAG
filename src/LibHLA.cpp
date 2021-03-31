@@ -2315,10 +2315,30 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 			else
 				OutMaxProb[i] = 0;
 		}
-		if (OutMatching)
+		if (OutMatching)  // matching proportion
+		{
 			OutMatching[i] = match_prob;
-		if (OutProbArray)
+		}
+		if (OutDosage)  // dosages
+		{
+			const size_t n = nHLA();
+			const double *s = &pred._SumPostProb[0];
+			double *p = OutDosage + i*n;
+			memset(p, 0, sizeof(double)*n);
+			for (size_t h1=0; h1 < n; h1++)
+			{
+				p[h1] += 2 * (*s++);  // expected hom. dosage
+				for (size_t h2=h1+1; h2 < n; h2++)
+				{
+					const double v = *s++;
+					p[h1] += v; p[h2] += v;
+				}
+			}
+		}
+		if (OutProbArray)  // probabilities for all allele pairs
+		{
 			memcpy(OutProbArray+i*nn, &pred._SumPostProb[0], sizeof(double)*nn);
+		}
 
 		Progress.Forward(1, verbose);
 		if (th_idx == 0) CheckInterrupt();  // run on the baseline thread
