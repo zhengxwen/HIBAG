@@ -1451,6 +1451,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_NewClassifierHaplo, 7),
 		CALL(HIBAG_NewClassifiers, 8),
 		CALL(HIBAG_Predict_Resp, 7),
+		CALL(HIBAG_Predict_Dosage, 7),
 		CALL(HIBAG_Predict_Resp_Prob, 7),
 		CALL(HIBAG_Training, 6),
 		CALL(HIBAG_SortAlleleStr, 1),
