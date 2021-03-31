@@ -517,10 +517,8 @@ hlaPredict <- function(object, snp, cl=FALSE,
 
     } else {
 
-        # a 'hlaSNPGenoClass' object
-
         ##################################################
-        # check assembly first
+        # a 'hlaSNPGenoClass' object, check assembly first
 
         model.assembly <- as.character(object$assembly)[1L]
         if (is.na(model.assembly))
@@ -674,9 +672,8 @@ hlaPredict <- function(object, snp, cl=FALSE,
     # check
     if (dim(snp)[1L] != object$n.snp)
     {
-        stop("The number of SNPs is not valid, and ",
-            "it maybe due to duplicated 'snp.id' or ",
-            "incorrect dimension of genotype matrix.")
+        stop("The number of SNPs is not valid, and it maybe due to duplicated 'snp.id' ",
+            "or incorrect dimension of genotype matrix.")
     }
 
     # initialize ...

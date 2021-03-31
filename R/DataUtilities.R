@@ -520,7 +520,7 @@ hlaGenoSwitchStrand <- function(target, template,
 # Get the information of SNP ID and position
 #
 
-hlaSNPID <- function(obj, type=c("RefSNP+Position", "RefSNP", "Position"))
+hlaSNPID <- function(obj, type=c("Position", "RefSNP+Position", "RefSNP"))
 {
     stopifnot( inherits(obj, "hlaSNPGenoClass") |
         inherits(obj, "hlaAttrBagClass") | inherits(obj, "hlaAttrBagObj") )
@@ -1236,6 +1236,11 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
             locus.pos.start <- HLAinfo[locus, "start"]
         if (!is.finite(locus.pos.end))
             locus.pos.end <- HLAinfo[locus, "end"]
+        if (!is.finite(locus.pos.start) || !is.finite(locus.pos.end))
+        {
+            warning("The position information for '", locus, "' is not available!",
+                immediate.=TRUE)
+        }
     } else {
         locus.pos.start <- as.integer(locus.pos.start)
         locus.pos.end <- as.integer(locus.pos.end)
@@ -1759,7 +1764,7 @@ hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
 {
     # check
     stopifnot(length(snp.id) == length(position))
-    stopifnot(is.character(locus), length(locus)==1L)
+    stopifnot(is.character(locus), length(locus)==1L, !is.na(locus))
 
     # init
     if (locus != "any")
@@ -1785,7 +1790,7 @@ hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
         flag <- (pos.start <= position) & (position <= pos.end)
         snp.id[flag]
     } else
-        stop("The position information is not available!")
+        stop("The position information for '", locus, "' is not available!")
 }
 
 

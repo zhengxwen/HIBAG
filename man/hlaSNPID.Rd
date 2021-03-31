@@ -7,7 +7,7 @@
     Get the information of SNP ID with or without position.
 }
 \usage{
-hlaSNPID(obj, type=c("RefSNP+Position", "RefSNP", "Position"))
+hlaSNPID(obj, type=c("Position", "RefSNP+Position", "RefSNP"))
 }
 \arguments{
     \item{obj}{a genotypic object of \code{\link{hlaSNPGenoClass}},

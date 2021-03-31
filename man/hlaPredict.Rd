@@ -111,7 +111,12 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- hlaPredict(model, test.geno)
+pred <- hlaPredict(model, test.geno, type="dosage")
+pred
+
+head(pred$value)
+pred$dosage[, 1:4]
+
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
     call.threshold=0))
