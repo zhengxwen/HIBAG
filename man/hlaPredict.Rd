@@ -10,11 +10,11 @@
 \usage{
 hlaPredict(object, snp, cl=FALSE,
     type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
+    allele.check=TRUE, match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 \method{predict}{hlaAttrBagClass}(object, snp, cl=FALSE,
     type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "RefSNP+Position", "RefSNP"),
+    allele.check=TRUE, match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, ...)
 }
 \arguments{

@@ -1,7 +1,7 @@
 \name{hlaGenoSwitchStrand}
 \alias{hlaGenoSwitchStrand}
 \title{
-    Allele switching
+    Allele flipping
 }
 \description{
     Determine the ordered pair of A and B alleles, using the allele information
@@ -9,7 +9,7 @@ provided by \code{template}.
 }
 \usage{
 hlaGenoSwitchStrand(target, template,
-    match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 }
 \arguments{

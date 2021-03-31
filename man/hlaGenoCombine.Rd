@@ -8,7 +8,7 @@
 }
 \usage{
 hlaGenoCombine(geno1, geno2,
-    match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
     allele.check=TRUE, same.strand=FALSE, verbose=TRUE)
 }
 \arguments{

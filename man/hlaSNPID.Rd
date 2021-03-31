@@ -7,7 +7,7 @@
     Get the information of SNP ID with or without position.
 }
 \usage{
-hlaSNPID(obj, type=c("Position", "RefSNP+Position", "RefSNP"))
+hlaSNPID(obj, type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"))
 }
 \arguments{
     \item{obj}{a genotypic object of \code{\link{hlaSNPGenoClass}},
@@ -21,8 +21,10 @@ hlaSNPID(obj, type=c("Position", "RefSNP+Position", "RefSNP"))
         return \code{paste(obj$snp.id, obj$snp.position, sep="-")};
     if \code{type = "RefSNP"},
         return \code{obj$snp.id};
-    otherwise,
-        return \code{obj$snp.position}.
+    if \code{type = "Position"},
+        return \code{obj$snp.position};
+    if \code{type = "Pos+RefAlt"},
+        return \code{paste(obj$snp.position, obj$snp.allele, sep="-")}.
 }
 \author{Xiuwen Zheng}
 \seealso{

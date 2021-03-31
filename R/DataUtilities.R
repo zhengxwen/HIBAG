@@ -395,7 +395,7 @@ hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
 #
 
 hlaGenoSwitchStrand <- function(target, template,
-    match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE)
 {
     # check
@@ -520,19 +520,18 @@ hlaGenoSwitchStrand <- function(target, template,
 # Get the information of SNP ID and position
 #
 
-hlaSNPID <- function(obj, type=c("Position", "RefSNP+Position", "RefSNP"))
+hlaSNPID <- function(obj, type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"))
 {
     stopifnot( inherits(obj, "hlaSNPGenoClass") |
         inherits(obj, "hlaAttrBagClass") | inherits(obj, "hlaAttrBagObj") )
     type <- match.arg(type)
-    if (type == "RefSNP+Position")
-        paste(obj$snp.id, obj$snp.position, sep="-")
-    else if (type == "RefSNP")
-        obj$snp.id
-    else if (type == "Position")
-        obj$snp.position
-    else
+    switch(type,
+        "Position"        = obj$snp.position,
+        "Pos+RefAlt"     = paste(obj$snp.position, obj$snp.allele, sep="-"),
+        "RefSNP+Position" = paste(obj$snp.id, obj$snp.position, sep="-"),
+        "RefSNP"          = obj$snp.id,
         invisible()
+    )
 }
 
 
@@ -541,7 +540,7 @@ hlaSNPID <- function(obj, type=c("Position", "RefSNP+Position", "RefSNP"))
 #
 
 hlaGenoCombine <- function(geno1, geno2,
-    match.type=c("RefSNP+Position", "RefSNP", "Position"),
+    match.type=c("Position", "Pos+RefAlt", "RefSNP+Position", "RefSNP"),
     allele.check=TRUE, same.strand=FALSE, verbose=TRUE)
 {
     # check
