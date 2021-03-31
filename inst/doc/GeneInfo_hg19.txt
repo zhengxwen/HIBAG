@@ -1,4 +1,4 @@
-## Genome: hg19
+## Human Genome: hg19
 name	chrom	start	end
 MHC	6	29719561	32883508
 A	6	29910247	29913661
