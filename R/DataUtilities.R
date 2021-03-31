@@ -491,7 +491,7 @@ hlaGenoSwitchStrand <- function(target, template,
     }
 
     # output
-    geno <- target$genotype[I2, drop=FALSE]
+    geno <- target$genotype[I2, , drop=FALSE]
     for (i in which(gz$flag)) geno[i,] <- 2L - geno[i,]
     colnames(geno) <- rownames(geno) <- NULL
     rv <- list(genotype = geno,
@@ -1286,11 +1286,7 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
 
     if (!is.null(hla$postprob))
     {
-        rv$postprob <- hla$postprob[, samp.sel]
-        if (is.vector(rv$postprob))
-        {
-            rv$postprob <- matrix(rv$postprob, ncol=1)
-        }
+        rv$postprob <- hla$postprob[, samp.sel, drop=FALSE]
     }
 
     class(rv) <- class(hla)

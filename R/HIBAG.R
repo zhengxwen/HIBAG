@@ -585,7 +585,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
             snp.allele[is.na(snp.allele)] <- ""
 
             # temporary variable
-            tmp <- list(genotype = snp$genotype[snp.sel,],
+            tmp <- list(genotype = snp$genotype[snp.sel, , drop=FALSE],
                 sample.id = snp$sample.id,
                 snp.id = object$snp.id, snp.position = object$snp.position,
                 snp.allele = snp.allele[snp.sel],
@@ -593,8 +593,6 @@ hlaPredict <- function(object, snp, cl=FALSE,
             flag <- is.na(tmp$snp.allele)
             tmp$snp.allele[flag] <- object$snp.allele[
                 match(tmp$snp.id[flag], object$snp.id)]
-            if (is.vector(tmp$genotype))
-                tmp$genotype <- matrix(tmp$genotype, ncol=1L)
             class(tmp) <- "hlaSNPGenoClass"
 
             # the total number of missing snp
