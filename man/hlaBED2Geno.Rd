@@ -14,7 +14,8 @@ hlaBED2Geno(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     \item{bed.fn}{binary file, genotype information}
     \item{fam.fn}{family, individual information, etc}
     \item{bim.fn}{extended MAP file: two extra cols = allele names}
-    \item{rm.invalid.allele}{if TRUE, remove SNPs with invalid alleles}
+    \item{rm.invalid.allele}{if TRUE, remove SNPs with non-standard alleles
+        (except A,G,C,T)}
     \item{import.chr}{the chromosome, "1" .. "22", "X", "Y", "XY", "MT",
         "xMHC", or "", where "xMHC" implies the extended MHC on chromosome 6,
         and "" for all SNPs; "6" for all SNPs on chromosome 6 for HLA;

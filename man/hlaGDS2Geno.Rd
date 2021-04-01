@@ -1,18 +1,20 @@
 \name{hlaGDS2Geno}
 \alias{hlaGDS2Geno}
 \title{
-    Convert from SNP GDS format
+    Import genotypes from a GDS file
 }
 \description{
-    To convert a SNP GDS file to an object of \code{\link{hlaSNPGenoClass}}.
+    To convert a SNPRelate or SeqArray GDS file to an object of \code{hlaSNPGenoClass}.
 }
 \usage{
-hlaGDS2Geno(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
-    assembly="auto", verbose=TRUE)
+hlaGDS2Geno(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC", assembly="auto",
+    verbose=TRUE)
 }
 \arguments{
-    \item{gds.fn}{the SNP GDS file used by the \code{SNPRelate} package}
-    \item{rm.invalid.allele}{if TRUE, remove SNPs with invalid alleles}
+    \item{gds.fn}{a file name for the GDS file defined in the SNPRelate or SeqArray
+        package}
+    \item{rm.invalid.allele}{if TRUE, remove SNPs with non-standard alleles
+        (except A,G,C,T)}
     \item{import.chr}{the chromosome, "1" .. "22", "X", "Y", "XY", "MT",
         "xMHC", or "", where "xMHC" implies the extended MHC on chromosome 6,
         and "" for all SNPs}
@@ -33,8 +35,7 @@ hlaGDS2Geno(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
 # Import a SNP GDS file
 fn <- system.file("extdata", "HapMap_CEU_Chr6.gds", package="HIBAG")
 
-geno <- hlaGDS2Geno(fn, assembly="hg18",
-    rm.invalid.allele=TRUE, import.chr="6")
+geno <- hlaGDS2Geno(fn, assembly="hg18", rm.invalid.allele=TRUE)
 
 summary(geno)
 }

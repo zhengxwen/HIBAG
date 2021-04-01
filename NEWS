@@ -9,6 +9,8 @@ CHANGES IN VERSION 1.27.8
       the training and test set are both matched to the same reference genome,
       e.g., 1000 Genomes Project
 
+    o `hlaGDS2Geno()` supports SeqArray GDS files
+
 
 CHANGES IN VERSION 1.26.1
 -------------------------

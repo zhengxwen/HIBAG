@@ -625,6 +625,63 @@ hlaGeno2PED <- function(geno, out.fn)
     v
 }
 
+.snp_selection <- function(assembly, import.chr, chr, snp.pos, verbose)
+{
+    if (length(import.chr) == 1L)
+    {
+        if (import.chr == "xMHC")
+        {
+            info <- hlaLociInfo(assembly)
+            info <- info[info$chrom == 6L, ]
+            st <- info$start[1L] - 1000000L    # MHC region
+            ed <- info$end[1L]   + 1000000L    # MHC region
+            v <- (st <= info$start) & (info$end <= ed)
+            inmhc <- which(v)
+            outmhc <- which(!v)
+
+            st <- min(info$start[inmhc]) - 1000000L
+            ed <- max(info$end[inmhc])   + 1000000L
+            snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
+            for (i in outmhc)
+            {
+                st <- info$start[i] - 1000000L
+                ed <- info$end[i]   + 1000000L
+                snp.flag <- snp.flag |
+                    ((chr==6L) & (st<=snp.pos) & (snp.pos<=ed))
+            }
+
+            n.snp <- as.integer(sum(snp.flag))
+            if (verbose)
+            {
+                cat(sprintf(
+                    "Import %d SNP%s within the xMHC region on chromosome 6\n",
+                    n.snp, .plural(n.snp)))
+            }
+            import.chr <- NULL
+        } else if (import.chr == "")
+        {
+            n.snp <- length(snp.id)
+            snp.flag <- rep(TRUE, n.snp)
+            if (verbose)
+                cat(sprintf("Import %d SNP%s\n", n.snp, .plural(n.snp)))
+            import.chr <- NULL
+        }
+    }
+    if (!is.null(import.chr))
+    {
+        snp.flag <- (chr %in% import.chr) & (snp.pos>0L)
+        n.snp <- sum(snp.flag)
+        if (verbose)
+        {
+            cat(sprintf("Import %d SNP%s from chromosome %s\n", n.snp,
+                .plural(n.snp), paste(import.chr, collapse=",")))
+        }
+    }
+    if (n.snp <= 0L)
+        stop("There is no SNP imported.")
+    snp.flag
+}
+
 hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     import.chr="xMHC", assembly="auto", verbose=TRUE)
 {
@@ -684,75 +741,24 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         cat("Open ", sQuote(bim.fn), "\n", sep="")
 
     # SNP selection
-    if (length(import.chr) == 1L)
-    {
-        if (import.chr == "xMHC")
-        {
-            info <- hlaLociInfo(assembly)
-            info <- info[info$chrom == 6L, ]
-            st <- info$start[1L] - 1000000L    # MHC region
-            ed <- info$end[1L]   + 1000000L    # MHC region
-            v <- (st <= info$start) & (info$end <= ed)
-            inmhc <- which(v)
-            outmhc <- which(!v)
-
-            st <- min(info$start[inmhc]) - 1000000L
-            ed <- max(info$end[inmhc])   + 1000000L
-            snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
-            for (i in outmhc)
-            {
-                st <- info$start[i] - 1000000L
-                ed <- info$end[i]   + 1000000L
-                snp.flag <- snp.flag |
-                    ((chr==6L) & (st<=snp.pos) & (snp.pos<=ed))
-            }
-
-            n.snp <- as.integer(sum(snp.flag))
-            if (verbose)
-            {
-                cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
-                    n.snp, .plural(n.snp)))
-            }
-            import.chr <- NULL
-        } else if (import.chr == "")
-        {
-            n.snp <- length(snp.id)
-            snp.flag <- rep(TRUE, n.snp)
-            if (verbose)
-                cat(sprintf("Import %d SNP%s.\n", n.snp, .plural(n.snp)))
-            import.chr <- NULL
-        }
-    }
-    if (!is.null(import.chr))
-    {
-        snp.flag <- (chr %in% import.chr) & (snp.pos>0L)
-        n.snp <- sum(snp.flag)
-        if (verbose)
-        {
-            cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
-                .plural(n.snp), paste(import.chr, collapse=",")))
-        }
-    }
-    if (n.snp <= 0L)
-        stop("There is no SNP imported.")
+    snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose)
+    n.snp <- sum(snp.flag)
 
     # call the C function
     g <- .Call(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id),
         n.snp, snp.flag)
 
     # result
-    v <- list(genotype = g, sample.id = sample.id,
+    geno <- list(genotype = g, sample.id = sample.id,
         snp.id = snp.id[snp.flag], snp.position = snp.pos[snp.flag],
         snp.allele = snp.allele[snp.flag], assembly = assembly)
-    class(v) <- "hlaSNPGenoClass"
-    if (anyDuplicated(v$snp.id))
-        warning("'snp.id' is not unique.", immediate.=TRUE)
+    class(geno) <- "hlaSNPGenoClass"
 
     # remove invalid snps
-    if (rm.invalid.allele) v <- .clean_geno(v, verbose)
-
-    v
+    if (rm.invalid.allele) geno <- .clean_geno(geno, verbose)
+    if (anyDuplicated(geno$snp.id))
+        warning("'snp.id' is not unique.", immediate.=TRUE)
+    geno
 }
 
 
@@ -767,9 +773,6 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
     if (!requireNamespace("gdsfmt"))
         stop("The gdsfmt package should be installed.")
 
-    if (!requireNamespace("SNPRelate"))
-        stop("The SNPRelate package should be installed.")
-
     # check
     stopifnot(is.character(gds.fn), length(gds.fn)==1L)
     stopifnot(is.logical(rm.invalid.allele), length(rm.invalid.allele)==1L)
@@ -778,102 +781,115 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
 
     assembly <- .hla_assembly(assembly)
 
+    # detect file format
+    f <- gdsfmt::openfn.gds(gds.fn, readonly=TRUE)
+    at <- gdsfmt::get.attr.gdsn(f$root)
+    if (identical(at$FileFormat, "SNP_ARRAY"))
+        snp_fmt <- TRUE
+    else if (identical(at$FileFormat, "SEQ_ARRAY"))
+        snp_fmt <- FALSE
+    else
+        stop("The input GDS file should be a SNPRelate or SeqArray GDS file.")
+    gdsfmt::closefn.gds(f)
 
-    ####  open the GDS SNP file  ####
-
-    chr <- NULL
-    snp.pos <- NULL
-    snp.id <- NULL
-
-    gfile <- SNPRelate::snpgdsOpen(gds.fn)
-    on.exit({ SNPRelate::snpgdsClose(gfile) })
-
-    # snp.id
-    snp.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(gfile, "snp.id"))
-    v <- gdsfmt::index.gdsn(gfile, "snp.rs.id", silent=TRUE)
-    if (!is.null(v))
+    if (snp_fmt)
     {
-        snp.rsid <- gdsfmt::read.gdsn(v)
-    } else
-        snp.rsid <- snp.id
+        # load SNPRelate
+        if (!requireNamespace("SNPRelate"))
+            stop("The SNPRelate package should be installed.")
 
-    # chromosome
-    chr <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(gfile, "snp.chromosome"))
-
-    # position
-    snp.pos <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(gfile, "snp.position"))
-    snp.pos[!is.finite(snp.pos)] <- 0
-
-    # SNP selection
-    if (length(import.chr) == 1L)
-    {
-        if (import.chr == "xMHC")
-        {
-            info <- hlaLociInfo(assembly)
-            info <- info[info$chrom == 6L, ]
-            st <- info$start[1L] - 1000000L    # MHC region
-            ed <- info$end[1L]   + 1000000L    # MHC region
-            v <- (st <= info$start) & (info$end <= ed)
-            inmhc <- which(v)
-            outmhc <- which(!v)
-
-            st <- min(info$start[inmhc]) - 1000000L
-            ed <- max(info$end[inmhc])   + 1000000L
-            snp.flag <- (chr==6L) & (st<=snp.pos) & (snp.pos<=ed)
-            for (i in outmhc)
-            {
-                st <- info$start[i] - 1000000L
-                ed <- info$end[i]   + 1000000L
-                snp.flag <- snp.flag |
-                    ((chr==6L) & (st<=snp.pos) & (snp.pos<=ed))
-            }
-
-            n.snp <- as.integer(sum(snp.flag))
-            if (verbose)
-            {
-                cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6.\n",
-                    n.snp, .plural(n.snp)))
-            }
-            import.chr <- NULL
-        } else if (import.chr == "")
-        {
-            n.snp <- length(snp.id)
-            snp.flag <- rep(TRUE, n.snp)
-            if (verbose)
-                cat(sprintf("Import %d SNP%s.\n", n.snp, .plural(n.snp)))
-            import.chr <- NULL
-        }
-    }
-    if (!is.null(import.chr))
-    {
-        snp.flag <- (chr %in% import.chr) & (snp.pos>0)
-        n.snp <- sum(snp.flag)
+        # SNPRelate GDS file
         if (verbose)
-        {
-            cat(sprintf("Import %d SNP%s from chromosome %s.\n", n.snp,
-                .plural(n.snp), paste(import.chr, collapse=",")))
-        }
+            cat("Open ", sQuote(gds.fn), "\n", sep="")
+        f <- SNPRelate::snpgdsOpen(gds.fn)
+        on.exit(SNPRelate::snpgdsClose(f))
+
+        # snp.id
+        snp.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "snp.id"))
+        v <- gdsfmt::index.gdsn(f, "snp.rs.id", silent=TRUE)
+        if (!is.null(v))
+            snp.rsid <- gdsfmt::read.gdsn(v)
+        else
+            snp.rsid <- snp.id
+
+        # chromosome
+        chr <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "snp.chromosome"))
+
+        # position
+        snp.pos <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "snp.position"))
+        snp.pos[!is.finite(snp.pos)] <- 0L
+
+        # SNP selection
+        snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose)
+
+        # output
+        geno <- list(
+            genotype = SNPRelate::snpgdsGetGeno(f,
+                snp.id=snp.id[snp.flag], snpfirstdim=TRUE, verbose=FALSE),
+            sample.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "sample.id")),
+            snp.id = snp.rsid[snp.flag],
+            snp.position = snp.pos[snp.flag],
+            snp.allele = gdsfmt::readex.gdsn(gdsfmt::index.gdsn(f, "snp.allele"),
+                sel=snp.flag),
+            assembly = assembly)
+    } else {
+        # load SeqArray
+        if (!requireNamespace("SeqArray"))
+            stop("The SeqArray package should be installed.")
+
+        # SeqArray GDS file
+        if (verbose)
+            cat("Open ", sQuote(gds.fn), "\n", sep="")
+        f <- SeqArray::seqOpen(gds.fn)
+        on.exit(SeqArray::seqClose(f))
+
+        # chromosome
+        chr <- SeqArray::seqGetData(f, "chromosome")
+        # position
+        snp.pos <- SeqArray::seqGetData(f, "position")
+        snp.pos[!is.finite(snp.pos)] <- 0L
+
+        # SNP selection
+        snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose)
+        n.snp <- sum(snp.flag)
+        SeqArray::seqSetFilter(f, variant.sel=snp.flag, verbose=FALSE)
+
+        # snp.id
+        snp.id <- SeqArray::seqGetData(f, "variant.id")
+        rs.id <- SeqArray::seqGetData(f, "annotation/id")
+        m <- sum(is.na(rs.id) | rs.id=="")
+        if (m < n.snp) snp.id <- rs.id
+
+        # allele, alt / ref allele
+        ss <- strsplit(SeqArray::seqGetData(f, "allele"), ",", fixed=TRUE)
+        a1 <- vapply(ss, `[`, "", i=1L)
+        a2 <- vapply(ss, `[`, "", i=2L)
+        a1[is.na(a1)] <- "0"
+        a2[is.na(a2)] <- "0"
+        allele <- paste(a2, a1, sep="/")
+
+        # genotype, only use the first alternative allele
+        g <- SeqArray::seqApply(f, "genotype", function(x) (x[1L,]==1L) + (x[2L,]==1L),
+            as.is="list", .progress=verbose)
+        g <- matrix(unlist(g), ncol=n.snp)
+
+        # output
+        geno <- list(
+            genotype = g,
+            sample.id = SeqArray::seqGetData(f, "sample.id"),
+            snp.id = snp.id,
+            snp.position = SeqArray::seqGetData(f, "position"),
+            snp.allele = allele,
+            assembly = assembly)
     }
-    if (n.snp <= 0L)
-        stop("There is no SNP imported.")
 
     # result
-    v <- list(
-        genotype = SNPRelate::snpgdsGetGeno(gfile,
-            snp.id=snp.id[snp.flag], snpfirstdim=TRUE, verbose=FALSE),
-        sample.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(gfile, "sample.id")),
-        snp.id = snp.rsid[snp.flag],
-        snp.position = snp.pos[snp.flag],
-        snp.allele = gdsfmt::read.gdsn(gdsfmt::index.gdsn(
-            gfile, "snp.allele"))[snp.flag],
-        assembly = assembly)
-    class(v) <- "hlaSNPGenoClass"
-
+    class(geno) <- "hlaSNPGenoClass"
     # remove invalid snps
-    if (rm.invalid.allele) v <- .clean_geno(v, verbose)
-
-    v
+    if (rm.invalid.allele) geno <- .clean_geno(geno, verbose)
+    if (anyDuplicated(geno$snp.id))
+        warning("'snp.id' is not unique.", immediate.=TRUE)
+    geno
 }
 
 
