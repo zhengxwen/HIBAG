@@ -1,7 +1,13 @@
-CHANGES IN VERSION 1.27.7
+CHANGES IN VERSION 1.27.8
 -------------------------
 
     o `hlaPredict()` returns the dosage of HLA alleles with type="dosage"
+
+    o a new option "Pos+Allele" in `hlaPredict()`, `hlaGenoCombine()`,
+      `hlaGenoSwitchStrand()`, `hlaSNPID()` and `hlaCheckSNPs()` for matching genotypes
+      by positions, reference and alternative alleles; it is particularly useful when
+      the training and test set are both matched to the same reference genome,
+      e.g., 1000 Genomes Project
 
 
 CHANGES IN VERSION 1.26.1

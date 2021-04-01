@@ -9,7 +9,7 @@ between the model and SNP genotypes.
 }
 \usage{
 hlaCheckSNPs(model, object,
-    match.type=c("RefSNP+Position", "RefSNP", "Position"), verbose=TRUE)
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"), verbose=TRUE)
 }
 \arguments{
     \item{model}{an object of \code{\link{hlaAttrBagClass}}, or an object of

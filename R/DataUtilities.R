@@ -427,18 +427,23 @@ hlaGenoSwitchStrand <- function(target, template,
         I1 <- match(s, s1); I2 <- match(s, s2)
     }
 
-    # compute allele frequencies
-    target.afreq <- rowMeans(target$genotype, na.rm=TRUE) * 0.5
-    template.afreq <- template$snp.allele.freq
-    if (is.null(template.afreq))
-        template.afreq <- rowMeans(template$genotype, na.rm=TRUE) * 0.5
-
-    # call
-    gz <- .Call(HIBAG_AlleleStrand,
-        template$snp.allele, template.afreq, I1,
-        target$snp.allele, target.afreq, I2,
-        same.strand, length(s))
-    names(gz) <- c("flag", "n.amb", "n.mismatch")
+    if (match.type != "Pos+Allele")
+    {
+        # compute allele frequencies
+        target.afreq <- rowMeans(target$genotype, na.rm=TRUE) * 0.5
+        template.afreq <- template$snp.allele.freq
+        if (is.null(template.afreq))
+            template.afreq <- rowMeans(template$genotype, na.rm=TRUE) * 0.5
+        # call
+        gz <- .Call(HIBAG_AlleleStrand, template$snp.allele, template.afreq, I1,
+            target$snp.allele, target.afreq, I2, same.strand, length(s))
+        names(gz) <- c("flag", "n.amb", "n.mismatch")
+    } else {
+        if (verbose)
+            cat("No allele is flipped since match.type='Pos+Allele'.\n")
+        verbose <- FALSE
+        gz <- list(flag=FALSE)
+    }
 
     if (verbose)
     {
@@ -456,7 +461,7 @@ hlaGenoSwitchStrand <- function(target, template,
     "There %s %d variant%s in total with switched allelic strand order%s.\n",
                 a, x, s, s))
         } else {
-            cat("No allelic strand orders are switched.\n")
+            cat("No allelic strand or A/B allele is flipped.\n")
         }
 
         # the number of ambiguity
@@ -493,10 +498,9 @@ hlaGenoSwitchStrand <- function(target, template,
     # output
     geno <- target$genotype[I2, , drop=FALSE]
     for (i in which(gz$flag)) geno[i,] <- 2L - geno[i,]
-    colnames(geno) <- rownames(geno) <- NULL
     rv <- list(genotype = geno,
-        sample.id = target$sample.id,
-        snp.id    = target$snp.id[I2],
+        sample.id    = target$sample.id,
+        snp.id       = target$snp.id[I2],
         snp.position = target$snp.position[I2],
         snp.allele   = template$snp.allele[I1],
         assembly     = template$assembly)
@@ -1871,7 +1875,7 @@ hlaCheckAllele <- function(allele1, allele2)
 #
 
 hlaCheckSNPs <- function(model, object,
-    match.type=c("RefSNP+Position", "RefSNP", "Position"), verbose=TRUE)
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"), verbose=TRUE)
 {
     # check
     stopifnot(inherits(model, "hlaAttrBagClass") |
