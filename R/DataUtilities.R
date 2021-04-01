@@ -690,7 +690,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     }
     if (!is.null(import.chr))
     {
-        snp.flag <- (chr %in% import.chr) & (snp.pos>0)
+        snp.flag <- (chr %in% import.chr) & (snp.pos>0L)
         n.snp <- sum(snp.flag)
         if (verbose)
         {
@@ -710,6 +710,8 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         snp.id = snp.id[snp.flag], snp.position = snp.pos[snp.flag],
         snp.allele = snp.allele[snp.flag], assembly = assembly)
     class(v) <- "hlaSNPGenoClass"
+    if (anyDuplicated(v$snp.id))
+        warning("'snp.id' is not unique.", immediate.=TRUE)
 
     # remove invalid snps
     if (rm.invalid.allele)
