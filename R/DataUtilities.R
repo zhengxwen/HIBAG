@@ -589,6 +589,42 @@ hlaGeno2PED <- function(geno, out.fn)
 # Convert from PLINK BED format
 #
 
+.clean_geno <- function(v, verbose)
+{
+    # check duplicated SNP ID
+    flag <- duplicated(v$snp.id)
+    if (any(flag))
+    {
+        if (verbose)
+        {
+            cat(sprintf("%d SNP%s with duplicated ID have been removed.\n",
+                sum(flag), .plural(sum(flag))))
+        }
+        v <- hlaGenoSubset(v, snp.sel=!flag)
+    }
+
+    # check invalid alleles
+    snp.allele <- v$snp.allele
+    snp.allele[is.na(snp.allele)] <- "?/?"
+    flag <- vapply(strsplit(snp.allele, "/"), FUN=function(x)
+        {
+            if (length(x) == 2L)
+                all(x %in% c("A", "G", "C", "T"))
+            else
+                FALSE
+        }, TRUE)
+    if (any(!flag) & verbose)
+    {
+        cat(sprintf(
+            "%d SNP%s with invalid alleles have been removed.\n",
+            sum(!flag), .plural(sum(!flag))))
+    }
+
+    # get a subset
+    if (any(!flag)) v <- hlaGenoSubset(v, snp.sel=flag)
+    v
+}
+
 hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     import.chr="xMHC", assembly="auto", verbose=TRUE)
 {
@@ -714,44 +750,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         warning("'snp.id' is not unique.", immediate.=TRUE)
 
     # remove invalid snps
-    if (rm.invalid.allele)
-    {
-        # check duplicated SNP ID
-        flag <- duplicated(v$snp.id)
-        if (any(flag))
-        {
-            if (verbose)
-            {
-                cat(sprintf("%d SNP%s with duplicated ID have been removed.\n",
-                    sum(flag), .plural(sum(flag))))
-            }
-            v <- hlaGenoSubset(v, snp.sel=!flag)
-        }
-
-        # check invalid alleles
-        snp.allele <- v$snp.allele
-        snp.allele[is.na(snp.allele)] <- "?/?"
-        flag <- sapply(strsplit(snp.allele, "/"),
-            FUN=function(x)
-            {
-                if (length(x) == 2L)
-                {
-                    all(x %in% c("A", "G", "C", "T"))
-                } else {
-                    FALSE
-                }
-            }
-        )
-        if (any(!flag) & verbose)
-        {
-            cat(sprintf(
-                "%d SNP%s with invalid alleles have been removed.\n",
-                sum(!flag), .plural(sum(!flag))))
-        }
-
-        # get a subset
-        v <- hlaGenoSubset(v, snp.sel=flag)
-    }
+    if (rm.invalid.allele) v <- .clean_geno(v, verbose)
 
     v
 }
@@ -764,17 +763,12 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
     assembly="auto", verbose=TRUE)
 {
-    # library
+    # check library
     if (!requireNamespace("gdsfmt"))
-    {
-        warning("The gdsfmt package should be installed.", immediate.=TRUE)
-        return(NULL)
-    }
+        stop("The gdsfmt package should be installed.")
+
     if (!requireNamespace("SNPRelate"))
-    {
-        warning("The SNPRelate package should be installed.", immediate.=TRUE)
-        return(NULL)
-    }
+        stop("The SNPRelate package should be installed.")
 
     # check
     stopifnot(is.character(gds.fn), length(gds.fn)==1L)
@@ -877,41 +871,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
     class(v) <- "hlaSNPGenoClass"
 
     # remove invalid snps
-    if (rm.invalid.allele)
-    {
-        # check duplicated SNP ID
-        flag <- duplicated(v$snp.id)
-        if (any(flag))
-        {
-            if (verbose)
-            {
-                cat(sprintf("%d SNP%s with duplicated ID have been removed.\n",
-                    sum(flag), .plural(sum(flag))))
-            }
-            v <- hlaGenoSubset(v, snp.sel=!flag)
-        }
-
-        # check invalid alleles
-        snp.allele <- v$snp.allele
-        snp.allele[is.na(snp.allele)] <- "?/?"
-        flag <- sapply(strsplit(snp.allele, "/"),
-            function(x)
-            {
-                if (length(x) == 2L)
-                {
-                    all(x %in% c("A", "G", "C", "T"))
-                } else {
-                    FALSE
-                }
-            }
-        )
-        if (any(!flag) & verbose)
-        {
-            cat(sprintf("%d SNP%s with invalid alleles have been removed.\n",
-                sum(!flag), .plural(sum(!flag))))
-        }
-        v <- hlaGenoSubset(v, snp.sel=flag)
-    }
+    if (rm.invalid.allele) v <- .clean_geno(v, verbose)
 
     v
 }

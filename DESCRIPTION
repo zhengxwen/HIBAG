@@ -5,7 +5,7 @@ Version: 1.27.8
 Date: 2021-03-31
 Depends: R (>= 3.2.0)
 Imports: methods, RcppParallel
-Suggests: parallel, knitr, gdsfmt, SNPRelate, ggplot2, reshape2
+Suggests: parallel, knitr, ggplot2, reshape2, gdsfmt, SNPRelate, SeqArray
 LinkingTo: RcppParallel
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu", comment=c(ORCID="0000-0002-1390-0708")),
@@ -25,5 +25,4 @@ VignetteBuilder: knitr
 SystemRequirements: C++11, GNU make
 ByteCompile: TRUE
 biocViews: Genetics, StatisticalMethod
-URL: http://github.com/zhengxwen/HIBAG,
-    https://hibag.s3.amazonaws.com/index.html
+URL: http://github.com/zhengxwen/HIBAG, https://hibag.s3.amazonaws.com/index.html
