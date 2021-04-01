@@ -437,7 +437,7 @@ hlaGenoSwitchStrand <- function(target, template,
         # call
         gz <- .Call(HIBAG_AlleleStrand, template$snp.allele, template.afreq, I1,
             target$snp.allele, target.afreq, I2, same.strand, length(s))
-        names(gz) <- c("flag", "n.amb", "n.mismatch")
+        names(gz) <- c("flag", "n.amb", "n.mismatch", "n.swapstrand")
     } else {
         if (verbose)
             cat("No allele is flipped since match.type='Pos+Allele'.\n")
@@ -450,48 +450,26 @@ hlaGenoSwitchStrand <- function(target, template,
         # switched allele pairs
         x <- sum(gz$flag)
         if (x > 0L)
-        {
-            if (x > 1L)
-            {
-                a <- "are"; s <- "s"
-            } else {
-                a <- "is"; s <- ""
-            }
-            cat(sprintf(
-    "There %s %d variant%s in total with switched allelic strand order%s.\n",
-                a, x, s, s))
-        } else {
+            cat("# of SNP loci with flipped alleles: ", x, "\n", sep="")
+        else
             cat("No allelic strand or A/B allele is flipped.\n")
-        }
+
+        # the number of swapped strands
+        if (gz$n.swapstrand > 0L)
+            cat("# of SNP loci with swapped strands: ", gz$n.swapstrand, "\n", sep="")
 
         # the number of ambiguity
         if (gz$n.amb > 0L)
         {
-            if (gz$n.amb > 1L)
-            {
-                a <- "are"; s <- "s"
-            } else {
-                a <- "is"; s <- ""
-            }
-            cat("Due to stand ambiguity (such like C/G),",
-                sprintf("the allelic strand order%s of %d variant%s %s",
-                    s, gz$n.amb, s, a),
-                "determined by comparing allele frequencies.\n")
+            cat("# of SNP loci with strand ambiguity (e.g., C/G): ", gz$n.amb,
+                " (flipped allele was determined by comparing frequencies)\n", sep="")
         }
 
         # the number of mismatching
         if (gz$n.mismatch > 0L)
         {
-            if (gz$n.mismatch > 1L)
-            {
-                a <- "are"; s <- "s"
-            } else {
-                a <- "is"; s <- ""
-            }
-            cat("Due to mismatching alleles,",
-                sprintf("the allelic strand order%s of %d variant%s %s",
-                    s, gz$n.mismatch, s, a),
-                "determined by comparing allele frequencies.\n")
+            cat("# of SNP loci with mismatched alleles: ", gz$n.mismatch,
+                " (flipped allele was determined by comparing frequencies)\n", sep="")
         }
     }
 
@@ -563,9 +541,7 @@ hlaGenoCombine <- function(geno1, geno2,
         snp.id = tmp1$snp.id, snp.position = tmp1$snp.position,
         snp.allele = tmp1$snp.allele,
         assembly = tmp1$assembly)
-    colnames(rv$genotype) <- NULL
-    rownames(rv$genotype) <- NULL
-
+    colnames(rv$genotype) <- rownames(rv$genotype) <- NULL
     class(rv) <- "hlaSNPGenoClass"
     rv
 }
@@ -630,26 +606,26 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     bed.flag <- .Call(HIBAG_BEDFlag, bed.fn)
     if (verbose)
     {
-        cat("Open \"", bed.fn, sep="")
+        cat("Open", sQuote(bed.fn))
         if (bed.flag == 0L)
-            cat("\" in the individual-major mode.\n")
+            cat(" (the individual-major mode)\n")
         else
-            cat("\" in the SNP-major mode.\n")
+            cat(" (the SNP-major mode)\n")
     }
 
     # read fam.fn
     famD <- read.table(fam.fn, header=FALSE, stringsAsFactors=FALSE)
     names(famD) <- c("FamilyID", "InvID", "PatID", "MatID", "Sex", "Pheno")
-    if (length(unique(famD$InvID)) == dim(famD)[1L])
+    if (!anyDuplicated(famD$InvID))
     {
         sample.id <- famD$InvID
     } else {
         sample.id <- paste(famD$FamilyID, famD$InvID, sep="-")
-        if (length(unique(sample.id)) != dim(famD)[1L])
+        if (anyDuplicated(sample.id))
             stop("IDs in PLINK bed are not unique!")
     }
     if (verbose)
-        cat("Open \"", fam.fn, "\".\n", sep="")
+        cat("Open ", sQuote(fam.fn), "\n", sep="")
 
     # read bim.fn
     bimD <- read.table(bim.fn, header=FALSE, stringsAsFactors=FALSE)
@@ -659,7 +635,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     chr <- bimD$chr; chr[is.na(chr)] <- ""
     # position
     snp.pos <- bimD$pos
-    snp.pos[!is.finite(snp.pos)] <- 0
+    snp.pos[!is.finite(snp.pos)] <- 0L
 
     # snp.id
     snp.id <- bimD$snp.id
@@ -669,7 +645,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
     # snp allele
     snp.allele <- paste(bimD$allele1, bimD$allele2, sep="/")
     if (verbose)
-        cat("Open \"", bim.fn, "\".\n", sep="")
+        cat("Open ", sQuote(bim.fn), "\n", sep="")
 
     # SNP selection
     if (length(import.chr) == 1L)
@@ -726,11 +702,11 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
         stop("There is no SNP imported.")
 
     # call the C function
-    v <- .Call(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id),
+    g <- .Call(HIBAG_ConvBED, bed.fn, length(sample.id), length(snp.id),
         n.snp, snp.flag)
 
     # result
-    v <- list(genotype = v, sample.id = sample.id,
+    v <- list(genotype = g, sample.id = sample.id,
         snp.id = snp.id[snp.flag], snp.position = snp.pos[snp.flag],
         snp.allele = snp.allele[snp.flag], assembly = assembly)
     class(v) <- "hlaSNPGenoClass"

@@ -206,7 +206,6 @@ static inline void split_allele(const char *txt, string &allele1, string &allele
 		allele1.assign(txt, p);
 		for (unsigned int i=0; i < allele1.size(); i++)
 			allele1[i] = toupper(allele1[i]);
-
 		// the second allele	
 		allele2 = p + 1;
 		for (unsigned int i=0; i < allele2.size(); i++)
@@ -235,7 +234,7 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 		map<string, string> MAP;
 		MAP["A"] = "T"; MAP["C"] = "G"; MAP["G"] = "C"; MAP["T"] = "A";
 
-		rv_ans = PROTECT(NEW_LIST(3));
+		rv_ans = PROTECT(NEW_LIST(4));
 
 		SEXP Flag = PROTECT(NEW_LOGICAL(n));
 		SET_ELEMENT(rv_ans, 0, Flag);
@@ -243,11 +242,12 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 
 		int out_n_stand_amb = 0;
 		int out_n_mismatch = 0;
+		int out_n_swap_stand = 0;
 
 		// loop for each SNP
 		for (int i=0; i < n; i++)
 		{
-			// if true, need switch strand
+			// if true, need flipping A&B alleles
 			bool switch_flag = false;
 
 			// if true, need to compare the allele frequencies
@@ -296,9 +296,13 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 							// for example, + C/G <---> - G/C, strand ambi
 							if (s1 == p2)
 								switch_freq_detect = 1;
+							else
+								out_n_swap_stand++;
 						} else if ( (s1 == MAP[p2]) && (s2 == MAP[p1]) )
+						{
 							switch_flag = true;
-						else
+							out_n_swap_stand++;
+						} else
 							switch_freq_detect = 2;
 					} else
 						switch_freq_detect = 2;
@@ -332,6 +336,7 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 
 		SET_ELEMENT(rv_ans, 1, ScalarInteger(out_n_stand_amb));
 		SET_ELEMENT(rv_ans, 2, ScalarInteger(out_n_mismatch));
+		SET_ELEMENT(rv_ans, 3, ScalarInteger(out_n_swap_stand));
 		UNPROTECT(2);
 
 	CORE_CATCH

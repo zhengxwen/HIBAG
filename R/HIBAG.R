@@ -234,7 +234,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     {
         if (verbose)
             cat("Calculating matching proportion:\n")
-        pd <- hlaPredict(mod, snp, cl=nthread, verbose=FALSE)
+        pd <- hlaPredict(mod, snp, cl=nthread, match.type="Pos+Allele", verbose=FALSE)
         mod$matching <- pd$value$matching
         if (verbose)
         {
