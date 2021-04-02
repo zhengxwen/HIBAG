@@ -49,7 +49,7 @@
 .hla_gene_name_string <- function(geno.name)
 {
     stopifnot(is.character(geno.name))
-    i <- grep(paste("\\b",c(
+    i <- grep(paste0("\\b(", paste(c(
             # HLA Classic I genes
             "A", "B", "C", "E", "F", "G",
             # HLA Classic II genes
@@ -57,10 +57,8 @@
             "DRA", "DRB\\d", "DQA\\d", "DQB\\d", "DPA\\d", "DPB\\d",
             # HLA Classic III genes
             "LTA", "TNF", "LTB", "HSPA1L", "HSPA1A", "HSPA1B",
-            "C2", "BF", "C4A", "C4B"),
-        "\\b", collapse="|"),
-        geno.name)
-    geno.name[i] <- paste("HLA -", geno.name[i])
+            "C2", "BF", "C4A", "C4B"), collapse="|"), ")\\b"), geno.name)
+    geno.name[i] <- paste0("HLA-", geno.name[i])
     geno.name
 }
 
