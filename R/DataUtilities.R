@@ -658,7 +658,7 @@ hlaGeno2PED <- function(geno, out.fn)
             import.chr <- NULL
         } else if (import.chr == "")
         {
-            n.snp <- length(snp.id)
+            n.snp <- length(snp.pos)
             snp.flag <- rep(TRUE, n.snp)
             if (verbose)
                 cat(sprintf("Import %d SNP%s\n", n.snp, .plural(n.snp)))
