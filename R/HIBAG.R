@@ -575,7 +575,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
                     stringsAsFactors=FALSE)
                 tab <- rbind(tab, d)
             }
-            names(tab) <- c("match.type=\"\"", "  missing SNPs #", "")
+            names(tab) <- c("match.type=\"--\"", "  missing SNPs #", "")
             tab[1L,3L] <- paste(tab[1L,3L], "^1")
             tab[2L,3L] <- paste(tab[2L,3L], "^2")
             print(tab, row.names=FALSE)
