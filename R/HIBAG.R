@@ -485,10 +485,13 @@ hlaPredict <- function(object, snp, cl=FALSE,
     {
         # get the number of classifiers
         CNum <- .Call(HIBAG_GetNumClassifiers, object$model)
-        cat("HIBAG model:\n",
+        s <- object$hla.allele
+        if (length(s) > 3L) s <- c(s[1:3], "...")
+        cat("HIBAG model for ", .hla_gene_name_string(object$hla.locus), ":\n",
             "    ", CNum, " individual classifier", .plural(CNum), "\n",
             "    ", length(object$snp.id), " SNPs\n",
-            "    ", length(object$hla.allele), " unique HLA alleles\n", sep="")
+            "    ", length(object$hla.allele), " unique HLA alleles: ",
+            paste(s, collapse=", "), "\n", sep="")
         cat("Prediction:\n")
         if (vote_method == 1L)
             cat("    based on the averaged posterior probabilities\n")
@@ -555,6 +558,34 @@ hlaPredict <- function(object, snp, cl=FALSE,
 
         ##################################################
 
+        # verbose for different matching methods
+        if (verbose)
+        {
+            cat("Matching the SNPs between the model and the test data:\n")
+            tab <- NULL
+            for (tp in c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"))
+            {
+                s1 <- hlaSNPID(object, match.type)
+                s2 <- hlaSNPID(snp, match.type)
+                s <- unique(intersect(s1, s2))
+                mcnt <- length(s1) - length(s)
+                d <- data.frame(c1=paste0("   ", tp),
+                    c2=sprintf("%d (%.1f%%)", mcnt, mcnt/length(s1)*100),
+                    c3=ifelse(tp==match.type, "*being used", ""),
+                    stringsAsFactors=FALSE)
+                tab <- rbind(tab, d)
+            }
+            names(tab) <- c("match.type=\"\"", "  missing SNPs #", "")
+            tab[1L,3L] <- paste(tab[1L,3L], "^1")
+            tab[2L,3L] <- paste(tab[2L,3L], "^2")
+            print(tab, row.names=FALSE)
+            cat("    ^1: useful if ambiguous strands in array-based platforms\n")
+            cat("    ^2: suggested if the model and test data are matched to the same reference genome\n")
+            s <- object$appendix$platform
+            if (is.null(s)) s <- "not applicable" else s <- paste(s, collapse=",")
+            cat("    Model platform: ", s, "\n", sep="")
+        }
+
         geno.sampid <- snp$sample.id
         obj.id <- hlaSNPID(object, match.type)
         geno.id <- hlaSNPID(snp, match.type)
@@ -581,6 +612,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
 
             # snp selection
             snp.sel <- match(obj.id, geno.id)
+            snp.sel[duplicated(snp.sel)] <- NA_integer_
             snp.allele <- snp$snp.allele
             snp.allele[is.na(snp.allele)] <- ""
 
@@ -597,56 +629,6 @@ hlaPredict <- function(object, snp, cl=FALSE,
 
             # the total number of missing snp
             missing.cnt <- sum(flag)
-
-            # verbose
-            if (verbose)
-            {
-                if (missing.cnt > 0L)
-                {
-                    cat(sprintf("There %s %d missing SNP%s (%0.1f%%).\n",
-                        ifelse(missing.cnt > 1L, "are", "is"),
-                        missing.cnt, .plural(missing.cnt),
-                        100*missing.cnt/length(obj.id)))
-                }
-            }
-
-            # try alternative matching if possible
-            if (match.type == "RefSNP+Position")
-            {
-                # match by RefSNP IDs
-                s1 <- hlaSNPID(object, "RefSNP")
-                s2 <- hlaSNPID(snp, "RefSNP")
-                mcnt.id <- length(s1) - length(intersect(s1, s2))
-
-                # match by positions
-                s1 <- hlaSNPID(object, "Position")
-                s2 <- hlaSNPID(snp, "Position")
-                mcnt.pos <- length(s1) - length(intersect(s1, s2))
-
-                if (((mcnt.id < missing.cnt) |
-                    (mcnt.pos < missing.cnt)) & verbose)
-                {
-                    message(
-                        "Hint:\n",
-                        "The current SNP matching requires both RefSNP IDs ",
-                        "and positions, and lower missing fraction(s) could ",
-                        "be gained:\n",
-                        sprintf("\t%0.1f%% by matching RefSNP IDs only, ",
-                            100*mcnt.id/length(s1)),
-                        "call 'hlaPredict(..., match.type=\"RefSNP\")'\n",
-                        sprintf("\t%0.1f%% by matching positions only, ",
-                            100*mcnt.pos/length(s1)),
-                        "call 'hlaPredict(..., match.type=\"Position\")'\n",
-                        "Any concern about SNP mismatching should be emailed ",
-                        "to the genotyping platform provider.")
-
-                    if (!is.null(object$appendix$platform))
-                    {
-                        message("The supported platform(s): ",
-                            object$appendix$platform)
-                    }
-                }
-            }
 
             if (missing.cnt == length(obj.id))
             {
