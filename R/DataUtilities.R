@@ -460,14 +460,14 @@ hlaGenoSwitchStrand <- function(target, template,
         if (gz$n.amb > 0L)
         {
             cat("# of SNP loci with strand ambiguity (e.g., C/G): ", gz$n.amb,
-                " (flipped allele was determined by comparing frequencies)\n", sep="")
+                " (comparing allele frequencies)\n", sep="")
         }
 
         # the number of mismatching
         if (gz$n.mismatch > 0L)
         {
             cat("# of SNP loci with mismatched alleles: ", gz$n.mismatch,
-                " (flipped allele was determined by comparing frequencies)\n", sep="")
+                " (comparing allele frequencies)\n", sep="")
         }
     }
 
@@ -1795,6 +1795,18 @@ summary.hlaAlleleClass <- function(object, verbose=TRUE, ...)
         {
             cat("Matching proportion of SNP haplotype:\n")
             print(summary(p))
+        }
+
+        if (!is.null(hla$dosage))
+        {
+            cat("Dosages:\n$dosage -")
+            str(hla$dosage)
+        }
+
+        if (!is.null(hla$postprob))
+        {
+            cat("Probabilities:\n$postprob -")
+            str(hla$postprob)
         }
     }
 
