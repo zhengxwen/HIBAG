@@ -565,8 +565,8 @@ hlaPredict <- function(object, snp, cl=FALSE,
             tab <- NULL
             for (tp in c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"))
             {
-                s1 <- hlaSNPID(object, match.type)
-                s2 <- hlaSNPID(snp, match.type)
+                s1 <- hlaSNPID(object, tp)
+                s2 <- hlaSNPID(snp, tp)
                 s <- unique(intersect(s1, s2))
                 mcnt <- length(s1) - length(s)
                 d <- data.frame(c1=paste0("   ", tp),
