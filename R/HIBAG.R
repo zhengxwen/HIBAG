@@ -114,7 +114,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     tmp.snp.position <- snp$snp.position
     tmp.snp.allele <- snp$snp.allele
 
-    # remove mono-SNPs
+    # remove mono-SNPs and MAF
     msg <- NULL
     if (mono.rm || is.finite(maf))
     {
@@ -213,13 +213,13 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     {
         cat(sprintf("Build a HIBAG model with %d individual classifier%s:\n",
             nclassifier, .plural(nclassifier)))
+        cat(msg)
         cat("    # of SNPs randomly sampled as candidates for each selection: ",
             mtry, "\n", sep="")
         cat("    # of SNPs: ", n.snp, "\n", sep="")
         cat("    # of samples: ", n.samp, "\n", sep="")
         s <- ifelse(!grepl("^KIR", hla$locus), "HLA", "KIR")
         cat("    # of unique ", s, " alleles: ", n.hla, "\n", sep="")
-        cat(msg)
         cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]][1L], "\n", sep="")
     }
 
