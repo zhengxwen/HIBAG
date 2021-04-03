@@ -11,6 +11,8 @@ CHANGES IN VERSION 1.27.8
 
     o `hlaGDS2Geno()` supports SeqArray GDS files
 
+    o a new option 'maf' in `hlaAttrBagging()` and `hlaParallelAttrBagging()`
+
 
 CHANGES IN VERSION 1.26.1
 -------------------------

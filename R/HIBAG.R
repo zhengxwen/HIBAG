@@ -46,7 +46,7 @@
 #
 
 hlaAttrBagging <- function(hla, snp, nclassifier=100L,
-    mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE, mono.rm=TRUE,
+    mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE, mono.rm=TRUE, maf=NaN,
     nthread=1L, verbose=TRUE, verbose.detail=FALSE)
 {
     # check
@@ -57,6 +57,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
+    stopifnot(is.numeric(maf), length(maf)==1L)
     stopifnot(is.numeric(nthread) | is.logical(nthread), length(nthread)==1L,
         !is.na(nthread))
     stopifnot(is.logical(verbose), length(verbose)==1L)
@@ -114,23 +115,44 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     tmp.snp.allele <- snp$snp.allele
 
     # remove mono-SNPs
-    if (mono.rm)
+    msg <- NULL
+    if (mono.rm || is.finite(maf))
     {
-        snpsel <- rowMeans(snp.geno, na.rm=TRUE)
-        snpsel[!is.finite(snpsel)] <- 0
-        snpsel <- (0 < snpsel) & (snpsel < 2)
-        if (sum(!snpsel) > 0L)
+        msg <- paste0("    MAF threshold: ", maf, "\n")
+        mf <- rowMeans(snp.geno, na.rm=TRUE) * 0.5
+        mf <- pmin(mf, 1-mf)
+        mf[!is.finite(mf)] <- 0
+        snpsel <- rep(TRUE, length(mf))
+        if (mono.rm)
         {
-            snp.geno <- snp.geno[snpsel, ]
-            if (verbose)
+            n0 <- sum(snpsel)
+            snpsel <- snpsel & (mf > 0)
+            n1 <- sum(snpsel)
+            a <- n0 - n1
+            if (a > 0L)
             {
-                a <- sum(!snpsel)
-                if (a > 0L)
-                    cat(sprintf("Exclude %d monomorphic SNP%s\n", a, .plural(a)))
+                msg <- paste0(msg, "    excluding ", a, " monomorphic SNP",
+                    .plural(a), "\n")
             }
+        }
+        if (is.finite(maf))
+        {
+            n0 <- sum(snpsel)
+            snpsel <- snpsel & (mf >= maf)
+            n1 <- sum(snpsel)
+            a <- n0 - n1
+            if (a > 0L)
+            {
+                msg <- paste0(msg, "    excluding ", a, " SNP", .plural(a),
+                    " for MAF threshold\n")
+            }
+        }
+        if (!all(snpsel))
+        {
             tmp.snp.id <- tmp.snp.id[snpsel]
             tmp.snp.position <- tmp.snp.position[snpsel]
             tmp.snp.allele <- tmp.snp.allele[snpsel]
+            snp.geno <- snp.geno[snpsel, , drop=FALSE]
         }
     }
 
@@ -197,6 +219,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
         cat("    # of samples: ", n.samp, "\n", sep="")
         s <- ifelse(!grepl("^KIR", hla$locus), "HLA", "KIR")
         cat("    # of unique ", s, " alleles: ", n.hla, "\n", sep="")
+        cat(msg)
         cat("CPU flags: ", .Call(HIBAG_Kernel_Version)[[2L]][1L], "\n", sep="")
     }
 
@@ -270,7 +293,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
 
 hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
-    mono.rm=TRUE, stop.cluster=FALSE, verbose=TRUE, verbose.detail=FALSE)
+    mono.rm=TRUE, maf=NaN, stop.cluster=FALSE, verbose=TRUE, verbose.detail=FALSE)
 {
     # check
     stopifnot(is.null(cl) | is.logical(cl) | is.numeric(cl) |
@@ -285,6 +308,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
     stopifnot(is.logical(prune), length(prune)==1L)
     stopifnot(is.logical(na.rm), length(na.rm)==1L)
     stopifnot(is.logical(mono.rm), length(mono.rm)==1L)
+    stopifnot(is.numeric(maf), length(maf)==1L)
     stopifnot(is.logical(stop.cluster), length(stop.cluster)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.detail), length(verbose.detail)==1L)
@@ -319,7 +343,7 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
             fun = function(job, hla, snp, mtry, prune, na.rm, mono.rm)
             {
                 model <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=-1L,
-                    mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
+                    mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm, maf=maf,
                     verbose=FALSE, verbose.detail=FALSE)
                 mobj <- hlaModelToObj(model)
                 hlaClose(model)
@@ -377,11 +401,11 @@ hlaParallelAttrBagging <- function(cl, hla, snp, auto.save="",
         if (auto.save == "")
         {
             mod <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=-nclassifier,
-                mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
+                mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm, maf=maf,
                 nthread=nthread, verbose=verbose, verbose.detail=verbose.detail)
         } else {
             mod <- hlaAttrBagging(hla=hla, snp=snp, nclassifier=0L,
-                mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm,
+                mtry=mtry, prune=prune, na.rm=na.rm, mono.rm=mono.rm, maf=maf,
                 nthread=nthread, verbose=verbose, verbose.detail=verbose.detail)
             mtry <- mod$mtry
             on.exit({ .packageEnv$snp.geno <- NULL }, add=TRUE)
