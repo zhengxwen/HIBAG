@@ -471,17 +471,17 @@ hlaClose <- function(model)
 predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
     type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE, ...)
+    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
 {
     stopifnot(inherits(object, "hlaAttrBagClass"))
     hlaPredict(object, snp, cl, type, vote, allele.check, match.type,
-        same.strand, verbose)
+        same.strand, verbose, verbose.match)
 }
 
 hlaPredict <- function(object, snp, cl=FALSE,
     type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE)
+    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
 {
     # check
     stopifnot(inherits(object, "hlaAttrBagClass"))
@@ -489,6 +489,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
     stopifnot(is.logical(allele.check), length(allele.check)==1L)
     stopifnot(is.logical(same.strand), length(same.strand)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
+    stopifnot(is.logical(verbose.match), length(verbose.match)==1L)
     type <- match.arg(type)
     vote <- match.arg(vote)
     match.type <- match.arg(match.type)
@@ -583,7 +584,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
         ##################################################
 
         # verbose for different matching methods
-        if (verbose)
+        if (verbose && verbose.match)
         {
             cat("Matching the SNPs between the model and the test data:\n")
             tab <- NULL
@@ -600,14 +601,17 @@ hlaPredict <- function(object, snp, cl=FALSE,
                 tab <- rbind(tab, d)
             }
             names(tab) <- c("match.type=\"--\"", "  missing SNPs #", "")
-            tab[1L,3L] <- paste(tab[1L,3L], "^1")
-            tab[2L,3L] <- paste(tab[2L,3L], "^2")
+            tab[1L,3L] <- paste(tab[1L,3L], "[1]")
+            tab[2L,3L] <- paste(tab[2L,3L], "[2]")
             print(tab, row.names=FALSE)
-            cat("    ^1: useful if ambiguous strands in array-based platforms\n")
-            cat("    ^2: suggested if the model and test data are matched to the same reference genome\n")
+            cat("      [1]: useful if ambiguous strands on array-based platforms\n")
+            cat("      [2]: suggested if the model and test data have been matched to the same reference genome\n")
             s <- object$appendix$platform
             if (is.null(s)) s <- "not applicable" else s <- paste(s, collapse=",")
             cat("    Model platform: ", s, "\n", sep="")
+        } else if (verbose)
+        {
+            cat("Using match.type='", match.type, "' for SNP matching\n", sep="")
         }
 
         geno.sampid <- snp$sample.id

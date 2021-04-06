@@ -11,11 +11,11 @@
 hlaPredict(object, snp, cl=FALSE,
     type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE)
+    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
 \method{predict}{hlaAttrBagClass}(object, snp, cl=FALSE,
     type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
     allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE, ...)
+    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
 }
 \arguments{
     \item{object}{a model of \code{\link{hlaAttrBagClass}}}
@@ -42,6 +42,8 @@ hlaPredict(object, snp, cl=FALSE,
         (e.g., forward strand); otherwise, \code{FALSE} not assuming whether
         on the same strand or not}
     \item{verbose}{if TRUE, show information}
+    \item{verbose.match}{if TRUE, show missing SNP proportions for different
+        \code{match.type}}
     \item{...}{unused}
 }
 \value{
