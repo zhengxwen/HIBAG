@@ -357,29 +357,39 @@ hlaGenoSubset <- function(genoobj, samp.sel=NULL, snp.sel=NULL, snp.id=NULL)
 #
 
 hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
-    assembly="auto")
+    assembly="auto", pos.mid=NA_integer_)
 {
     # check
     stopifnot(inherits(genoobj, "hlaSNPGenoClass"))
+    stopifnot(is.character(locus), length(locus)==1L, !is.na(locus))
+    stopifnot(is.numeric(flank.bp), length(flank.bp)==1L, is.finite(flank.bp))
+    stopifnot(is.character(assembly), length(assembly)==1L, !is.na(assembly))
+    stopifnot(is.numeric(pos.mid), length(pos.mid)==1L)
 
-    if (assembly=="auto") assembly <- genoobj$assembly
-    assembly <- .hla_assembly(assembly)
-    HLAinfo <- hlaLociInfo(assembly)
-
-    if (locus %in% rownames(HLAinfo))
+    # initialize
+    if (locus != "any")
     {
-        ps <- HLAinfo[locus, "start"]
-        pe <- HLAinfo[locus, "end"]
+        assembly <- .hla_assembly(assembly)
+        HLAInfo <- hlaLociInfo(assembly)
+        ID <- rownames(HLAInfo)
+        if (!(locus %in% ID))
+            stop(paste("'locus' should be one of", paste(ID, collapse=", ")))
+        pos.start <- HLAInfo[locus, "start"] - flank.bp
+        pos.end <- HLAInfo[locus, "end"] + flank.bp
+        if (!is.na(pos.mid))
+            warning("'pos.mid' is ignored when 'locus' is specified.", immediate.=TRUE)
     } else {
-        ps <- pe <- NA_integer_
+        if (!is.finite(pos.mid))
+            stop("'pos.mid' should be specified.")
+        pos.start <- pos.mid - flank.bp
+        pos.end <- pos.mid + flank.bp
     }
 
-    if (!is.na(ps) & !is.na(pe))
+    if (is.finite(pos.start) & is.finite(pos.end))
     {
-        ps <- ps - flank.bp
-        pe <- pe + flank.bp
-        rv <- hlaGenoSubset(genoobj,
-            snp.sel=(ps<=genoobj$snp.position) & (genoobj$snp.position<=pe))
+        flag <- (pos.start <= genoobj$snp.position) & (genoobj$snp.position <= pos.end)
+        flag[is.na(flag)] <- FALSE
+        rv <- hlaGenoSubset(genoobj, snp.sel=flag)
     } else
         stop("No position information for ", locus, " on ", assembly)
 
@@ -1700,30 +1710,33 @@ hlaSplitAllele <- function(HLA, train.prop=0.5)
 #
 
 hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
-    assembly="auto", pos.start=NA_integer_, pos.end=NA_integer_)
+    assembly="auto", pos.mid=NA_integer_)
 {
     # check
     stopifnot(length(snp.id) == length(position))
     stopifnot(is.character(locus), length(locus)==1L, !is.na(locus))
+    stopifnot(is.numeric(flank.bp), length(flank.bp)==1L, is.finite(flank.bp))
+    stopifnot(is.character(assembly), length(assembly)==1L, !is.na(assembly))
+    stopifnot(is.numeric(pos.mid), length(pos.mid)==1L)
 
-    # init
+    # initialize
     if (locus != "any")
     {
         assembly <- .hla_assembly(assembly)
         HLAInfo <- hlaLociInfo(assembly)
         ID <- rownames(HLAInfo)
-
         if (!(locus %in% ID))
             stop(paste("'locus' should be one of", paste(ID, collapse=", ")))
-    } else {
-        if (!is.finite(pos.start) | !is.finite(pos.end))
-            stop("'pos.start' and 'pos.end' should be specified.")
-    }
-
-    if (!is.finite(pos.start))
         pos.start <- HLAInfo[locus, "start"] - flank.bp
-    if (!is.finite(pos.end))
         pos.end <- HLAInfo[locus, "end"] + flank.bp
+        if (!is.na(pos.mid))
+            warning("'pos.mid' is ignored when 'locus' is specified.", immediate.=TRUE)
+    } else {
+        if (!is.finite(pos.mid))
+            stop("'pos.mid' should be specified.")
+        pos.start <- pos.mid - flank.bp
+        pos.end <- pos.mid + flank.bp
+    }
 
     if (is.finite(pos.start) & is.finite(pos.end))
     {

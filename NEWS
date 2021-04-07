@@ -1,4 +1,4 @@
-CHANGES IN VERSION 1.27.8
+CHANGES IN VERSION 1.27.9
 -------------------------
 
     o `hlaPredict()` returns the dosage of HLA alleles with type="dosage"
@@ -12,6 +12,9 @@ CHANGES IN VERSION 1.27.8
     o `hlaGDS2Geno()` supports SeqArray GDS files
 
     o a new option 'maf' in `hlaAttrBagging()` and `hlaParallelAttrBagging()`
+
+    o 'pos.start' and 'pos.end' are replaced by 'pos.mid' in `hlaFlankingSNP()` and
+      `hlaGenoSubsetFlank()`
 
 
 CHANGES IN VERSION 1.26.1

@@ -9,20 +9,20 @@
 }
 \usage{
 hlaFlankingSNP(snp.id, position, locus, flank.bp=500000L, assembly="auto",
-    pos.start=NA_integer_, pos.end=NA_integer_)
-hlaGenoSubsetFlank(genoobj, locus="any", flank.bp=500000L, assembly="auto")
+    pos.mid=NA_integer_)
+hlaGenoSubsetFlank(genoobj, locus="any", flank.bp=500000L, assembly="auto",
+    pos.mid=NA_integer_)
 }
 \arguments{
     \item{snp.id}{a vector of SNP IDs}
     \item{genoobj}{a genotype object of \code{\link{hlaSNPGenoClass}}}
     \item{position}{a vector of positions}
-    \item{locus}{the name of HLA locus, or "any" for other genes}
+    \item{locus}{the name of HLA locus, or "any" for other genes and using \code{pos.mid}}
     \item{flank.bp}{the size of flanking region on each side in basepair}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
-    \item{pos.start}{the start position of the gene}
-    \item{pos.end}{the end position of the gene}
+    \item{pos.mid}{the middle position of the flanking region}
 }
 \details{
     \code{hla.id} is "A", "B", "C", "DRB1", "DRB5", "DQA1", "DQB1", "DPB1" or
@@ -60,7 +60,7 @@ summary(train.geno)
 
 ## customize positions
 snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id, HapMap_CEU_Geno$snp.position,
-    "any", 500*1000, pos.start=29457816, pos.end=30450205)
+    "any", 500*1000, pos.mid=29954010)
 }
 
 \keyword{SNP}
