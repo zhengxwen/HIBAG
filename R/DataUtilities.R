@@ -378,6 +378,15 @@ hlaGenoSubsetFlank <- function(genoobj, locus="any", flank.bp=500000L,
         pos.end <- HLAInfo[locus, "end"] + flank.bp
         if (!is.na(pos.mid))
             warning("'pos.mid' is ignored when 'locus' is specified.", immediate.=TRUE)
+        if (!is.null(HLAInfo$suggest.pos))
+        {
+            i <- HLAInfo[locus, "suggest.pos"]
+            if (!is.na(i) && i<0L)
+            {
+                warning("The position of '", locus,
+                    "' may not be appropriate for building the model.", immediate.=TRUE)
+            }
+        }
     } else {
         if (!is.finite(pos.mid))
             stop("'pos.mid' should be specified.")
@@ -1048,9 +1057,9 @@ hlaLociInfo <- function(assembly =
         package="HIBAG")
     if (file.exists(fn))
     {
-        v <- read.table(fn, header=TRUE, stringsAsFactors=FALSE)
+        v <- read.table(fn, header=TRUE, sep="\t", stringsAsFactors=FALSE)
         rownames(v) <- v$name
-        v[, c("chrom", "start", "end")]
+        v[, -1L]
     } else {
         if (assembly != "unknown")
             stop("Unknown human genome reference in 'assembly'!")
@@ -1731,6 +1740,15 @@ hlaFlankingSNP <- function(snp.id, position, locus, flank.bp=500000L,
         pos.end <- HLAInfo[locus, "end"] + flank.bp
         if (!is.na(pos.mid))
             warning("'pos.mid' is ignored when 'locus' is specified.", immediate.=TRUE)
+        if (!is.null(HLAInfo$suggest.pos))
+        {
+            i <- HLAInfo[locus, "suggest.pos"]
+            if (!is.na(i) && i<0L)
+            {
+                warning("The position of '", locus,
+                    "' may not be appropriate for building the model.", immediate.=TRUE)
+            }
+        }
     } else {
         if (!is.finite(pos.mid))
             stop("'pos.mid' should be specified.")

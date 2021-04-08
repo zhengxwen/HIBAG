@@ -105,20 +105,12 @@ train.HLA <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 
-# selected SNPs:
-#    the flanking region of 500kb on each side,
-#    or an appropriate flanking size without sacrificing predictive accuracy
-region <- 500   # kb
-snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id,
-    HapMap_CEU_Geno$snp.position, hla.id, region*1000, assembly="hg19")
-length(snpid)
-
 # training genotypes
 #   import your PLINK BED file,
 #   e.g., train.geno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
-#   or,
-train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
-    snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
+#   and select the SNPs in the flanking region of 500kb on each side
+region <- 500    # kb
+train.geno <- hlaGenoSubsetFlank(HapMap_CEU_Geno, hla.id, region*1000, assembly="hg19")
 summary(train.geno)
 
 # train a HIBAG model
@@ -155,20 +147,12 @@ train.HLA <- hlaAllele(HLA_Type_Table$sample.id,
     H2 = HLA_Type_Table[, paste(hla.id, ".2", sep="")],
     locus=hla.id, assembly="hg19")
 
-# selected SNPs:
-#    the flanking region of 500kb on each side,
-#    or an appropriate flanking size without sacrificing predictive accuracy
-region <- 500   # kb
-snpid <- hlaFlankingSNP(HapMap_CEU_Geno$snp.id,
-    HapMap_CEU_Geno$snp.position, hla.id, region*1000, assembly="hg19")
-length(snpid)
-
 # training genotypes
 #   import your PLINK BED file,
 #   e.g., train.geno <- hlaBED2Geno(bed.fn=".bed", fam.fn=".fam", bim.fn=".bim")
-#   or,
-train.geno <- hlaGenoSubset(HapMap_CEU_Geno,
-    snp.sel = match(snpid, HapMap_CEU_Geno$snp.id))
+#   and select the SNPs in the flanking region of 500kb on each side
+region <- 500    # kb
+train.geno <- hlaGenoSubsetFlank(HapMap_CEU_Geno, hla.id, region*1000, assembly="hg19")
 summary(train.geno)
 
 
