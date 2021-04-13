@@ -1,7 +1,8 @@
-CHANGES IN VERSION 1.27.9
+CHANGES IN VERSION 1.27.10
 -------------------------
 
-    o `hlaPredict()` returns the dosage of HLA alleles with type="dosage"
+    o `hlaPredict()` returns the dosage of HLA alleles when type="response+dosage", and
+      `hlaPredict()` returns the best guess and dosages by default
 
     o a new option "Pos+Allele" in `hlaPredict()`, `hlaGenoCombine()`,
       `hlaGenoSwitchStrand()`, `hlaSNPID()` and `hlaCheckSNPs()` for matching genotypes

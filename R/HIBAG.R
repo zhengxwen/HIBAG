@@ -469,8 +469,9 @@ hlaClose <- function(model)
 #
 
 predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
-    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
+    type=c("response+dosage", "response", "prob", "response+prob"),
+    vote=c("prob", "majority"), allele.check=TRUE,
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
 {
     stopifnot(inherits(object, "hlaAttrBagClass"))
@@ -479,8 +480,9 @@ predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
 }
 
 hlaPredict <- function(object, snp, cl=FALSE,
-    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
+    type=c("response+dosage", "response", "prob", "response+prob"),
+    vote=c("prob", "majority"), allele.check=TRUE,
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
 {
     # check
@@ -706,7 +708,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
         pm <- attr(cl, "proc_ptr")
 
         # predict HLA genotypes
-        if (type %in% c("response", "dosage", "response+prob"))
+        if (type %in% c("response", "response+dosage", "response+prob"))
         {
             # the best-guess prediction
             if (type == "response")
@@ -714,7 +716,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
                 rv <- .Call(HIBAG_Predict_Resp, object$model, as.integer(snp),
                     n.samp, vote_method, nthread, verbose, pm)
                 names(rv) <- c("H1", "H2", "prob", "matching")
-            } else if (type == "dosage")
+            } else if (type == "response+dosage")
             {
                 rv <- .Call(HIBAG_Predict_Dosage, object$model, as.integer(snp),
                     n.samp, vote_method, nthread, verbose, pm)
@@ -782,7 +784,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
         )
 
         # merge the results
-        if (type %in% c("response", "dosage", "response+prob"))
+        if (type %in% c("response", "response+dosage", "response+prob"))
         {
             res <- rv[[1L]]
             for (i in 2L:length(rv))

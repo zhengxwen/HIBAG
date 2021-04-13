@@ -52,7 +52,7 @@ for (hla.idx in seq_along(hla.list))
 	summary(model)
 
 	# validation
-	pred <- hlaPredict(model, test.geno)
+	pred <- hlaPredict(model, test.geno, type="response")
 	summary(pred)
 
 	# compare

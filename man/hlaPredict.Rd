@@ -9,12 +9,14 @@
 }
 \usage{
 hlaPredict(object, snp, cl=FALSE,
-    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
+    type=c("response+dosage", "response", "prob", "response+prob"),
+    vote=c("prob", "majority"), allele.check=TRUE,
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
 \method{predict}{hlaAttrBagClass}(object, snp, cl=FALSE,
-    type=c("response", "dosage", "prob", "response+prob"), vote=c("prob", "majority"),
-    allele.check=TRUE, match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
+    type=c("response+dosage", "response", "prob", "response+prob"),
+    vote=c("prob", "majority"), allele.check=TRUE,
+    match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
     same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
 }
 \arguments{
@@ -25,9 +27,9 @@ hlaPredict(object, snp, cl=FALSE,
         implementation; if \code{TRUE}, use the number of threads returned from
         \code{RcppParallel::defaultNumThreads()} (by default using all threads);
         if an integer, specify the number of threads}
-    \item{type}{"response": return the best-guess types with its posterior probability;
-        "dosage": return the best-guess types and dosages for each allele;
-        "prob": return all posterior probabilities;
+    \item{type}{"response+dosage": return the best-guess types and dosages for each
+        allele (by default); "response": return the best-guess types with its posterior
+        probability; "prob": return all posterior probabilities;
         "response+prob": return the best-guess and all posterior probabilities}
     \item{vote}{\code{"prob"} (default behavior) -- make a prediction based on
         the averaged posterior probabilities from all individual classifiers;
@@ -113,11 +115,11 @@ model <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=4,
 summary(model)
 
 # validation
-pred <- hlaPredict(model, test.geno, type="dosage")
+pred <- hlaPredict(model, test.geno, type="response+dosage")
 pred
 
 head(pred$value)
-pred$dosage[, 1:4]
+pred$dosage[, 1:4]  # a dosage matrix
 
 # compare
 (comp <- hlaCompareAllele(hlatab$validation, pred, allele.limit=model,
