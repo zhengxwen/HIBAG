@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2020   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2021   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,8 @@
             # HLA Classic III genes
             "LTA", "TNF", "LTB", "HSPA1L", "HSPA1A", "HSPA1B",
             "C2", "BF", "C4A", "C4B"), collapse="|"), ")\\b"), geno.name)
-    geno.name[i] <- paste0("HLA-", geno.name[i])
+    if (length(i))
+        geno.name[i] <- paste0("HLA-", geno.name[i])
     geno.name
 }
 
@@ -1259,10 +1260,10 @@ hlaAlleleSubset <- function(hla, samp.sel=NULL)
     if (!is.null(hla$reference))
         rv$reference <- hla$reference
 
+    if (!is.null(hla$dosage))
+        rv$dosage <- hla$dosage[, samp.sel, drop=FALSE]
     if (!is.null(hla$postprob))
-    {
         rv$postprob <- hla$postprob[, samp.sel, drop=FALSE]
-    }
 
     class(rv) <- class(hla)
     rv
@@ -2561,3 +2562,87 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
 
     p
 }
+
+
+##########################################################################
+# Convert HLA alleles to a VCF file for dosages
+#
+
+hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, verbose=TRUE)
+{
+    # check
+    stopifnot(inherits(hla, "hlaAlleleClass"))
+    if (!inherits(outfn, "connection"))
+        stopifnot(is.character(outfn), length(outfn)==1L, !is.na(outfn))
+    stopifnot(is.logical(DS), length(DS)==1L, !is.na(DS))
+    stopifnot(is.logical(verbose), length(verbose)==1L, !is.na(verbose))
+    hasDS <- !is.null(hla$dosage) && DS
+
+    # information
+    hs <- hlaUniqueAllele(hla)
+    if (verbose)
+    {
+        cat("Convert to dosage VCF format:\n")
+        cat("    # of samples: ", NROW(hla$value), "\n", sep="")
+        cat("    # of unique HLA alleles: ", length(hs), "\n", sep="")
+        if (inherits(outfn, "connection"))
+            cat("    output: <connection>\n")
+        else
+            cat("    output: ", shQuote(outfn), "\n", sep="")
+    }
+
+    # create a file if needed
+    if (is.character(outfn))
+    {
+        outfn <- file(outfn, "wt")
+        on.exit(close(outfn))
+    }
+
+    # write to VCF header
+    ss <- c(
+        '##fileformat=VCFv4.0',
+        paste0("##fileDate=", format(Sys.time(), "%Y%m%d")),
+        '##source=HIBAG',
+        '##FILTER=<ID=PASS,Description="All filters passed">',
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        if (hasDS)
+            '##FORMAT=<ID=DS,Number=1,Type=Float,Description="Dosage of HLA allele">'
+        else
+            NULL,
+        paste(c("#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT",
+            hla$value$sample.id), collapse="\t")
+    )
+    writeLines(ss, outfn)
+
+    # write to VCF for each allele
+    pos <- as.character(round(mean(c(hla$pos.start, hla$pos.end), na.rm=TRUE)))
+    if (is.na(pos)) pos <- "."
+    if (hasDS)
+        ii <- match(hla$value$sample.id, colnames(hla$dosage))
+    for (h in hs)
+    {
+        ss <- c("6", pos, paste0(.hla_gene_name_string(hla$locus), "*", h),
+            "A", paste0("P_", gsub("[^a-zA-Z0-9]", "", h)), ".", "PASS", ".",
+            ifelse(hasDS, "GT:DS", "GT"))
+        h1 <- as.integer(hla$value["allele1"]==h)
+        if (anyNA(h1)) h1[is.na(h1)] <- "."
+        h2 <- as.integer(hla$value["allele2"]==h)
+        if (anyNA(h2)) h2[is.na(h2)] <- "."
+        s <- paste(h1, h2, sep="/")
+        if (hasDS)
+        {
+            i <- match(h, rownames(hla$dosage))
+            ds <- as.vector(hla$dosage[i, ii])
+            x <- is.na(ds)
+            ds <- format(ds, digits=5)
+            if (any(x)) ds[x] <- "."
+            s <- paste(s, ds, sep=":")
+        }
+        ss <- c(ss, s)
+        writeLines(paste(ss, collapse="\t"), outfn)
+    }
+
+    invisible()
+}
+
+
