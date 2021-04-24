@@ -16,8 +16,10 @@ hlaMakeSNPGeno(genotype, sample.id, snp.id, snp.position,
     \item{sample.id}{a vector of sample IDs}
     \item{snp.id}{a vector of SNP IDs}
     \item{snp.position}{a vector of SNP positions}
-    \item{A.allele}{a vector of A alleles in the SNP list}
-    \item{B.allele}{a vector of B alleles in the SNP list}
+    \item{A.allele}{a vector of A alleles, A is usually defined as a minor or alternative
+        allele}
+    \item{B.allele}{a vector of B alleles, B is usually defined as a major or reference
+        allele}
     \item{assembly}{the human genome reference: "hg18", "hg19" (default),
         "hg38"; "auto" refers to "hg19"; "auto-silent" refers to "hg19" without
         any warning}
