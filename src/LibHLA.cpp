@@ -152,8 +152,8 @@ static inline int thread_idx() { return tbb::this_task_arena::current_thread_ind
 
 #else
 
-#define PARALLEL_FOR(i, SIZE)                 {  for (size_t i=0; i < SIZE; i++)
-#define PARALLEL_FOR_CHUNK(i, SIZE, CHUNK)    {  for (size_t i=0; i < SIZE; i++)
+#define PARALLEL_FOR(i, SIZE)                 {  for (size_t i=0; i < (size_t)SIZE; i++)
+#define PARALLEL_FOR_CHUNK(i, SIZE, CHUNK)    {  for (size_t i=0; i < (size_t)SIZE; i++)
 #define PARALLEL_END    }
 
 static inline int thread_num() { return 1; }

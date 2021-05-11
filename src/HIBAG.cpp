@@ -654,7 +654,9 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	const int midx = Rf_asInteger(Model);
 	const int nSamp = Rf_asInteger(NumSamp);
 	const int vote_method = Rf_asInteger(VoteMethod);
+#if RCPP_PARALLEL_USE_TBB
 	const int nthread = Rf_asInteger(NThread);
+#endif
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
@@ -704,7 +706,9 @@ SEXP HIBAG_Predict_Dosage(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	const int midx = Rf_asInteger(Model);
 	const int nSamp = Rf_asInteger(NumSamp);
 	const int vote_method = Rf_asInteger(VoteMethod);
+#if RCPP_PARALLEL_USE_TBB
 	const int nthread = Rf_asInteger(NThread);
+#endif
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
@@ -756,7 +760,9 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	const int midx = Rf_asInteger(Model);
 	const int nSamp = Rf_asInteger(NumSamp);
 	const int vote_method = Rf_asInteger(VoteMethod);
+#if RCPP_PARALLEL_USE_TBB
 	const int nthread = Rf_asInteger(NThread);
+#endif
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
