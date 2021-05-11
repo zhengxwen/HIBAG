@@ -44,10 +44,13 @@
 #ifdef length
 #   undef length
 #endif
-#include <RcppParallel.h>
-#include <tbb/parallel_for.h>
 #include <mutex>
 #include <algorithm>
+
+#ifndef _WIN32
+#include <RcppParallel.h>
+#include <tbb/parallel_for.h>
+#endif
 
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE

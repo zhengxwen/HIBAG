@@ -29,9 +29,11 @@
 #include <R.h>
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
+
+#ifndef _WIN32
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
-
+#endif
 
 using namespace std;
 using namespace HLA_LIB;
