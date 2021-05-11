@@ -29,10 +29,14 @@
 #include <R.h>
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
-
-#ifndef _WIN32
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
+
+#ifdef _WIN32
+#   ifdef RCPP_PARALLEL_USE_TBB
+#       undef RCPP_PARALLEL_USE_TBB
+#   endif
+#   define RCPP_PARALLEL_USE_TBB 0
 #endif
 
 using namespace std;

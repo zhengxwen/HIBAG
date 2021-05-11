@@ -46,10 +46,14 @@
 #endif
 #include <mutex>
 #include <algorithm>
-
-#ifndef _WIN32
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
+
+#ifdef _WIN32
+#   ifdef RCPP_PARALLEL_USE_TBB
+#       undef RCPP_PARALLEL_USE_TBB
+#   endif
+#   define RCPP_PARALLEL_USE_TBB 0
 #endif
 
 #ifdef HIBAG_CPU_ARCH_X86
