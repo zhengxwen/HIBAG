@@ -1,24 +1,31 @@
+CHANGES IN VERSION 1.29.1
+-------------------------
+
+    o add the support of Intel AVX-512VPOPCNTDQ intrinsics
+
+
 CHANGES IN VERSION 1.28.0
 -------------------------
 
-    o `hlaPredict()` returns the dosage of HLA alleles when type="response+dosage", and
-      `hlaPredict()` returns the best guess and dosages by default
+    o `hlaPredict()` returns the dosage of HLA alleles when
+       type="response+dosage", and `hlaPredict()` returns the best guess and
+       dosages by default
 
     o a new option "Pos+Allele" in `hlaPredict()`, `hlaGenoCombine()`,
-      `hlaGenoSwitchStrand()`, `hlaSNPID()` and `hlaCheckSNPs()` for matching genotypes
-      by positions, reference and alternative alleles; it is particularly useful when
-      the training and test set are both matched to the same reference genome,
-      e.g., 1000 Genomes Project
+      `hlaGenoSwitchStrand()`, `hlaSNPID()` and `hlaCheckSNPs()` for matching
+      genotypes by positions, reference and alternative alleles; it is
+      particularly useful when the training and test set are both matched to
+      the same reference genome, e.g., 1000 Genomes Project
 
     o `hlaGDS2Geno()` supports SeqArray GDS files
 
     o a new option 'maf' in `hlaAttrBagging()` and `hlaParallelAttrBagging()`
 
-    o 'pos.start' and 'pos.end' are replaced by 'pos.mid' in `hlaFlankingSNP()` and
-      `hlaGenoSubsetFlank()`
+    o 'pos.start' and 'pos.end' are replaced by 'pos.mid' in `hlaFlankingSNP()`
+      and `hlaGenoSubsetFlank()`
 
-    o new function `hlaAlleleToVCF()` for converting the imputed HLA classical alleles
-      to a VCF file
+    o new function `hlaAlleleToVCF()` for converting the imputed HLA classical
+      alleles to a VCF file
 
 
 CHANGES IN VERSION 1.26.1

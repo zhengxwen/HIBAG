@@ -175,6 +175,26 @@
 #endif
 
 
+// AVX512VPOPCNTDQ
+#ifdef HIBAG_CPU_ARCH_X86
+#   if defined(__GNUC__) && (__GNUC__>=5)
+#       define HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#       define HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
+#   endif
+#   if defined(__GNUC__) && (__GNUC__>=6)
+#       define HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ
+#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#       define HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ
+#   elif defined(__ICC)
+#       define HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ
+#   endif
+#endif
+#if defined(__AVX512VPOPCNTDQ__) && !defined(HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ)
+#   define HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
+#endif
+
+
 #include <stdint.h>
 #include <stdlib.h>
 

@@ -68,6 +68,7 @@ extern const bool HIBAG_ALGORITHM_AVX;
 extern const bool HIBAG_ALGORITHM_AVX2;
 extern const bool HIBAG_ALGORITHM_AVX512F;
 extern const bool HIBAG_ALGORITHM_AVX512BW;
+extern const bool HIBAG_ALGORITHM_AVX512VPOPCNTDQ;
 
 // target-specific functions
 static CAlg_Prediction::F_PrepHaploMatch fc_PrepHaploMatch = NULL;
@@ -1257,11 +1258,30 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	__builtin_cpu_init();
 #endif
 
+// ========  Intel AVX512VPOPCNTDQ  ========
+#if defined(__AVX512F__) && defined(__AVX512VPOPCNTDQ__)
+	const bool has_avx512vpopcnt = true;
+#elif defined(HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ)
+#if defined(__ICC) && defined(_FEATURE_AVX512F) && defined(_FEATURE_AVX512VL) && defined(_FEATURE_AVX512_VPOPCNTDQ)
+	// since __builtin_cpu_supports("avx512vpopcntdq") in ICC always return 0
+	const bool has_avx512vpopcnt = _may_i_use_cpu_feature(_FEATURE_AVX512F |
+		_FEATURE_AVX512VL | _FEATURE_AVX512_VPOPCNTDQ) &&
+		HIBAG_ALGORITHM_AVX512VPOPCNTDQ;
+#else
+	const bool has_avx512vpopcnt = __builtin_cpu_supports("avx512f") &&
+		__builtin_cpu_supports("avx512vl") &&
+		__builtin_cpu_supports("avx512vpopcntdq") && HIBAG_ALGORITHM_AVX512VPOPCNTDQ;
+#endif
+#else
+	const bool has_avx512vpopcnt = false;
+#endif
+
+// ========  Intel AVX512BW  ========
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 	const bool has_avx512bw = true;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512BW)
 #if defined(__ICC) && defined(_FEATURE_AVX512F) && defined(_FEATURE_AVX512BW)
-	// since __builtin_cpu_supports("avx512bw") always return 0
+	// since __builtin_cpu_supports("avx512bw") in ICC always return 0
 	const bool has_avx512bw = _may_i_use_cpu_feature(
 		_FEATURE_AVX512F | _FEATURE_AVX512BW) && HIBAG_ALGORITHM_AVX512BW;
 #else
@@ -1272,6 +1292,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_avx512bw = false;
 #endif
 
+// ========  Intel AVX512F  ========
 #if defined(__AVX512F__)
 	const bool has_avx512f = true;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512F)
@@ -1281,6 +1302,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_avx512f = false;
 #endif
 
+// ========  Intel AVX2  ========
 #if defined(__AVX2__)
 	const bool has_avx2 = true;
 #elif defined(HIBAG_BUILTIN_CPU_AVX2)
@@ -1289,6 +1311,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_avx2 = false;
 #endif
 
+// ========  Intel AVX  ========
 #if defined(__AVX__)
 	const bool has_avx = true;
 #elif defined(HIBAG_BUILTIN_CPU_AVX)
@@ -1297,6 +1320,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_avx = false;
 #endif
 
+// ========  Intel SSE4.2 & POPCNT  ========
 #if defined(__SSE4_2__)
 	const bool has_sse4 = true;
 #elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_SSE4_2)
@@ -1306,6 +1330,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_sse4 = false;
 #endif
 
+// ========  Intel SSE2  ========
 #if defined(__SSE2__)
 	const bool has_sse2 = true;
 #elif defined(HIBAG_BUILTIN_CPU_SSE2)
@@ -1314,6 +1339,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	const bool has_sse2 = false;
 #endif
 
+	// set the functions
 	bool flag_popcnt = false;
 	if (cpu_max && has_avx512bw)
 	{
@@ -1374,6 +1400,16 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
 		cpu_info.append(", SSE2");
 		flag_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
+	} else if (strcmp(cpu, "avx512vpopcnt")==0 || (cpu_auto && has_avx512vpopcnt))
+	{
+		if (!has_avx512vpopcnt)
+			error("Not support AVX512VPOPCNTDQ.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512vpopcnt;
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512vpopcnt;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512vpopcnt;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512vpopcnt;
+		cpu_info.append(", AVX512VPOPCNTDQ");
+		need_aux_haplo = true;
 	} else if (strcmp(cpu, "avx512bw")==0 || (cpu_auto && has_avx512bw))
 	{
 		if (!has_avx512bw)

@@ -427,48 +427,55 @@ namespace HLA_LIB
 		static double _PostProb2_def(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
 
 	#ifdef HIBAG_CPU_ARCH_X86
-		// SSE2 CPU flags
+		// SSE2 CPU flag
 		static void _PrepHaploMatch_sse2(const TGenotype &Geno,
 			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
 		static THLAType _BestGuess_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_sse2(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
-		// SSE4.2 CPU flags
+		// SSE4.2 CPU flag
 		static void _PrepHaploMatch_sse4_2(const TGenotype &Geno,
 			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
 		static THLAType _BestGuess_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_sse4_2(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
-		// AVX CPU flags
+		// AVX CPU flag
 		static void _PrepHaploMatch_avx(const TGenotype &Geno,
 			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
 		static THLAType _BestGuess_avx(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_avx(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_avx(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
-		// AVX2 CPU flags
+		// AVX2 CPU flag
 		static void _PrepHaploMatch_avx2(const TGenotype &Geno,
 			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
 		static THLAType _BestGuess_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_avx2(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
-		// AVX512F CPU flags
+		// AVX512F CPU flag
 		static void _PrepHaploMatch_avx512f(const TGenotype &Geno,
 			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
 		static THLAType _BestGuess_avx512f(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_avx512f(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_avx512f(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
-		// AVX512BW CPU flags
+		// AVX512BW CPU flag
 		static void _PrepHaploMatch_avx512bw(const TGenotype &Geno,
 			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
 		static THLAType _BestGuess_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno);
 		static double _PostProb_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
 		static double _PostProb2_avx512bw(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
+		// AVX512VPOPCNT CPU flag
+		static void _PrepHaploMatch_avx512vpopcnt(const TGenotype &Geno,
+			THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
+			size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[]);
+		static THLAType _BestGuess_avx512vpopcnt(const CHaplotypeList &Haplo, const TGenotype &Geno);
+		static double _PostProb_avx512vpopcnt(const CHaplotypeList &Haplo, const TGenotype &Geno, const THLAType &HLA);
+		static double _PostProb2_avx512vpopcnt(const CHaplotypeList &Haplo, const TGenotype &Geno, double Prob[]);
 	#endif
 	};
 
