@@ -170,8 +170,8 @@ static ALWAYS_INLINE TARGET_AVX512
 		__m128i va = (H1 ^ S1) & MASK;  // (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
 		__m128i vb = (H2 ^ S2) & MASK;
 		// popcount
-		return U_POPCOUNT(va[0]) + U_POPCOUNT(va[1]) +
-			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
+		__m128i v = _mm_popcnt_epi64(va) + _mm_popcnt_epi64(vb);
+		return v[0] + v[1];
 	}
 }
 
