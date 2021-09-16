@@ -30,6 +30,9 @@ LibHLA_ext_avx512f.o:
 LibHLA_ext_avx512bw.o:
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512bw.cpp -c -o $@
 
+LibHLA_ext_avx512vpopcnt.o:
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512vpopcnt.cpp -c -o $@
+
 
 clean:
 	rm -f ../.travis.yml
