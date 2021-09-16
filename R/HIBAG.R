@@ -1592,7 +1592,7 @@ print.hlaAttrBagObj <- function(x, ...)
 #######################################################################
 
 hlaSetKernelTarget <- function(cpu=c("max", "auto.avx2", "base",
-    "sse2", "sse4", "avx", "avx2", "avx512f", "avx512bw"))
+    "sse2", "sse4", "avx", "avx2", "avx512f", "avx512bw", "avx512vpopcnt"))
 {
     cpu <- match.arg(cpu)
     .Call(HIBAG_Kernel_SetTarget, cpu)

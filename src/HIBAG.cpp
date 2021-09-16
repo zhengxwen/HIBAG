@@ -1326,6 +1326,7 @@ extern const bool HIBAG_ALGORITHM_AVX;
 extern const bool HIBAG_ALGORITHM_AVX2;
 extern const bool HIBAG_ALGORITHM_AVX512F;
 extern const bool HIBAG_ALGORITHM_AVX512BW;
+extern const bool HIBAG_ALGORITHM_AVX512VPOPCNTDQ;
 
 static void target_add(string &s, const char *code, bool work)
 {
@@ -1388,6 +1389,7 @@ SEXP HIBAG_Kernel_Version()
 	target_add(s, "AVX2", HIBAG_ALGORITHM_AVX2);
 	target_add(s, "AVX512F", HIBAG_ALGORITHM_AVX512F);
 	target_add(s, "AVX512BW", HIBAG_ALGORITHM_AVX512BW);
+	target_add(s, "AVX512VPOPCNTDQ", HIBAG_ALGORITHM_AVX512VPOPCNTDQ);
 	SET_STRING_ELT(info, 2, mkChar(s.c_str()));
 
 	// using Intel TBB or not

@@ -1237,12 +1237,12 @@ CAlg_Prediction::CAlg_Prediction() { }
 
 void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 {
-	bool cpu_auto, cpu_max;
+	bool cpu_auto_avx2, cpu_max;
 	if (!cpu) cpu = "";
 	if (strcmp(cpu, "auto.avx2")==0) cpu = "";
-	cpu_auto = (strlen(cpu)==0);
+	cpu_auto_avx2 = (strlen(cpu)==0);
 	cpu_max = (strcmp(cpu, "max")==0);
-	if (cpu_max) cpu_auto = true;
+	if (cpu_max) cpu_auto_avx2 = true;
 	string cpu_info;
 	bool need_aux_haplo = false;
 
@@ -1341,15 +1341,35 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 	// set the functions
 	bool flag_popcnt = false;
-	if (cpu_max && has_avx512bw)
+	if (strcmp(cpu, "avx512vpopcnt")==0 || (cpu_max && has_avx512vpopcnt))
+	{
+		if (!has_avx512vpopcnt)
+			error("Not support AVX512VPOPCNTDQ.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512vpopcnt;
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512vpopcnt;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512vpopcnt;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512vpopcnt;
+		cpu_info.append(", AVX512VPOPCNTDQ");
+		need_aux_haplo = true;
+	} else if (strcmp(cpu, "avx512bw")==0 || (cpu_max && has_avx512bw))
 	{
 		if (!has_avx512bw)
-			error("Not support AVX512F+AVX512BW.");
+			error("Not support AVX512BW.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512bw;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
-		cpu_info.append(", AVX512F+AVX512BW");
+		cpu_info.append(", AVX512BW");
+		need_aux_haplo = true;
+	} else if (strcmp(cpu, "avx512f")==0 || (cpu_max && has_avx512f))
+	{
+		if (!has_avx512f)
+			error("Not support AVX512F.");
+		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512f;
+		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512f;
+		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512f;
+		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512f;
+		cpu_info.append(", AVX512F");
 		need_aux_haplo = true;
 	} else if (strcmp(cpu, "base")==0)
 	{
@@ -1360,7 +1380,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	#ifdef __POPCNT__
 		flag_popcnt = true;
 	#endif
-	} else if (strcmp(cpu, "avx2")==0 || (cpu_auto && has_avx2))
+	} else if (strcmp(cpu, "avx2")==0 || (cpu_auto_avx2 && has_avx2))
 	{
 		if (!has_avx2)
 			error("Not support AVX2.");
@@ -1370,7 +1390,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx2;
 		cpu_info.append(", AVX2");
 		need_aux_haplo = true;
-	} else if (strcmp(cpu, "avx")==0 || (cpu_auto && has_avx))
+	} else if (strcmp(cpu, "avx")==0 || (cpu_auto_avx2 && has_avx))
 	{
 		if (!has_avx)
 			error("Not support AVX.");
@@ -1380,7 +1400,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx;
 		cpu_info.append(", AVX");
 		need_aux_haplo = true;
-	} else if (strcmp(cpu, "sse4")==0 || (cpu_auto && has_sse4))
+	} else if (strcmp(cpu, "sse4")==0 || (cpu_auto_avx2 && has_sse4))
 	{
 		if (!has_sse4)
 			error("Not support SSE4.2.");
@@ -1390,7 +1410,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse4_2;
 		cpu_info.append(", SSE4.2");
 		flag_popcnt = true;
-	} else if (strcmp(cpu, "sse2")==0 || (cpu_auto && has_sse2))
+	} else if (strcmp(cpu, "sse2")==0 || (cpu_auto_avx2 && has_sse2))
 	{
 		if (!has_sse2)
 			error("Not support SSE2.");
@@ -1400,36 +1420,6 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 		fc_PostProb2 = &CAlg_Prediction::_PostProb2_sse2;
 		cpu_info.append(", SSE2");
 		flag_popcnt = HIBAG_ALGORITHM_SSE2_POPCNT;
-	} else if (strcmp(cpu, "avx512vpopcnt")==0 || (cpu_auto && has_avx512vpopcnt))
-	{
-		if (!has_avx512vpopcnt)
-			error("Not support AVX512VPOPCNTDQ.");
-		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512vpopcnt;
-		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512vpopcnt;
-		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512vpopcnt;
-		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512vpopcnt;
-		cpu_info.append(", AVX512VPOPCNTDQ");
-		need_aux_haplo = true;
-	} else if (strcmp(cpu, "avx512bw")==0 || (cpu_auto && has_avx512bw))
-	{
-		if (!has_avx512bw)
-			error("Not support AVX512F+AVX512BW.");
-		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512bw;
-		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
-		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
-		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512bw;
-		cpu_info.append(", AVX512F+AVX512BW");
-		need_aux_haplo = true;
-	} else if (strcmp(cpu, "avx512f")==0 || (cpu_auto && has_avx512f))
-	{
-		if (!has_avx512f)
-			error("Not support AVX512F.");
-		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512f;
-		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512f;
-		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512f;
-		fc_PostProb2 = &CAlg_Prediction::_PostProb2_avx512f;
-		cpu_info.append(", AVX512F");
-		need_aux_haplo = true;
 	} else {
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_def;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_def;

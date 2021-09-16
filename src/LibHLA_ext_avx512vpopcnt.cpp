@@ -58,8 +58,8 @@ extern const bool HIBAG_ALGORITHM_AVX512VPOPCNTDQ = false;
 #ifdef HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
 
 #ifdef __ICC
-	#pragma intel optimization_parameter target_arch=CORE-AVX512
-#   define TARGET_AVX512    __attribute__((target("avx512vpopcntdq")))
+	#pragma intel optimization_parameter target_arch=ICELAKE
+#   define TARGET_AVX512
 #else
 #   if !defined(__AVX512F__) && !defined(__clang__)
 		#pragma GCC target("avx512f")
@@ -68,7 +68,7 @@ extern const bool HIBAG_ALGORITHM_AVX512VPOPCNTDQ = false;
 		#pragma GCC target("avx512vl")
 #   endif
 #   if !defined(__AVX512VPOPCNTDQ__) && !defined(__clang__)
-		#pragma GCC target("avx512vpopcnt")
+		#pragma GCC target("avx512vpopcntdq")
 #   endif
 #   define TARGET_AVX512    __attribute__((target("avx512f,avx512vl,avx512vpopcntdq")))
 #endif
