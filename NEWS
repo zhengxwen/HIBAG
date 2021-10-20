@@ -1,7 +1,8 @@
-CHANGES IN VERSION 1.29.1
+CHANGES IN VERSION 1.30.0
 -------------------------
 
-    o add the support of Intel AVX-512VPOPCNTDQ intrinsics
+    o add the support of Intel AVX-512VPOPCNTDQ intrinsics (faster than
+      AVX512BW)
 
 
 CHANGES IN VERSION 1.28.0
