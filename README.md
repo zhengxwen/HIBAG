@@ -93,7 +93,7 @@ The `install_github()` approach requires that you build from source, i.e. `make`
 
 ### GPU with OpenCL
 
-* [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu), requiring HIBAG (>= v1.26.1).
+* [HIBAG.gpu](https://github.com/zhengxwen/HIBAG.gpu), requiring HIBAG (>= v1.28.0).
 
 
 ## Archive
