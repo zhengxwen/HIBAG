@@ -890,6 +890,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
         g <- SeqArray::seqApply(f, "genotype", function(x) (x[1L,]==1L) + (x[2L,]==1L),
             as.is="list", .progress=verbose)
         g <- matrix(unlist(g), ncol=n.snp)
+        g <- t(g)
 
         # output
         geno <- list(
