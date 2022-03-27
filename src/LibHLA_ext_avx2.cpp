@@ -138,6 +138,7 @@ private:
 			S1 = I1; S2 = I2;
 			S1_0 = _mm256_set1_epi64x(s1[0]);
 			S2_0 = _mm256_set1_epi64x(s2[0]);
+			S1_1 = S2_1 = _mm256_setzero_si256();
 		} else {
 			__m128i I1 = { s1[0], s1[1] }, I2 = { s2[0], s2[1] };  // genotypes
 			S1 = I1; S2 = I2;

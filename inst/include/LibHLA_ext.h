@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2020-2021   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2020-2022   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -192,6 +192,19 @@
 #endif
 #if defined(__AVX512VPOPCNTDQ__) && !defined(HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ)
 #   define HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
+#endif
+
+
+#if defined(_WIN32) && !defined(HIBAG_CPU_LP64)
+#   ifdef HIBAG_CPU_ARCH_X86_AVX512F
+#       undef HIBAG_CPU_ARCH_X86_AVX512F
+#   endif
+#   ifdef HIBAG_CPU_ARCH_X86_AVX512BW
+#       undef HIBAG_CPU_ARCH_X86_AVX512BW
+#   endif
+#   ifdef HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
+#       undef HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
+#   endif
 #endif
 
 
