@@ -526,7 +526,7 @@ double SIMD_NAME(CAlg_Prediction::_PostProb2)(const CHaplotypeList &Haplo,
 
 #else
 
-void SIMD_NAME(_PrepHaploMatch)(const TGenotype &pG,
+void SIMD_NAME(CAlg_Prediction::_PrepHaploMatch)(const TGenotype &Geno,
 	THaplotype *pH1_st, size_t pH1_n, THaplotype *pH2_st, size_t pH2_n,
 	size_t Num_SNP, std::vector<CAlg_EM::THaploPair> &HP_PairList, short DiffList[])
 {
