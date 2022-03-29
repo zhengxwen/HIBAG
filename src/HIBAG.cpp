@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2021   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -573,7 +573,7 @@ struct set_gpu_ptr
 };
 
 /// show the number of threads
-static void verbose_num_thread(bool verbose)
+inline static void verbose_num_thread(bool verbose)
 {
 	if (verbose)
 	{
@@ -604,7 +604,6 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 	const int midx = Rf_asInteger(model);
 	const int nclassifier = Rf_asInteger(NClassifier);
 	const int mtry = Rf_asInteger(MTry);
-	const int nthread = Rf_asInteger(NThread);
 	const bool prune = Rf_asLogical(Prune) == TRUE;
 	const bool verbose = Rf_asLogical(Verbose) == TRUE;
 	const bool verbose_detail = Rf_asLogical(VerboseDetail) == TRUE;
@@ -615,7 +614,10 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 		set_gpu_ptr set(proc_ptr);
 
 	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(abs(nthread));
+		const int nthread = Rf_asInteger(NThread);
+		tbb::task_arena arena(abs(nthread));
+		// tbb::task_scheduler_init init(abs(nthread)); deprecated!
+		arena.execute([&]{
 	#endif
 		verbose_num_thread(verbose && nthread>0);
 		if (verbose && nthread>0)
@@ -623,6 +625,9 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 
 		_HIBAG_MODELS_[midx]->BuildClassifiers(nclassifier, mtry,
 			prune, verbose, verbose_detail);
+	#if RCPP_PARALLEL_USE_TBB
+		});
+	#endif
 
 		PutRNGstate();
 	CORE_CATCH
@@ -647,20 +652,12 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	const int midx = Rf_asInteger(Model);
 	const int nSamp = Rf_asInteger(NumSamp);
 	const int vote_method = Rf_asInteger(VoteMethod);
-#if RCPP_PARALLEL_USE_TBB
-	const int nthread = Rf_asInteger(NThread);
-#endif
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 		set_gpu_ptr set(proc_ptr);
-
-	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(nthread);
-	#endif
-		verbose_num_thread(verbose);
 
 		rv_ans = PROTECT(NEW_LIST(4));
 		SEXP out_H1 = NEW_INTEGER(nSamp);
@@ -672,9 +669,19 @@ SEXP HIBAG_Predict_Resp(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
 
+	#if RCPP_PARALLEL_USE_TBB
+		const int nthread = Rf_asInteger(NThread);
+		tbb::task_arena arena(nthread);
+		// tbb::task_scheduler_init init(nthread); deprecated!
+		arena.execute([&]{
+	#endif
+		verbose_num_thread(verbose);
 		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
 			REAL(out_Matching), NULL, NULL, verbose);
+	#if RCPP_PARALLEL_USE_TBB
+		});
+	#endif
 
 		UNPROTECT(1);
 	CORE_CATCH
@@ -699,20 +706,12 @@ SEXP HIBAG_Predict_Dosage(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	const int midx = Rf_asInteger(Model);
 	const int nSamp = Rf_asInteger(NumSamp);
 	const int vote_method = Rf_asInteger(VoteMethod);
-#if RCPP_PARALLEL_USE_TBB
-	const int nthread = Rf_asInteger(NThread);
-#endif
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 		set_gpu_ptr set(proc_ptr);
-
-	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(nthread);
-	#endif
-		verbose_num_thread(verbose);
 
 		rv_ans = PROTECT(NEW_LIST(5));
 		SEXP out_H1 = NEW_INTEGER(nSamp);
@@ -726,9 +725,19 @@ SEXP HIBAG_Predict_Dosage(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_MatDosage = Rf_allocMatrix(REALSXP, M.nHLA(), nSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatDosage);
 
+	#if RCPP_PARALLEL_USE_TBB
+		const int nthread = Rf_asInteger(NThread);
+		tbb::task_arena arena(nthread);
+		// tbb::task_scheduler_init init(nthread); deprecated!
+		arena.execute([&]{
+	#endif
+		verbose_num_thread(verbose);
 		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
 			REAL(out_Matching), REAL(out_MatDosage), NULL, verbose);
+	#if RCPP_PARALLEL_USE_TBB
+		});
+	#endif
 
 		UNPROTECT(1);
 	CORE_CATCH
@@ -753,20 +762,12 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 	const int midx = Rf_asInteger(Model);
 	const int nSamp = Rf_asInteger(NumSamp);
 	const int vote_method = Rf_asInteger(VoteMethod);
-#if RCPP_PARALLEL_USE_TBB
-	const int nthread = Rf_asInteger(NThread);
-#endif
 	const bool verbose = Rf_asLogical(Verbose)==TRUE;
 
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 		set_gpu_ptr set(proc_ptr);
-
-	#if RCPP_PARALLEL_USE_TBB
-		tbb::task_scheduler_init init(nthread);
-	#endif
-		verbose_num_thread(verbose);
 
 		rv_ans = PROTECT(NEW_LIST(5));
 		SEXP out_H1 = NEW_INTEGER(nSamp);
@@ -780,9 +781,19 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SEXP out_MatProb = Rf_allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
 		SET_ELEMENT(rv_ans, 4, out_MatProb);
 
+	#if RCPP_PARALLEL_USE_TBB
+		const int nthread = Rf_asInteger(NThread);
+		tbb::task_arena arena(nthread);
+		// tbb::task_scheduler_init init(nthread); deprecated!
+		arena.execute([&]{
+	#endif
+		verbose_num_thread(verbose);
 		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
 			REAL(out_Matching), NULL, REAL(out_MatProb), verbose);
+	#if RCPP_PARALLEL_USE_TBB
+		});
+	#endif
 
 		UNPROTECT(1);
 	CORE_CATCH

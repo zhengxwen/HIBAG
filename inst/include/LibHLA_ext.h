@@ -195,19 +195,6 @@
 #endif
 
 
-#if defined(_WIN32) && !defined(HIBAG_CPU_LP64)
-#   ifdef HIBAG_CPU_ARCH_X86_AVX512F
-#       undef HIBAG_CPU_ARCH_X86_AVX512F
-#   endif
-#   ifdef HIBAG_CPU_ARCH_X86_AVX512BW
-#       undef HIBAG_CPU_ARCH_X86_AVX512BW
-#   endif
-#   ifdef HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
-#       undef HIBAG_CPU_ARCH_X86_AVX512VPOPCNTDQ
-#   endif
-#endif
-
-
 #include <stdint.h>
 #include <stdlib.h>
 
