@@ -26,7 +26,7 @@ ensembles using bootstrap aggregating and random variable selection.
 
 \bold{Features:} \cr
 1) HIBAG can be used by researchers with published parameter estimates
-    (\url{http://www.biostat.washington.edu/~bsweir/HIBAG/}) instead of
+    (\url{https://hibag.s3.amazonaws.com/hlares_index.html}) instead of
     requiring access to large training sample datasets. \cr
 2) A typical HIBAG parameter file contains only haplotype frequencies at
     different SNP subsets rather than individual training genotypes. \cr

@@ -20,7 +20,7 @@ vignette: >
 
 # Overview
 
-The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation [@Shiina09]. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the *HLA--B* locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database [@Robinson13] ([http://www.ebi.ac.uk/imgt/hla/](http://www.ebi.ac.uk/imgt/hla/)).
+The human leukocyte antigen (HLA) system, located in the major histocompatibility complex (MHC) on chromosome 6p21.3, is highly polymorphic. This region has been shown to be important in human disease, adverse drug reactions and organ transplantation [@Shiina09]. HLA genes play a role in the immune system and autoimmunity as they are central to the presentation of antigens for recognition by T cells. Since they have to provide defense against a great diversity of environmental microbes, HLA genes must be able to present a wide range of peptides. Evolutionary pressure at these loci have given rise to a great deal of functional diversity. For example, the *HLA--B* locus has 1,898 four-digit alleles listed in the April 2012 release of the IMGT-HLA Database [@Robinson13] ([https://www.ebi.ac.uk/ipd/imgt/hla/](https://www.ebi.ac.uk/ipd/imgt/hla/)).
 
 Classical HLA genotyping methodologies have been predominantly developed for tissue typing purposes, with sequence based typing (SBT) approaches currently considered the gold standard. While there is widespread availability of vendors offering HLA genotyping services, the complexities involved in performing this to the standard required for diagnostic purposes make using a SBT approach time-consuming and cost-prohibitive for most research studies wishing to look in detail at the involvement of classical HLA genes in disease.
 
@@ -115,7 +115,7 @@ hlaAssocTest(aa, disease ~ h, data=dat, model="recessive")  # try recessive mode
 # Resources
 
 * Allele Frequency Net Database (AFND): [http://www.allelefrequencies.net](http://www.allelefrequencies.net).
-* IMGT/HLA Database: [http://www.ebi.ac.uk/imgt/hla](http://www.ebi.ac.uk/imgt/hla).
+* IMGT/HLA Database: [https://www.ebi.ac.uk/ipd/imgt/hla/](https://www.ebi.ac.uk/ipd/imgt/hla/).
 * HLA Nomenclature: [G Codes](http://hla.alleles.org/alleles/g_groups.html) and [P Codes](http://hla.alleles.org/alleles/p_groups.html) for reporting of ambiguous allele typings.
 
 

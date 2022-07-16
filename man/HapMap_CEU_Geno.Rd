@@ -9,8 +9,7 @@
 
 \usage{HapMap_CEU_Geno}
 \references{
-    \url{http://hapmap.ncbi.nlm.nih.gov/
-downloads/genotypes/2010-08_phaseII+III/forward/}
+    \url{https://www.ncbi.nlm.nih.gov/variation/news/NCBI_retiring_HapMap/}
 
     The International HapMap Consortium. A second generation human haplotype
 map of over 3.1 million SNPs. Nature 449, 851-861. 2007.

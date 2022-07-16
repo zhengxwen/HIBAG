@@ -20,8 +20,7 @@ hlaLociInfo(assembly=c("auto", "auto-silent", "hg18", "hg19", "hg38",
 }
 
 \references{
-    GeneCards: \url{https://www.genecards.org/cgi-bin/carddisp.pl?gene=},
-    NCBI Resources: \url{http://www.ncbi.nlm.nih.gov/gene},
+    NCBI Resources: \url{https://www.ncbi.nlm.nih.gov/gene},
     HLA Nomenclature: \url{http://hla.alleles.org/genes/index.html}
 }
 \author{Xiuwen Zheng}

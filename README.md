@@ -55,7 +55,6 @@ Dr. Xiuwen Zheng
 
 * [https://hibag.s3.amazonaws.com/index.html](https://hibag.s3.amazonaws.com/index.html)
 * Platform-specific HLARES models: [https://hibag.s3.amazonaws.com/hlares_index.html](https://hibag.s3.amazonaws.com/hlares_index.html)
-* [http://www.biostat.washington.edu/~bsweir/HIBAG/](http://www.biostat.washington.edu/~bsweir/HIBAG/)
 
 
 ## Citation
@@ -79,7 +78,7 @@ biocLite("HIBAG")
 library("devtools")
 install_github("zhengxwen/HIBAG")
 ```
-The `install_github()` approach requires that you build from source, i.e. `make` and compilers must be installed on your system -- see the [R FAQ](http://cran.r-project.org/faqs.html) for your operating system; you may also need to install dependencies manually.
+The `install_github()` approach requires that you build from source, i.e. `make` and compilers must be installed on your system -- see the [R FAQ](https://cran.r-project.org/faqs.html) for your operating system; you may also need to install dependencies manually.
 
 
 ## Acceleration

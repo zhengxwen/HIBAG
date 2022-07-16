@@ -171,8 +171,8 @@ sessionInfo()
 
 * Zheng X (2018). Imputation-based HLA Typing with SNPs in GWAS Studies. *Methods in Molecular Biology*. https://doi.org/10.1007/978-1-4939-8546-3_11.
 
-* Intel AVX2 intrinsics: https://software.intel.com/content/www/us/en/develop/articles/how-intel-avx2-improves-performance-on-server-applications.html.
+* Intel AVX2 intrinsics: https://www.intel.com/content/www/us/en/develop/documentation/cpp-compiler-developer-guide-and-reference/top/compiler-reference/intrinsics/intrinsics-for-avx2.html.
 
 * Intel AVX-512 overview: https://www.intel.com/content/www/us/en/architecture-and-technology/avx-512-overview.html.
 
-* National Center for Supercomputing Applications (UIUC): http://www.ncsa.illinois.edu.
+* National Center for Supercomputing Applications (UIUC): https://www.ncsa.illinois.edu.
