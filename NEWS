@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.33.2
+-------------------------
+
+    o fix the compiler issue on Mac M1 chip
+
+
 CHANGES IN VERSION 1.32.0
 -------------------------
 
