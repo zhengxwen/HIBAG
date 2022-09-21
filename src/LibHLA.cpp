@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2021   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1431,7 +1431,14 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 #ifdef __FMA__
 	cpu_info.append(", FMA");
 #endif
+
+#else
+	fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_def;
+	fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
+	fc_PostProb  = &CAlg_Prediction::_PostProb_def;
+	fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
 #endif
+
 	HIBAG_CPU_Info = cpu_info;
 	need_auxiliary_haplo = need_aux_haplo;
 }
