@@ -1,7 +1,9 @@
-CHANGES IN VERSION 1.33.2
+CHANGES IN VERSION 1.34.0
 -------------------------
 
     o fix the compiler issue on Mac M1 chip
+
+    o fix the C stack error in RStudio
 
 
 CHANGES IN VERSION 1.32.0

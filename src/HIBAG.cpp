@@ -467,7 +467,7 @@ static void model_free(SEXP ptr_obj)
 static SEXP new_model_id(int id, CAttrBag_Model *mod_ptr)
 {
 	SEXP ans = PROTECT(ScalarInteger(id));
-	SEXP ptr = PROTECT(R_MakeExternalPtr(mod_ptr, R_NilValue, ans));
+	SEXP ptr = PROTECT(R_MakeExternalPtr(mod_ptr, R_NilValue, R_NilValue));
 	R_RegisterCFinalizerEx(ptr, model_free, (Rboolean)TRUE);
 	Rf_setAttrib(ans, install("handle_ptr"), ptr);
 	UNPROTECT(2);
