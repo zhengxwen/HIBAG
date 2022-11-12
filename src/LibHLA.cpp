@@ -210,8 +210,9 @@ const char *HLA_LIB::date_text()
 	time_t rawtime;
 	time(&rawtime);
 	struct tm *p = localtime(&rawtime);
-	sprintf(date_buffer, "%04d-%02d-%02d %02d:%02d:%02d", p->tm_year+1900,
-		p->tm_mon+1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+	snprintf(date_buffer, sizeof(date_buffer), "%04d-%02d-%02d %02d:%02d:%02d",
+		p->tm_year+1900, p->tm_mon+1, p->tm_mday,
+		p->tm_hour, p->tm_min, p->tm_sec);
 	return date_buffer;
 }
 

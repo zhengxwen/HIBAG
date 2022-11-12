@@ -28,9 +28,9 @@
     \code{classifiers} has the following components:
     \item{samp.num}{the number of copies of samples in a bootstrap sample}
     \item{haplos}{a data.frame of haplotype frequencies}
-    \item{ }{\code{freq}  -- haplotype frequency}
-    \item{ }{\code{hla}   -- a HLA allele}
-    \item{ }{\code{haplo} -- a SNP haplotype, with an entry value 0 standing
+    \item{.}{\code{freq}  -- haplotype frequency}
+    \item{.}{\code{hla}   -- a HLA allele}
+    \item{.}{\code{haplo} -- a SNP haplotype, with an entry value 0 standing
         for B (ZERO A allele), 1 for A (ONE A allele)}
     \item{snpidx}{the SNP indices used in this classifier}
     \item{outofbag.acc}{the out-of-bag accuracy of this classifier}

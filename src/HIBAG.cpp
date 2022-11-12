@@ -1373,7 +1373,8 @@ SEXP HIBAG_Kernel_Version()
 	#ifndef __GNUC_PATCHLEVEL__
 	#   define __GNUC_PATCHLEVEL__    0
 	#endif
-	sprintf(buf_compiler, "GNUG_v%d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+	snprintf(buf_compiler, sizeof(buf_compiler), "GNUG_v%d.%d.%d",
+		__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 	string gnug = buf_compiler;
 #else
 	string gnug;
