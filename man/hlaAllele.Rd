@@ -55,7 +55,7 @@ a possible maximum resolution.
 \author{Xiuwen Zheng}
 \seealso{
     \code{\link{hlaAlleleDigit}}, \code{\link{hlaAlleleSubset}},
-    \code{\link{hlaLociInfo}}
+    \code{\link{hlaLociInfo}}, \code{\link{hlaAlleleToVCF}}
 }
 
 \examples{

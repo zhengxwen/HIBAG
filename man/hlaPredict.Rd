@@ -74,7 +74,7 @@ platform provider.
 \seealso{
     \code{\link{hlaAttrBagging}}, \code{\link{hlaAllele}},
     \code{\link{hlaCompareAllele}}, \code{\link{hlaParallelAttrBagging}},
-    \code{\link{hlaSetKernelTarget}}
+    \code{\link{hlaSetKernelTarget}}, \code{\link{hlaAlleleToVCF}}
 }
 
 \examples{
