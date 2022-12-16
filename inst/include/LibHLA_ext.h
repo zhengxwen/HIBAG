@@ -36,7 +36,7 @@
 
 
 // 32-bit or 64-bit registers
-#ifdef __LP64__
+#if defined(__LP64__) || defined(_WIN64)
 #   define HIBAG_CPU_LP64
 #else
 #   ifdef HIBAG_CPU_LP64
