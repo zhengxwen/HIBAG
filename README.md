@@ -8,6 +8,7 @@ Kernel Version: 1.5
 
 [![Availability](http://www.bioconductor.org/shields/availability/release/HIBAG.svg)](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 [![Years-in-BioC](http://www.bioconductor.org/shields/years-in-bioc/HIBAG.svg)](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
+[![R](https://github.com/zhengxwen/HIBAG/actions/workflows/r.yml/badge.svg)](https://github.com/zhengxwen/HIBAG/actions/workflows/r.yml)
 
 
 ## Features
