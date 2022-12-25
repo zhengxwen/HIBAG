@@ -35,6 +35,5 @@ LibHLA_ext_avx512vpopcnt.o:
 
 
 clean:
-	rm -f ../.travis.yml
-	rm -rf ../appveyor.yml
 	rm -f ../.gitignore
+	rm -rf ../.github

@@ -21,6 +21,5 @@ PKG_LIBS = \
 all: $(SHLIB)
 
 clean:
-	rm -f ../.travis.yml
-	rm -rf ../appveyor.yml
 	rm -f ../.gitignore
+	rm -rf ../.github

@@ -8,9 +8,6 @@ Kernel Version: 1.5
 
 [![Availability](http://www.bioconductor.org/shields/availability/release/HIBAG.svg)](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
 [![Years-in-BioC](http://www.bioconductor.org/shields/years-in-bioc/HIBAG.svg)](http://www.bioconductor.org/packages/release/bioc/html/HIBAG.html)
-[![Build Status](https://travis-ci.org/zhengxwen/HIBAG.png)](https://travis-ci.org/zhengxwen/HIBAG)
-[![Build status](https://ci.appveyor.com/api/projects/status/v650qe8ap4bojxuf?svg=true)](https://ci.appveyor.com/project/zhengxwen/hibag)
-[![codecov.io](https://codecov.io/github/zhengxwen/HIBAG/coverage.svg?branch=master)](https://codecov.io/github/zhengxwen/HIBAG?branch=master)
 
 
 ## Features
