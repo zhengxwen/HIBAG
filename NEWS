@@ -11,7 +11,9 @@ CHANGES IN VERSION 1.34.0
 
     o fix the compiler issue on Mac M1 chip
 
-    o fix the C stack error in RStudio
+    o fix the C stack error in RStudio (RStudio tries to capture the internal
+      R object structure, but fails in an infinite loop); there is no such
+      error when running R in the terminal
 
 
 CHANGES IN VERSION 1.32.0
