@@ -23,7 +23,8 @@ hlaAttrBagging(hla, snp, nclassifier=100L, mtry=c("sqrt", "all", "one"),
         otherwise, exhaustive forward variable selection. See details}
     \item{na.rm}{if TRUE, remove the samples with missing HLA alleles}
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
-    \item{maf}{MAF threshold for SNP filter, excluding any SNP with MAF < \code{maf}}
+    \item{maf}{MAF threshold for SNP filter, excluding any SNP with
+        MAF < \code{maf}}
     \item{nthread}{specify the number of threads used in the model building;
         if \code{TRUE}, use the number of threads returned from
         \code{RcppParallel::defaultNumThreads()} (by default using all threads)}

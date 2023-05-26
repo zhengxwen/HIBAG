@@ -9,7 +9,8 @@
 \usage{
 hlaParallelAttrBagging(cl, hla, snp, auto.save="",
     nclassifier=100L, mtry=c("sqrt", "all", "one"), prune=TRUE, na.rm=TRUE,
-    mono.rm=TRUE, maf=NaN, stop.cluster=FALSE, verbose=TRUE, verbose.detail=FALSE)
+    mono.rm=TRUE, maf=NaN, stop.cluster=FALSE, verbose=TRUE,
+    verbose.detail=FALSE)
 }
 \arguments{
     \item{cl}{\code{NULL}, \code{FALSE}, \code{TRUE}, an integer, or a cluster
@@ -17,12 +18,15 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
         \code{FALSE}, use the serial implementation; if \code{TRUE}, use the
         number of threads returned from \code{RcppParallel::defaultNumThreads()}
         (by default using all threads); if an integer, specify the number of
-        threads}
+        threads; When \code{cl} is \code{TRUE} or an integer, the multithreading
+        implementation will be used; when \code{cl} is a cluster, the
+        multi-processing implementation will be used where each individual
+        classifier is built within a child process}
     \item{hla}{training HLA types, an object of \code{\link{hlaAlleleClass}}}
     \item{snp}{training SNP genotypes, an object of
         \code{\link{hlaSNPGenoClass}}}
     \item{auto.save}{specify a autosaved file name for an R object
-        (.rda, .RData or .rds); "", no file saving}
+        (.rda, .RData or .rds); "", no file saving; see details}
     \item{nclassifier}{the total number of individual classifiers}
     \item{mtry}{a character or a numeric value, the number of variables randomly
         sampled as candidates for each selection. See details}
@@ -30,7 +34,8 @@ hlaParallelAttrBagging(cl, hla, snp, auto.save="",
         otherwise, exhaustive forward variable selection. See details}
     \item{na.rm}{if TRUE, remove the samples with missing HLA types}
     \item{mono.rm}{if TRUE, remove monomorphic SNPs}
-    \item{maf}{MAF threshold for SNP filter, excluding any SNP with MAF < \code{maf}}
+    \item{maf}{MAF threshold for SNP filter, excluding any SNP with
+        MAF < \code{maf}}
     \item{stop.cluster}{\code{TRUE}: stop cluster nodes after completing
         the calculation}
     \item{verbose}{if \code{TRUE}, show information}
