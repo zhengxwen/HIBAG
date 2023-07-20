@@ -8,17 +8,20 @@
 HLA types.
 }
 \usage{
-hlaPredMerge(..., weight=NULL, equivalence=NULL)
+hlaPredMerge(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
+    ret.postprob=TRUE)
 }
 \arguments{
     \item{...}{The object(s) of \code{\link{hlaAlleleClass}}, having a field
         of 'postprob', and returned by
-        \code{predict(..., type="response+prob", vote="majority")}}
+        \code{hlaPredict(..., type="response+prob")}}
     \item{weight}{the weight used for each prediction; if \code{NULL},
-        equal weights}
+        equal weights to be used}
     \item{equivalence}{a \code{data.frame} with two columns, the first column
         for new equivalent alleles, and the second for the alleles possibly
         existed in the object(s) passed to this function}
+    \item{ret.dosage}{if \code{TRUE}, return dosages}
+    \item{ret.postprob}{if \code{TRUE}, return average posterior probabilities}
 }
 \details{
     Calculate a new probability matrix for each pair of HLA alleles, by
@@ -77,8 +80,8 @@ m2 <- hlaAttrBagging(hlatab$training, train.geno, nclassifier=2,
 
 
 # validation
-pd1 <- hlaPredict(m1, test.geno, type="response+prob", vote="majority")
-pd2 <- hlaPredict(m2, test.geno, type="response+prob", vote="majority")
+pd1 <- hlaPredict(m1, test.geno, type="response+prob")
+pd2 <- hlaPredict(m2, test.geno, type="response+prob")
 
 hlaCompareAllele(hlatab$validation, pd1)$overall
 

@@ -920,11 +920,16 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
     colnames(prob) <- samp.id
     rownames(prob) <- m
 
+    # matching probabilities
+    has.matching <- all(
+        vapply(pdlist, function(x) !is.null(x$value$matching), TRUE))
+    if (has.matching) has.matching <- 0
+
     # for-loop
     for (i in seq_along(pdlist))
     {
         p <- pdlist[[i]]$postprob
-        h <- replace(unlist(strsplit(rownames(p), "/")))
+        h <- replace(unlist(strsplit(rownames(p), "/", fixed=TRUE)))
         h1 <- h[seq(1L, length(h), 2L)]; h2 <- h[seq(2L, length(h), 2L)]
         j1 <- match(paste(h1, h2, sep="/"), m)
         j2 <- match(paste(h2, h1, sep="/"), m)
@@ -933,12 +938,12 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
         p <- p * weight[i]
         for (j in seq_along(j1))
             prob[j1[j], ] <- prob[j1[j], ] + p[j, ]
+        if (is.numeric(has.matching))
+            has.matching <- has.matching + pdlist[[i]]$value$matching
     }
 
-# need res$value$matching
-
     pb <- apply(prob, 2L, max)
-    pt <- unlist(strsplit(m[apply(prob, 2L, which.max)], "/"))
+    pt <- unlist(strsplit(m[apply(prob, 2L, which.max)], "/", fixed=TRUE))
     assembly <- pdlist[[1L]]$assembly
     if (is.null(assembly)) assembly <- "auto"
 
@@ -951,9 +956,23 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
         locus.pos.end = pdlist[[1L]]$pos.end,
         prob = pb, na.rm = FALSE,
         assembly = assembly)
-
-    # if (isTRUE(ret.dosage)) rv$dosage <- prob
-
+    if (is.numeric(has.matching))
+        rv$value$matching <- has.matching / length(pdlist)
+    if (isTRUE(ret.dosage))
+    {
+        ds <- matrix(0, nrow=length(hla.allele), ncol=n.samp)
+        rownames(ds) <- hla.allele
+        colnames(ds) <- samp.id
+        h <- unlist(strsplit(rownames(prob), "/", fixed=TRUE))
+        h1 <- h[seq(1L, length(h), 2L)]; h2 <- h[seq(2L, length(h), 2L)]
+        for (i in seq_along(hla.allele))
+        {
+            ds[i, ] <-
+                colSums(prob[h1 %in% hla.allele[i], , drop=FALSE]) +
+                colSums(prob[h2 %in% hla.allele[i], , drop=FALSE])
+        }
+        rv$dosage <- ds
+    }
     if (isTRUE(ret.postprob)) rv$postprob <- prob
     rv
 }

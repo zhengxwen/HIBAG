@@ -3,6 +3,8 @@ CHANGES IN VERSION 1.36.1
 
     o the output of `hlaPredict(, type="response+prob")` includes dosages
 
+    o new arguments 'ret.dosage' and 'ret.postprob' in `hlaPredMerge()`
+
 
 CHANGES IN VERSION 1.34.1
 -------------------------
