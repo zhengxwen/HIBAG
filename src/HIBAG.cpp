@@ -769,7 +769,7 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		CAttrBag_Model &M = *_HIBAG_MODELS_[midx];
 		set_gpu_ptr set(proc_ptr);
 
-		rv_ans = PROTECT(NEW_LIST(5));
+		rv_ans = PROTECT(NEW_LIST(6));
 		SEXP out_H1 = NEW_INTEGER(nSamp);
 		SET_ELEMENT(rv_ans, 0, out_H1);
 		SEXP out_H2 = NEW_INTEGER(nSamp);
@@ -778,8 +778,10 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		SET_ELEMENT(rv_ans, 2, out_Prob);
 		SEXP out_Matching = NEW_NUMERIC(nSamp);
 		SET_ELEMENT(rv_ans, 3, out_Matching);
+		SEXP out_MatDosage = Rf_allocMatrix(REALSXP, M.nHLA(), nSamp);
+		SET_ELEMENT(rv_ans, 4, out_MatDosage);
 		SEXP out_MatProb = Rf_allocMatrix(REALSXP, M.nHLA()*(M.nHLA()+1)/2, nSamp);
-		SET_ELEMENT(rv_ans, 4, out_MatProb);
+		SET_ELEMENT(rv_ans, 5, out_MatProb);
 
 	#if RCPP_PARALLEL_USE_TBB
 		const int nthread = Rf_asInteger(NThread);
@@ -790,7 +792,8 @@ SEXP HIBAG_Predict_Resp_Prob(SEXP Model, SEXP GenoMat, SEXP NumSamp,
 		verbose_num_thread(verbose);
 		M.PredictHLA(INTEGER(GenoMat), nSamp, vote_method,
 			INTEGER(out_H1), INTEGER(out_H2), REAL(out_Prob),
-			REAL(out_Matching), NULL, REAL(out_MatProb), verbose);
+			REAL(out_Matching), REAL(out_MatDosage), REAL(out_MatProb),
+			verbose);
 	#if RCPP_PARALLEL_USE_TBB
 		});
 	#endif

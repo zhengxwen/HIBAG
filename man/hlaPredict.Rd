@@ -29,8 +29,9 @@ hlaPredict(object, snp, cl=FALSE,
         if an integer, specify the number of threads}
     \item{type}{"response+dosage": return the best-guess types and dosages for
         each allele (by default); "response": return the best-guess types with
-        its posterior probability; "prob": return all posterior probabilities;
-        "response+prob": return the best-guess and all posterior probabilities}
+        its posterior probability; "prob": return a matrix for all posterior
+        probabilities; "response+prob": return the best-guess, dosages and all
+        posterior probabilities}
     \item{vote}{\code{"prob"} (default behavior) -- make a prediction based on
         the averaged posterior probabilities from all individual classifiers;
         \code{"majority"} -- majority voting from all individual

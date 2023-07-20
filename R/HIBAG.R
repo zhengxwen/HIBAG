@@ -725,7 +725,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
             } else {
                 rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
                     as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
-                names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
+                names(rv) <- c("H1", "H2", "prob", "matching", "dosage", "postprob")
             }
 
             # output object
@@ -745,8 +745,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
             {
                 res$postprob <- rv$postprob
                 colnames(res$postprob) <- geno.sampid
-                m <- outer(object$hla.allele, object$hla.allele,
-                    function(x, y) paste(y, x, sep="/"))
+                m <- outer(object$hla.allele, object$hla.allele, paste, sep="/")
                 rownames(res$postprob) <- m[lower.tri(m, diag=TRUE)]
             }
             NA.cnt <- sum(is.na(res$value$allele1) | is.na(res$value$allele2))
@@ -755,13 +754,12 @@ hlaPredict <- function(object, snp, cl=FALSE,
             # all probabilities
             rv <- .Call(HIBAG_Predict_Resp_Prob, object$model,
                 as.integer(snp), n.samp, vote_method, nthread, verbose, pm)
-            names(rv) <- c("H1", "H2", "prob", "matching", "postprob")
+            names(rv) <- c("H1", "H2", "prob", "matching", "dosage", "postprob")
 
             # output object
             res <- rv$postprob
             colnames(res) <- geno.sampid
-            m <- outer(object$hla.allele, object$hla.allele,
-                function(x, y) paste(y, x, sep="/"))
+            m <- outer(object$hla.allele, object$hla.allele, paste, sep="/")
             rownames(res) <- m[lower.tri(m, diag=TRUE)]
             NA.cnt <- sum(colSums(res) <= 0L, na.rm=TRUE)
         }
@@ -826,24 +824,25 @@ hlaPredict <- function(object, snp, cl=FALSE,
 # Merge predictions by voting
 #
 
-hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
+hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
+    ret.postprob=TRUE)
 {
     # check "..."
     pdlist <- list(...)
     if (length(pdlist) <= 0L)
-        stop("No object is passed to 'hlaPredMerge'.")
-    for (i in 1:length(pdlist))
+        stop("No hlaAlleleClass object passed to 'hlaPredMerge()'.")
+    for (i in seq_along(pdlist))
     {
         if (!inherits(pdlist[[i]], "hlaAlleleClass"))
         {
-            stop("The object(s) passed to 'hlaPredMerge' ",
+            stop("The object(s) passed to 'hlaPredMerge()' ",
                 "should be 'hlaAlleleClass'.")
         }
         if (is.null(pdlist[[i]]$postprob))
         {
-            stop("The object(s) passed to 'hlaPredMerge' should have ",
+            stop("The object(s) passed to 'hlaPredMerge()' should have ",
                 "a field of 'postprob' returned from ",
-                "'hlaPredict(..., type=\"response+prob\", vote=\"majority\")'.")
+                "'hlaPredict(..., type=\"response+prob\")'.")
         }
     }
 
@@ -856,14 +855,14 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
             stop("'equivalence' should have two columns: ",
                 "the first for new equivalent alleles, and ",
                 "the second for the alleles possibly existed ",
-                "in the object(s) passed to 'hlaPredMerge'.")
+                "in the object(s) passed to 'hlaPredMerge()'.")
         }
     }
 
     # check locus and sample.id
     samp.id <- pdlist[[1L]]$value$sample.id
     locus <- pdlist[[1L]]$locus
-    for (i in 1L:length(pdlist))
+    for (i in seq_along(pdlist))
     {
         if (!identical(samp.id, pdlist[[i]]$value$sample.id))
             stop("The sample IDs should be the same.")
@@ -874,14 +873,20 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
     # check weight
     if (!is.null(weight))
     {
-        stopifnot(is.numeric(weight) & is.vector(weight))
+        stopifnot(is.numeric(weight), is.vector(weight))
         if (length(pdlist) != length(weight))
             stop("Invalid 'weight'.")
+        if (anyNA(weight))
+            stop("'weight' should not have NA/NaN.")
         weight <- abs(weight)
         weight <- weight / sum(weight)
     } else {
         weight <- rep(1/length(pdlist), length(pdlist))
     }
+
+    # check
+    stopifnot(is.logical(ret.dosage))
+    stopifnot(is.logical(ret.postprob))
 
     #############################################################
     # replace function
@@ -889,10 +894,10 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
     {
         if (!is.null(equivalence))
         {
-            i <- match(allele, equivalence[, 2L])
+            i <- match(allele, equivalence[,2L])
             flag <- !is.na(i)
             i <- i[flag]
-            allele[flag] <- equivalence[i, 1L]
+            allele[flag] <- equivalence[i,1L]
         }
         allele
     }
@@ -900,7 +905,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
 
     # all different alleles
     hla.allele <- NULL
-    for (i in 1L:length(pdlist))
+    for (i in seq_along(pdlist))
     {
         h <- unique(unlist(strsplit(rownames(pdlist[[i]]$postprob), "/")))
         hla.allele <- unique(c(hla.allele, replace(h)))
@@ -909,36 +914,35 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
     n.hla <- length(hla.allele)
     n.samp <- length(samp.id)
 
-    prob <- matrix(0.0, nrow=n.hla*(n.hla+1L)/2, ncol=n.samp)
-    m <- outer(hla.allele, hla.allele, function(x, y) paste(x, y, sep="/"))
+    prob <- matrix(0.0, nrow=n.hla*(n.hla+1L)/2L, ncol=n.samp)
+    m <- outer(hla.allele, hla.allele, paste, sep="/")
     m <- m[lower.tri(m, diag=TRUE)]
+    colnames(prob) <- samp.id
+    rownames(prob) <- m
 
     # for-loop
-    for (i in 1L:length(pdlist))
+    for (i in seq_along(pdlist))
     {
         p <- pdlist[[i]]$postprob
         h <- replace(unlist(strsplit(rownames(p), "/")))
-
         h1 <- h[seq(1L, length(h), 2L)]; h2 <- h[seq(2L, length(h), 2L)]
         j1 <- match(paste(h1, h2, sep="/"), m)
         j2 <- match(paste(h2, h1, sep="/"), m)
         j1[is.na(j1)] <- j2[is.na(j1)]
-
-        # check
-        stopifnot(!any(is.na(j1)))
-
+        stopifnot(!anyNA(j1))  # check
         p <- p * weight[i]
-        for (j in seq_len(length(j1)))
+        for (j in seq_along(j1))
             prob[j1[j], ] <- prob[j1[j], ] + p[j, ]
     }
-    colnames(prob) <- samp.id
-    rownames(prob) <- m
+
+# need res$value$matching
 
     pb <- apply(prob, 2L, max)
     pt <- unlist(strsplit(m[apply(prob, 2L, which.max)], "/"))
     assembly <- pdlist[[1L]]$assembly
     if (is.null(assembly)) assembly <- "auto"
 
+    # output
     rv <- hlaAllele(samp.id,
         H1 = pt[seq(2L, length(pt), 2L)],
         H2 = pt[seq(1L, length(pt), 2L)],
@@ -947,7 +951,10 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL)
         locus.pos.end = pdlist[[1L]]$pos.end,
         prob = pb, na.rm = FALSE,
         assembly = assembly)
-    rv$postprob <- prob
+
+    # if (isTRUE(ret.dosage)) rv$dosage <- prob
+
+    if (isTRUE(ret.postprob)) rv$postprob <- prob
     rv
 }
 
