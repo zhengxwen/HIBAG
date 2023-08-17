@@ -2569,7 +2569,8 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
 # Convert HLA alleles to a VCF file for dosages
 #
 
-hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
+hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
+    prob.cutoff=NaN, verbose=TRUE)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass"))
@@ -2579,6 +2580,12 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
     stopifnot(is.logical(verbose), length(verbose)==1L, !is.na(verbose))
     hasDS <- !is.null(hla$dosage) && DS
     stopifnot(is.logical(allele.list) || is.character(allele.list))
+    stopifnot(is.numeric(prob.cutoff), length(prob.cutoff)==1L)
+    if (is.null(hla$value$prob) && !is.finite(prob.cutoff))
+    {
+        warning("'prob.cutoff' is not used since no probability information.")
+        prob.cutoff <- NaN
+    }
 
     # information
     hs <- hlaUniqueAllele(hla)
@@ -2602,10 +2609,26 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
             cat("    output: ", shQuote(outfn), "\n", sep="")
     }
 
+    # sample selection
+    na_sel <- FALSE
+    if (is.finite(prob.cutoff))
+    {
+        na_sel <- hla$value$prob < prob.cutoff
+        na_sel[is.na(na_sel)] <- FALSE
+    }
+
     # create a file if needed
     if (is.character(outfn))
     {
-        outfn <- file(outfn, "wt")
+        if (grepl("\\.gz$", outfn, ignore.case=TRUE))
+        {
+            outfn <- gzfile(outfn, "wt")
+        } else if (grepl("\\.xz$", outfn, ignore.case=TRUE))
+        {
+            outfn <- xzfile(outfn, "wt")
+        } else {
+            outfn <- file(outfn, "wt")
+        }
         on.exit(close(outfn))
     }
 
@@ -2613,7 +2636,8 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
     ss <- c(
         '##fileformat=VCFv4.0',
         paste0("##fileDate=", format(Sys.time(), "%Y%m%d")),
-        '##source=HIBAG',
+        paste0('##source=HIBAG_v', packageVersion("HIBAG")),
+        paste0('##reference=', hla$assembly),
         '##FILTER=<ID=PASS,Description="All filters passed">',
         '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
         if (hasDS)
@@ -2640,13 +2664,20 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
         h2 <- as.integer(hla$value["allele2"]==h)
         if (anyNA(h2)) h2[is.na(h2)] <- "."
         s <- paste(h1, h2, sep="/")
+        s[na_sel] <- "./."
         if (hasDS)
         {
-            i <- match(h, rownames(hla$dosage))
-            ds <- as.vector(hla$dosage[i, ii])
-            x <- is.na(ds)
-            ds <- format(ds, digits=5)
-            if (any(x)) ds[x] <- "."
+            i <- match(h, rownames(hla$dosage))[1L]  # use the first
+            if (!is.na(i))
+            {
+                ds <- as.vector(hla$dosage[i, ii])
+                ds[na_sel] <- NaN
+                x <- is.na(ds)
+                ds <- format(ds, digits=5)
+                if (any(x)) ds[x] <- "."
+            } else {
+                ds <- rep(".", length(ii))
+            }
             s <- paste(s, ds, sep=":")
         }
         ss <- c(ss, s)
