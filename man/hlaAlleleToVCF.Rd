@@ -7,16 +7,20 @@
     To convert the HLA allele data to a VCF file.
 }
 \usage{
-hlaAlleleToVCF(hla, outfn, DS=TRUE, verbose=TRUE)
+hlaAlleleToVCF(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
 }
 \arguments{
     \item{hla}{the training HLA types, an object of \code{\link{hlaAlleleClass}}}
     \item{outfn}{a VCF file name or a \code{connection}}
     \item{DS}{if TRUE, output dosages in the DS field}
+    \item{allele.list}{a logical value or a character vector for a list of
+        alleles; when it is a logical value, if \code{TRUE} and dosage is
+        available, use all possible alleles in the dosages; otherwise, use the
+        alleles predicted at least once}
     \item{verbose}{if \code{TRUE}, show information}
 }
 \value{
-    None.
+    Return \code{outfn}.
 }
 \references{
     Zheng X, Shen J, Cox C, Wakefield J, Ehm M, Nelson M, Weir BS;

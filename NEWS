@@ -1,9 +1,12 @@
-CHANGES IN VERSION 1.36.1
+CHANGES IN VERSION 1.36.2
 -------------------------
 
     o the output of `hlaPredict(, type="response+prob")` includes dosages
 
     o new arguments 'ret.dosage' and 'ret.postprob' in `hlaPredMerge()`
+
+    o new arguments 'allele.list' and '' in `hlaAlleleToVCF()`
+      for more possible outputs
 
 
 CHANGES IN VERSION 1.34.1

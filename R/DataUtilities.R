@@ -2569,7 +2569,7 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
 # Convert HLA alleles to a VCF file for dosages
 #
 
-hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, verbose=TRUE)
+hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=TRUE, verbose=TRUE)
 {
     # check
     stopifnot(inherits(hla, "hlaAlleleClass"))
@@ -2578,9 +2578,19 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, verbose=TRUE)
     stopifnot(is.logical(DS), length(DS)==1L, !is.na(DS))
     stopifnot(is.logical(verbose), length(verbose)==1L, !is.na(verbose))
     hasDS <- !is.null(hla$dosage) && DS
+    stopifnot(is.logical(allele.list) || is.character(allele.list))
 
     # information
     hs <- hlaUniqueAllele(hla)
+    if (isTRUE(allele.list))
+    {
+        if (is.matrix(hla$dosage))
+            hs <- hlaUniqueAllele(rownames(hla$dosage))
+    } else if (is.character(allele.list)) {
+        if (anyNA(allele.list))
+            stop("'allele.list' should not contain NA.")
+        hs <- unique(allele.list)
+    }
     if (verbose)
     {
         cat("Convert to dosage VCF format:\n")
@@ -2643,7 +2653,7 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, verbose=TRUE)
         writeLines(paste(ss, collapse="\t"), outfn)
     }
 
-    invisible()
+    invisible(outfn)
 }
 
 
