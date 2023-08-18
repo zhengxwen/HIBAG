@@ -9,7 +9,7 @@ HLA types.
 }
 \usage{
 hlaPredMerge(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
-    ret.postprob=TRUE)
+    ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
 }
 \arguments{
     \item{...}{The object(s) of \code{\link{hlaAlleleClass}}, having a field
@@ -22,6 +22,12 @@ hlaPredMerge(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
         existed in the object(s) passed to this function}
     \item{ret.dosage}{if \code{TRUE}, return dosages}
     \item{ret.postprob}{if \code{TRUE}, return average posterior probabilities}
+    \item{max.resolution}{"2-digit", "1-field", "4-digit", "2-field", "6-digit",
+        "3-field", "8-digit", "4-field", "allele", "protein", "full", "none",
+        or "": "allele" = "2-digit"; "protein" = "4-digit"; "full", "none" or
+        "" for no limit on resolution}
+    \item{rm.suffix}{whether remove the non-digit suffix in the last field,
+        e.g., for "01:22N", "N" is a non-digit suffix}
 }
 \details{
     Calculate a new probability matrix for each pair of HLA alleles, by
@@ -84,14 +90,17 @@ pd1 <- hlaPredict(m1, test.geno, type="response+prob")
 pd2 <- hlaPredict(m2, test.geno, type="response+prob")
 
 hlaCompareAllele(hlatab$validation, pd1)$overall
-
 hlaCompareAllele(hlatab$validation, pd2)$overall
 
-
 # merge predictions from multiple models, by voting from all classifiers
-pd <- hlaPredMerge(pd1, pd2, weight=c(1,1))
+pd <- hlaPredMerge(pd1, pd2)
+pd
 
 hlaCompareAllele(hlatab$validation, pd)$overall
+
+# collapse to 2-digit
+pd <- hlaPredMerge(pd1, pd2, max.resolution="2-digit", ret.postprob=FALSE)
+pd
 }
 
 \keyword{HLA}

@@ -825,7 +825,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
 #
 
 hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
-    ret.postprob=TRUE)
+    ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
 {
     # check "..."
     pdlist <- list(...)
@@ -858,6 +858,10 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
                 "in the object(s) passed to 'hlaPredMerge()'.")
         }
     }
+    stopifnot(is.logical(rm.suffix), length(rm.suffix)==1L)
+    stopifnot(is.character(max.resolution), length(max.resolution)==1L)
+    use_resolution <- !identical(max.resolution, "") ||
+        !identical(rm.suffix, FALSE)
 
     # check locus and sample.id
     samp.id <- pdlist[[1L]]$value$sample.id
@@ -899,6 +903,11 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
             i <- i[flag]
             allele[flag] <- equivalence[i,1L]
         }
+        if (use_resolution)
+        {
+            allele <- hlaAlleleDigit(allele, max.resolution=max.resolution,
+                rm.suffix=rm.suffix)
+        }
         allele
     }
 
@@ -930,7 +939,8 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
     {
         p <- pdlist[[i]]$postprob
         h <- replace(unlist(strsplit(rownames(p), "/", fixed=TRUE)))
-        h1 <- h[seq(1L, length(h), 2L)]; h2 <- h[seq(2L, length(h), 2L)]
+        h1 <- h[seq(1L, length(h), 2L)]
+        h2 <- h[seq(2L, length(h), 2L)]
         j1 <- match(paste(h1, h2, sep="/"), m)
         j2 <- match(paste(h2, h1, sep="/"), m)
         j1[is.na(j1)] <- j2[is.na(j1)]
