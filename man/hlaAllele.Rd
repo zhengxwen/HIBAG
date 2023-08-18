@@ -16,9 +16,10 @@ hlaAllele(sample.id, H1, H2, max.resolution="", locus="any", assembly="auto",
     \item{sample.id}{sample IDs}
     \item{H1}{a vector of HLA/KIR alleles}
     \item{H2}{a vector of HLA/KIR alleles}
-    \item{max.resolution}{"2-digit", "4-digit", "6-digit", "8-digit", "allele",
-        "protein", "2", "4", "6", "8", "full" or "": "allele" = "2-digit",
-        "protein" = "4-digit", "full" and "" indicating no limit on resolution}
+    \item{max.resolution}{"2-digit", "1-field", "4-digit", "2-field", "6-digit",
+        "3-field", "8-digit", "4-field", "allele", "protein", "full", "none",
+        or "": "allele" = "2-digit"; "protein" = "4-digit"; "full", "none" or
+        "" for no limit on resolution}
     \item{locus}{the name of HLA locus: "A", "B", "C", "DRB1", "DRB5",
         "DQA1", "DQB1", "DPB1", KIR locus, or "any", where "any" indicates any other
         multiallelic locus; see \code{\link{hlaLociInfo}} for possible locus names}

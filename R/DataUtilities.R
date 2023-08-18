@@ -1082,12 +1082,11 @@ hlaAlleleDigit <- function(obj, max.resolution=NA_character_, rm.suffix=FALSE)
     stopifnot(is.logical(rm.suffix), length(rm.suffix)==1L)
     if (is.character(obj))
         stopifnot(is.vector(obj))
-    stopifnot(is.character(max.resolution), length(max.resolution)==1L,
-        !is.na(max.resolution))
+    stopifnot(is.character(max.resolution), length(max.resolution)==1L)
     reslist <- c("2-digit", "1-field", "4-digit", "2-field", "6-digit",
         "3-field", "8-digit", "4-field", "allele", "protein",
         "full", "none", "")
-    if (!(max.resolution %in% reslist))
+    if (!isTRUE(max.resolution %in% reslist))
     {
         stop("'max.resolution' should be one of ",
             paste(sQuote(reslist), collapse=", "), ".")
@@ -1167,8 +1166,15 @@ hlaAllele <- function(sample.id, H1, H2, max.resolution="", locus="any",
     stopifnot(is.vector(H2) & is.character(H2))
     stopifnot(length(sample.id) == length(H1))
     stopifnot(length(sample.id) == length(H2))
-    stopifnot(max.resolution %in% c("2-digit", "4-digit", "6-digit",
-        "8-digit", "allele", "protein", "2", "4", "6", "8", "full", ""))
+    stopifnot(is.character(max.resolution), length(max.resolution)==1L)
+    reslist <- c("2-digit", "1-field", "4-digit", "2-field", "6-digit",
+        "3-field", "8-digit", "4-field", "allele", "protein",
+        "full", "none", "")
+    if (!isTRUE(max.resolution %in% reslist))
+    {
+        stop("'max.resolution' should be one of ",
+            paste(sQuote(reslist), collapse=", "), ".")
+    }
 
     assembly <- .hla_assembly(assembly)
     HLAinfo <- hlaLociInfo(assembly)

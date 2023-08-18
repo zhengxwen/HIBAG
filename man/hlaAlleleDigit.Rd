@@ -12,8 +12,8 @@ hlaAlleleDigit(obj, max.resolution=NA_character_, rm.suffix=FALSE)
 \arguments{
     \item{obj}{should be a \code{\link{hlaAlleleClass}} object or characters}
     \item{max.resolution}{"2-digit", "1-field", "4-digit", "2-field", "6-digit",
-        "3-field", "8-digit", "4-field", "allele", "protein", "full", "",
-        "none": "allele" = "2-digit"; "protein" = "4-digit"; "full", "none" or
+        "3-field", "8-digit", "4-field", "allele", "protein", "full", "none",
+        or "": "allele" = "2-digit"; "protein" = "4-digit"; "full", "none" or
         "" for no limit on resolution}
     \item{rm.suffix}{whether remove the non-digit suffix in the last field,
         e.g., for "01:22N", "N" is a non-digit suffix}
