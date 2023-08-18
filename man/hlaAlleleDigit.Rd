@@ -7,22 +7,22 @@
     Trim HLA alleles to specified width.
 }
 \usage{
-hlaAlleleDigit(obj, max.resolution="4-digit", rm.suffix=FALSE)
+hlaAlleleDigit(obj, max.resolution=NA_character_, rm.suffix=FALSE)
 }
 \arguments{
     \item{obj}{should be a \code{\link{hlaAlleleClass}} object or characters}
     \item{max.resolution}{"2-digit", "1-field", "4-digit", "2-field", "6-digit",
         "3-field", "8-digit", "4-field", "allele", "protein", "full", "",
-        "none": "allele" = "2-digit"; "protein" = "4-digit"; "full" and ""
-        indicating no limit on resolution}
-    \item{rm.suffix}{whether remove the suffix, e.g., for "01:22N", "N" is a
-        suffix}
+        "none": "allele" = "2-digit"; "protein" = "4-digit"; "full", "none" or
+        "" for no limit on resolution}
+    \item{rm.suffix}{whether remove the non-digit suffix in the last field,
+        e.g., for "01:22N", "N" is a non-digit suffix}
 }
 \details{
-    Either \code{HLAtypes} or \code{H1} \code{H2} should be specified. The
-format of \code{HLAtypes} is "allele 1 / allele 2", e.g., "0512/0102". If
-\code{max.resolution} is specified, the HLA alleles will be trimmed with the
-maximum resolution.
+    If \code{max.resolution} is specified, the HLA alleles will be trimmed with
+the maximum resolution.
+See \url{https://hla.alleles.org/nomenclature/naming.html} for the HLA
+nomenclature.
 }
 \value{
     Return a \code{\link{hlaAlleleClass}} object if \code{obj} is

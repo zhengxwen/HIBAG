@@ -1075,22 +1075,25 @@ hlaLociInfo <- function(assembly =
 # Limit the resolution of HLA alleles
 #
 
-hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
+hlaAlleleDigit <- function(obj, max.resolution=NA_character_, rm.suffix=FALSE)
 {
     # check
     stopifnot(inherits(obj, "hlaAlleleClass") | is.character(obj))
-    stopifnot(is.logical(rm.suffix))
+    stopifnot(is.logical(rm.suffix), length(rm.suffix)==1L)
     if (is.character(obj))
         stopifnot(is.vector(obj))
+    stopifnot(is.character(max.resolution), length(max.resolution)==1L,
+        !is.na(max.resolution))
     reslist <- c("2-digit", "1-field", "4-digit", "2-field", "6-digit",
-        "3-field", "8-digit", "4-field", "allele", "protein", "full", "")
+        "3-field", "8-digit", "4-field", "allele", "protein",
+        "full", "none", "")
     if (!(max.resolution %in% reslist))
     {
         stop("'max.resolution' should be one of ",
             paste(sQuote(reslist), collapse=", "), ".")
     }
 
-    if (!(max.resolution %in% c("full", "")))
+    if (!(max.resolution %in% c("full", "none", "")))
     {
         if (is.character(obj))
         {
@@ -1098,35 +1101,20 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
             names(len) <- c("2-digit", "1-field", "4-digit", "2-field",
                 "6-digit", "3-field", "8-digit", "4-field", "allele", "protein")
             maxlen <- len[[as.character(max.resolution)]]
+            ii <- seq_len(maxlen)
 
-            obj <- sapply(strsplit(obj, ":"), FUN =
-                    function(s, idx) {
-                        if (any(is.na(s)))
-                        {
-                            NA
-                        } else {
-                            if (length(idx) < length(s)) s <- s[idx]
-                            if (length(idx) == length(s))
-                            {
-                                if (rm.suffix & (nchar(s[length(s)])>0L))
-                                {
-                                    z <- unlist(strsplit(s[length(s)], ""))
-                                    for (i in 1L:length(z))
-                                    {
-                                        if (!(z[i] %in% as.character(0:9)))
-                                        {
-                                            if (i > 1L)
-                                                z <- z[1L:(i-1L)]
-                                            break
-                                        }
-                                    }
-                                    s[length(s)] <- paste(z, collapse="")
-                                }
-                            }
-                            paste(s, collapse=":")
-                        }
-                    },
-                idx = 1L:maxlen)
+            obj <- sapply(strsplit(obj, ":"), FUN = function(s)
+            {
+                if (!anyNA(s))
+                {
+                    if (length(s) > length(ii)) s <- s[ii]
+                    if (isTRUE(rm.suffix))
+                        s[length(s)] <- gsub("\\D+$", "", s[length(s)])
+                    paste(s, collapse=":")
+                } else {
+                    NA_character_
+                }
+            })
         } else {
             rv <- list(locus = obj$locus,
                 pos.start = obj$pos.start, pos.end = obj$pos.end,
@@ -1136,8 +1124,6 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
                     stringsAsFactors=FALSE),
                 assembly = obj$assembly
             )
-            if ("prob" %in% names(obj$value))
-                rv$value$prob <- obj$value$prob
             class(rv) <- "hlaAlleleClass"
             obj <- rv
         }
