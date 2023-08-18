@@ -11,7 +11,8 @@ hlaAlleleToVCF(hla, outfn, DS=TRUE, allele.list=FALSE, prob.cutoff=NaN,
     verbose=TRUE)
 }
 \arguments{
-    \item{hla}{an object of \code{\link{hlaAlleleClass}} for HLA alleles}
+    \item{hla}{an object of \code{\link{hlaAlleleClass}} for HLA alleles, or
+        a list of \code{hlaAlleleClass} objects}
     \item{outfn}{a VCF file name or a \code{connection}; if \code{outfn} ends
         with ".gz" or ".xz", \code{gzfile} or \code{xzfile} will be used to
         compress the output file}

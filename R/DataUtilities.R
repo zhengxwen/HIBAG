@@ -2565,7 +2565,23 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
     prob.cutoff=NaN, verbose=TRUE)
 {
     # check
-    stopifnot(inherits(hla, "hlaAlleleClass"))
+    stopifnot(inherits(hla, "hlaAlleleClass") || class(hla)[1L]=="list")
+    if (class(hla)[1L] == "list")
+    {
+        v <- vapply(hla, function(h) inherits(h, "hlaAlleleClass"), TRUE)
+        if (length(v)==0L || !all(v))
+            stop("'hla' should be a hlaAlleleClass object or a list of hlaAlleleClass objects.")
+        hla_lst <- hla
+        hla <- hla_lst[[1L]]
+        s <- hla$value$sample.id
+        for (i in seq_along(hla_lst))
+        {
+            if (!identical(s, hla_lst[[i]]$value$sample.id))
+                stop("'hla[[", i, "]]' has different sample IDs.")
+        }
+    } else {
+        hla_lst <- list(hla)
+    }
     if (!inherits(outfn, "connection"))
         stopifnot(is.character(outfn), length(outfn)==1L, !is.na(outfn))
     stopifnot(is.logical(DS), length(DS)==1L, !is.na(DS))
@@ -2579,34 +2595,14 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         prob.cutoff <- NaN
     }
 
-    # information
-    hs <- hlaUniqueAllele(hla)
-    if (isTRUE(allele.list))
-    {
-        if (is.matrix(hla$dosage))
-            hs <- hlaUniqueAllele(rownames(hla$dosage))
-    } else if (is.character(allele.list)) {
-        if (anyNA(allele.list))
-            stop("'allele.list' should not contain NA.")
-        hs <- unique(allele.list)
-    }
     if (verbose)
     {
         cat("Convert to dosage VCF format:\n")
         cat("    # of samples: ", NROW(hla$value), "\n", sep="")
-        cat("    # of unique HLA alleles: ", length(hs), "\n", sep="")
         if (inherits(outfn, "connection"))
             cat("    output: <connection>\n")
         else
             cat("    output: ", shQuote(outfn), "\n", sep="")
-    }
-
-    # sample selection
-    na_sel <- FALSE
-    if (is.finite(prob.cutoff))
-    {
-        na_sel <- hla$value$prob < prob.cutoff
-        na_sel[is.na(na_sel)] <- FALSE
     }
 
     # create a file if needed
@@ -2641,39 +2637,75 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
     )
     writeLines(ss, outfn)
 
-    # write to VCF for each allele
-    pos <- as.character(round(mean(c(hla$pos.start, hla$pos.end), na.rm=TRUE)))
-    if (is.na(pos)) pos <- "."
-    if (hasDS)
-        ii <- match(hla$value$sample.id, colnames(hla$dosage))
-    for (h in hs)
+    # for-loop each hlaAlleleClass
+    for (hla_i in seq_along(hla_lst))
     {
-        ss <- c("6", pos, paste0(.hla_gene_name_string(hla$locus), "*", h),
-            "A", paste0("P_", gsub("[^a-zA-Z0-9]", "", h)), ".", "PASS", ".",
-            ifelse(hasDS, "GT:DS", "GT"))
-        h1 <- as.integer(hla$value["allele1"]==h)
-        if (anyNA(h1)) h1[is.na(h1)] <- "."
-        h2 <- as.integer(hla$value["allele2"]==h)
-        if (anyNA(h2)) h2[is.na(h2)] <- "."
-        s <- paste(h1, h2, sep="/")
-        s[na_sel] <- "./."
-        if (hasDS)
+        hla <- hla_lst[[hla_i]]
+        # allele information
+        hs <- hlaUniqueAllele(hla)
+        if (isTRUE(allele.list))
         {
-            i <- match(h, rownames(hla$dosage))[1L]  # use the first
-            if (!is.na(i))
-            {
-                ds <- as.vector(hla$dosage[i, ii])
-                ds[na_sel] <- NaN
-                x <- is.na(ds)
-                ds <- format(ds, digits=5)
-                if (any(x)) ds[x] <- "."
-            } else {
-                ds <- rep(".", length(ii))
-            }
-            s <- paste(s, ds, sep=":")
+            if (is.matrix(hla$dosage))
+                hs <- hlaUniqueAllele(rownames(hla$dosage))
+        } else if (is.character(allele.list)) {
+            if (anyNA(allele.list))
+                stop("'allele.list' should not contain NA.")
+            hs <- unique(allele.list)
         }
-        ss <- c(ss, s)
-        writeLines(paste(ss, collapse="\t"), outfn)
+        if (verbose)
+        {
+            if (length(hla_lst) > 1L)
+                cat("Input object ", hla_i, ":\n", sep="")
+            cat("    # of unique HLA alleles: ", length(hs), "\n", sep="")
+        }
+
+        # sample selection
+        na_sel <- FALSE
+        if (is.finite(prob.cutoff))
+        {
+            na_sel <- hla$value$prob < prob.cutoff
+            na_sel[is.na(na_sel)] <- FALSE
+            if (verbose)
+            {
+                cat("    # of samples (set to be missing): ",
+                    sum(na_sel), "\n", sep="")
+            }
+        }
+
+        # write to VCF for each allele
+        pos <- as.character(round(mean(c(hla$pos.start, hla$pos.end), na.rm=TRUE)))
+        if (is.na(pos)) pos <- "."
+        if (hasDS)
+            ii <- match(hla$value$sample.id, colnames(hla$dosage))
+        for (h in hs)
+        {
+            ss <- c("6", pos, paste0(.hla_gene_name_string(hla$locus), "*", h),
+                "A", paste0("P_", gsub("[^a-zA-Z0-9]", "", h)), ".", "PASS",
+                ".", ifelse(hasDS, "GT:DS", "GT"))
+            h1 <- as.integer(hla$value["allele1"]==h)
+            if (anyNA(h1)) h1[is.na(h1)] <- "."
+            h2 <- as.integer(hla$value["allele2"]==h)
+            if (anyNA(h2)) h2[is.na(h2)] <- "."
+            s <- paste(h1, h2, sep="/")
+            s[na_sel] <- "./."
+            if (hasDS && !is.null(hla$dosage))
+            {
+                i <- match(h, rownames(hla$dosage))[1L]  # use the first
+                if (!is.na(i))
+                {
+                    ds <- as.vector(hla$dosage[i, ii])
+                    ds[na_sel] <- NaN
+                    x <- is.na(ds)
+                    ds <- format(ds, digits=5)
+                    if (any(x)) ds[x] <- "."
+                } else {
+                    ds <- rep(".", length(ii))
+                }
+                s <- paste(s, ds, sep=":")
+            }
+            ss <- c(ss, s)
+            writeLines(paste(ss, collapse="\t"), outfn)
+        }
     }
 
     invisible(outfn)
