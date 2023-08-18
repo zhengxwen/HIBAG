@@ -1083,7 +1083,7 @@ hlaAlleleDigit <- function(obj, max.resolution="4-digit", rm.suffix=FALSE)
     if (is.character(obj))
         stopifnot(is.vector(obj))
     reslist <- c("2-digit", "1-field", "4-digit", "2-field", "6-digit",
-        "3-filed", "8-digit", "4-field", "allele", "protein", "full", "")
+        "3-field", "8-digit", "4-field", "allele", "protein", "full", "")
     if (!(max.resolution %in% reslist))
     {
         stop("'max.resolution' should be one of ",
