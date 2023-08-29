@@ -2586,14 +2586,9 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         stopifnot(is.character(outfn), length(outfn)==1L, !is.na(outfn))
     stopifnot(is.logical(DS), length(DS)==1L, !is.na(DS))
     stopifnot(is.logical(verbose), length(verbose)==1L, !is.na(verbose))
-    hasDS <- !is.null(hla$dosage) && DS
     stopifnot(is.logical(allele.list) || is.character(allele.list))
+    if (isTRUE(prob.cutoff)) prob.cutoff <- 0.5
     stopifnot(is.numeric(prob.cutoff), length(prob.cutoff)==1L)
-    if (is.null(hla$value$prob) && !is.finite(prob.cutoff))
-    {
-        warning("'prob.cutoff' is not used since no probability information.")
-        prob.cutoff <- NaN
-    }
 
     if (verbose)
     {
@@ -2621,6 +2616,7 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
     }
 
     # write to VCF header
+    hasDS <- any(vapply(hla_lst, function(h) !is.null(h$dosage), TRUE))
     ss <- c(
         '##fileformat=VCFv4.0',
         paste0("##fileDate=", format(Sys.time(), "%Y%m%d")),
@@ -2651,17 +2647,19 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
             if (anyNA(allele.list))
                 stop("'allele.list' should not contain NA.")
             hs <- unique(allele.list)
+            if (any(hs=="")) hs <- hs[hs!=""]
         }
         if (verbose)
         {
             if (length(hla_lst) > 1L)
                 cat("Input object ", hla_i, ":\n", sep="")
             cat("    # of unique HLA alleles: ", length(hs), "\n", sep="")
+            cat("    [", paste(hs, collapse=","), "]\n")
         }
 
         # sample selection
         na_sel <- FALSE
-        if (is.finite(prob.cutoff))
+        if (is.finite(prob.cutoff) && !is.null(hla$value$prob))
         {
             na_sel <- hla$value$prob < prob.cutoff
             na_sel[is.na(na_sel)] <- FALSE
@@ -2675,6 +2673,7 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         # write to VCF for each allele
         pos <- as.character(round(mean(c(hla$pos.start, hla$pos.end), na.rm=TRUE)))
         if (is.na(pos)) pos <- "."
+        hasDS <- DS && !is.null(hla$dosage)
         if (hasDS)
             ii <- match(hla$value$sample.id, colnames(hla$dosage))
         for (h in hs)
@@ -2710,5 +2709,4 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
 
     invisible(outfn)
 }
-
 
