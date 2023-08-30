@@ -2653,7 +2653,8 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         {
             if (length(hla_lst) > 1L)
                 cat("Input object ", hla_i, ":\n", sep="")
-            cat("    # of unique HLA alleles: ", length(hs), "\n", sep="")
+            cat("    # of unique HLA-", hla$locus, " alleles: ", length(hs),
+                "\n", sep="")
             cat("    [", paste(hs, collapse=","), "]\n")
         }
 
