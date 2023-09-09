@@ -2605,7 +2605,17 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
     {
         if (grepl("\\.gz$", outfn, ignore.case=TRUE))
         {
-            outfn <- gzfile(outfn, "wt")
+            if (.Platform$OS.type!="windows" &&
+                requireNamespace("Rsamtools", quietly=TRUE))
+            {
+                outfn <- .Call(HIBAG_bgzip_create, outfn)
+                if (verbose)
+                    cat("            [BGZF-format gzip file]\n")
+            } else {
+                outfn <- gzfile(outfn, "wt")
+                if (verbose)
+                    cat("            [general gzip file]\n")
+            }
         } else if (grepl("\\.xz$", outfn, ignore.case=TRUE))
         {
             outfn <- xzfile(outfn, "wt")
@@ -2622,6 +2632,10 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         paste0("##fileDate=", format(Sys.time(), "%Y%m%d")),
         paste0('##source=HIBAG_v', packageVersion("HIBAG")),
         paste0('##reference=', hla$assembly),
+        if (identical(hla$assembly, "hg38"))
+            '##contig=<ID=6,length=170805979>'
+        else
+            '##contig=<ID=6,length=171115067>',
         '##FILTER=<ID=PASS,Description="All filters passed">',
         '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
         if (hasDS)
