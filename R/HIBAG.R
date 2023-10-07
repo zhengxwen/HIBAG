@@ -82,7 +82,7 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
     hla.allele2 <- hla$value$allele2[samp.flag]
     if (na.rm)
     {
-        if (any(is.na(c(hla.allele1, hla.allele2))))
+        if (anyNA(c(hla.allele1, hla.allele2)))
         {
             warning("There are missing HLA alleles, ",
                 "and the corresponding samples have been removed.")
@@ -93,10 +93,8 @@ hlaAttrBagging <- function(hla, snp, nclassifier=100L,
             hla.allele2 <- hla$value$allele2[samp.flag]
         }
     } else {
-        if (any(is.na(c(hla.allele1, hla.allele2))))
-        {
+        if (anyNA(c(hla.allele1, hla.allele2)))
             stop("There are missing HLA alleles!")
-        }
     }
 
     # SNP genotypes
@@ -1108,8 +1106,10 @@ hlaModelFromObj <- function(obj)
     # add individual classifiers
     for (tree in obj$classifiers)
     {
+        if (is.null(tree$haplos$haplo))
+            stop("No 'haplo' component. The model may be used by the higher version of HIBAG.")
         hla <- match(tree$haplos$hla, obj$hla.allele) - 1L
-        if (any(is.na(hla)))
+        if (anyNA(hla))
             stop("Invalid HLA alleles in the individual classifier.")
         if (is.null(tree$samp.num))
             snum <- rep.int(1L, obj$n.samp)
@@ -1260,15 +1260,15 @@ hlaOutOfBag <- function(model, hla, snp, call.threshold=NaN, verbose=TRUE)
     if (is.null(model$sample.id))
         stop("There is no sample ID in the model.")
     samp.idx <- match(model$sample.id, snp$sample.id)
-    if (any(is.na(samp.idx)))
+    if (anyNA(samp.idx))
         stop("Some of sample.id in the model do not exist in SNP genotypes.")
     hla.samp.idx <- match(model$sample.id, hla$value$sample.id)
-    if (any(is.na(hla.samp.idx)))
+    if (anyNA(hla.samp.idx))
         stop("Some of sample.id in the model do not exist in HLA types.")
 
     # map SNPs
     snp.idx <- match(model$snp.id, snp$snp.id)
-    if (any(is.na(snp.idx)))
+    if (anyNA(snp.idx))
         stop("Some of snp.id in the model do not exist in SNP genotypes.")
 
     # genotypes and the number of classifiers
