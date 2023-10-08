@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2023   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -998,16 +998,18 @@ summary.hlaAttrBagClass <- function(object, show=TRUE, ...)
 
 
 #######################################################################
-# Save the parameters in a model of attribute bagging
+# Save the parameters in a model of attribute bagging to an R object
 #
 
-hlaModelToObj <- function(model)
+hlaModelToObj <- function(model, version=c("v1.0", "v1.1"))
 {
     # check
     stopifnot(inherits(model, "hlaAttrBagClass"))
+    version <- match.arg(version)
 
     # get a list of classifiers
-    clr <- .Call(HIBAG_GetClassifierList, model$model, model$hla.allele)
+    clr <- .Call(HIBAG_GetClassifierList, model$model, model$hla.allele,
+        match(version, c("v1.0", "v1.1")))
 
     # output
     rv <- list(n.samp = model$n.samp, n.snp = model$n.snp,
@@ -1106,11 +1108,22 @@ hlaModelFromObj <- function(obj)
     # add individual classifiers
     for (tree in obj$classifiers)
     {
-        if (is.null(tree$haplos$haplo))
-            stop("No 'haplo' component. The model may be used by the higher version of HIBAG.")
-        hla <- match(tree$haplos$hla, obj$hla.allele) - 1L
-        if (anyNA(hla))
+        ss <- "The model may be used by the higher version of HIBAG."
+        # index of HLA alleles
+        if ("hla" %in% names(tree$haplos))
+        {
+            hla_i <- match(tree$haplos$hla, obj$hla.allele) - 1L
+        } else {
+            if (!is.null(tree$haplos$hla_i))
+                hla_i <- as.integer(tree$haplos$hla_i - 1L)
+            else
+                stop("No 'hla' and 'hla_i' component. ", ss)
+        }
+        if (anyNA(hla_i))
             stop("Invalid HLA alleles in the individual classifier.")
+        #
+        if (is.null(tree$haplos$haplo))
+            stop("No 'haplo' component. ", ss)
         if (is.null(tree$samp.num))
             snum <- rep.int(1L, obj$n.samp)
         else
@@ -1118,7 +1131,7 @@ hlaModelFromObj <- function(obj)
 
         # create a new classifier
         .Call(HIBAG_NewClassifierHaplo, ABmodel, as.integer(tree$snpidx - 1L),
-            snum, as.double(tree$haplos$freq), hla,
+            snum, as.double(tree$haplos$freq), hla_i,
             as.character(tree$haplos$haplo),
             tree$outofbag.acc)
     }
@@ -1656,7 +1669,9 @@ hlaSetKernelTarget <- function(cpu=c("max", "auto.avx2", "base",
 .hibag_data_list <- list(
 	data.frame = "data.frame",
 	clr_nm = c("samp.num", "haplos", "snpidx", "outofbag.acc"),
-	clr_haplo_nm = c("freq", "hla", "haplo"))
+	clr_haplo_nm = c("freq", "hla", "haplo"),
+	clr_haplo_nm_1.1 = c("freq", "hla_i", "hex_haplo")
+)
 
 .onLoad <- function(lib, pkg)
 {

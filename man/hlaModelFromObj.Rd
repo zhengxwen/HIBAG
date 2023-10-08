@@ -12,11 +12,14 @@ saved in a file
 }
 \usage{
 hlaModelFromObj(obj)
-hlaModelToObj(model)
+hlaModelToObj(model, version=c("v1.0", "v1.1"))
 }
 \arguments{
     \item{obj}{an object of \code{\link{hlaAttrBagObj}}}
     \item{model}{an object of \code{\link{hlaAttrBagClass}}}
+    \item{version}{\code{"v1.0"} is used for maximizing compatibility by
+        default; \code{"v1.1"} is an option in HIBAG (>= v1.38.0) for
+        generating a smaller object file}
 }
 \value{
     \code{hlaModelFromObj} returns \code{hlaAttrBagClass}, and

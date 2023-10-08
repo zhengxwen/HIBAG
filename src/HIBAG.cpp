@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2023   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -66,6 +66,7 @@ static std::string _LastError;
 static SEXP hibag_data_frame = R_NilValue;
 static SEXP hibag_clr_nm = R_NilValue;
 static SEXP hibag_clr_haplo_nm = R_NilValue;
+static SEXP hibag_clr_haplo_nm_1_1 = R_NilValue;
 
 
 // ===========================================================
@@ -876,10 +877,13 @@ SEXP HIBAG_GetNumClassifiers(SEXP model)
  *  Get the details of a specified individual classifier
  *
  *  \param model         the model index
+ *  \param hla_str       a character vector for HLA alleles
+ *  \param version       int, 1 for v1.0, 2 for v1.1
  *  \return a list of individual classifiers
 **/
-SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
+SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str, SEXP version)
 {
+	int version_i = Rf_asInteger(version);  // 1 for v1.0, 2 for v1.1
 	int midx = Rf_asInteger(model);
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
@@ -892,7 +896,9 @@ SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 			const CAttrBag_Classifier &M = AB->ClassifierList()[k];
 			SEXP lst = NEW_LIST(4);
 			SET_ELEMENT(rv_ans, k, lst);
+
 			SET_NAMES(lst, hibag_clr_nm);
+
 			{ // samp.num
 				const vector<int> &ns = M.BootstrapCount();
 				SEXP nl = NEW_INTEGER(ns.size());
@@ -912,15 +918,28 @@ SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 				for (size_t i=0; i < nHaplo; i++)
 					pF[i] = Haplo.List[i].Freq;
 
-				// haplos$hla
-				SEXP hla = NEW_CHARACTER(nHaplo);
-				SET_ELEMENT(dt, 1, hla);
-				size_t hla_i = 0;
-				for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
+				if (version_i == 2)
 				{
-					SEXP s = STRING_ELT(hla_str, i);
-					for (size_t j=Haplo.LenPerHLA[i]; j > 0; j--)
-						SET_STRING_ELT(hla, hla_i++, s);
+					// haplos$hla_i
+					SEXP hla_i = NEW_INTEGER(nHaplo);
+					SET_ELEMENT(dt, 1, hla_i);
+					int *p_hla = INTEGER(hla_i);
+					for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
+					{
+						for (size_t j=Haplo.LenPerHLA[i]; j > 0; j--)
+							*p_hla++ = i+1;
+					}
+				} else {
+					// haplos$hla
+					SEXP hla = NEW_CHARACTER(nHaplo);
+					SET_ELEMENT(dt, 1, hla);
+					size_t hla_i = 0;
+					for (size_t i=0; i < Haplo.LenPerHLA.size(); i++)
+					{
+						SEXP s = STRING_ELT(hla_str, i);
+						for (size_t j=Haplo.LenPerHLA[i]; j > 0; j--)
+							SET_STRING_ELT(hla, hla_i++, s);
+					}
 				}
 
 				// haplos$haplo
@@ -929,12 +948,19 @@ SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 				const size_t nsnp = M.nSNP();
 				for (size_t i=0; i < nHaplo; i++)
 				{
-					SET_STRING_ELT(haplo, i,
-						mkChar(Haplo.List[i].HaploToStr(nsnp).c_str()));
+					string s = (version_i == 2) ? 
+						Haplo.List[i].HaploToHex(nsnp) :
+						Haplo.List[i].HaploToStr(nsnp);
+					SET_STRING_ELT(haplo, i, mkChar(s.c_str()));
 				}
 
+				// column names
+				if (version_i == 2)
+					SET_NAMES(dt, hibag_clr_haplo_nm_1_1);
+				else
+					SET_NAMES(dt, hibag_clr_haplo_nm);
+
 				// convert to data.frame
-				SET_NAMES(dt, hibag_clr_haplo_nm);
 				SET_CLASS(dt, hibag_data_frame);
 				SEXP rs = NEW_INTEGER(nHaplo);
 				Rf_setAttrib(dt, R_RowNamesSymbol, rs);
@@ -1449,6 +1475,7 @@ SEXP HIBAG_Init(SEXP data_lst)
 	hibag_data_frame = VECTOR_ELT(data_lst, 0);
 	hibag_clr_nm = VECTOR_ELT(data_lst, 1);
 	hibag_clr_haplo_nm = VECTOR_ELT(data_lst, 2);
+	hibag_clr_haplo_nm_1_1 = VECTOR_ELT(data_lst, 3);
 	return R_NilValue;
 }
 
@@ -1468,7 +1495,7 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_AlleleStrand2, 2),
 		CALL(HIBAG_BEDFlag, 1),
 		CALL(HIBAG_GetNumClassifiers, 1),
-		CALL(HIBAG_GetClassifierList, 2),
+		CALL(HIBAG_GetClassifierList, 3),
 		CALL(HIBAG_Close, 1),
 		CALL(HIBAG_Confusion, 4),
 		CALL(HIBAG_ConvBED, 5),

@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2023   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -309,15 +309,49 @@ string THaplotype::HaploToStr(size_t Length) const
 {
 	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
 		"THaplotype::HaploToStr, the length is invalid.");
-	string rv;
+	string s;
 	if (Length > 0)
 	{
-		rv.resize(Length);
 		const UINT8 *p = (const UINT8*)PackedHaplo;
+		s.resize(Length);
 		for (size_t i=0; i < Length; i++)
-			rv[i] = ((p[i >> 3] >> (i & 0x07)) & 0x01) ? '1' : '0';
+			s[i] = ((p[i >> 3] >> (i & 0x07)) & 0x01) ? '1' : '0';
 	}
-	return rv;
+	return s;
+}
+
+static inline char hex(UINT8 u)
+{
+	return (u < 10) ? (u + '0') : (u - 10 + 'A');
+}
+
+string THaplotype::HaploToHex(size_t Length) const
+{
+	HIBAG_CHECKING(Length > HIBAG_MAXNUM_SNP_IN_CLASSIFIER,
+		"THaplotype::HaploToStr, the length is invalid.");
+	string s;
+	if (Length > 0)
+	{
+		const UINT8 *p = (const UINT8*)PackedHaplo;
+		s.resize((Length >> 2) + ((Length & 0x03) != 0));
+		size_t s_i = 0;
+		for (; Length >= 8; Length-=8, p++)
+		{
+			s[s_i++] = hex(*p & 0x0F);
+			s[s_i++] = hex(*p >> 4);
+		}
+		if (Length > 0)
+		{
+			UINT8 u = *p & ~(0xFF << Length);
+			if (Length >= 4)
+			{
+				s[s_i++] = hex(u & 0x0F);
+				u >>= 4; Length -= 4;
+			}
+			if (Length > 0) s[s_i++] = hex(u);
+		}
+	}
+	return s;
 }
 
 void THaplotype::StrToHaplo(const string &str)

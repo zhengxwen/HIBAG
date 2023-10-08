@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2020-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2020-2023   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -284,8 +284,12 @@ namespace HLA_LIB
 		void SetAllele(size_t idx, UINT8 val);
 		/// get a string of "0" and "1" from packed SNP alleles
 		std::string HaploToStr(size_t Length) const;
+		/// get a hex string from packed SNP alleles
+		std::string HaploToHex(size_t Length) const;
 		/// set packed SNP alleles from a string of "0" and "1"
 		void StrToHaplo(const std::string &str);
+		/// set packed SNP alleles from a hex string
+		void HexToHaplo(const std::string &str);
 
 	private:
 		/// set SNP allele, idx starts from ZERO, without checking
