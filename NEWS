@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.38.0
+-------------------------
+
+    o fix a compiler warning of "unused-but-set-variable" on Apple ARM chips
+
+
 CHANGES IN VERSION 1.36.3
 -------------------------
 

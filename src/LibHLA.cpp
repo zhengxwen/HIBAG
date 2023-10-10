@@ -1238,12 +1238,6 @@ CAlg_Prediction::CAlg_Prediction() { }
 
 void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 {
-	bool cpu_auto_avx2, cpu_max;
-	if (!cpu) cpu = "";
-	if (strcmp(cpu, "auto.avx2")==0) cpu = "";
-	cpu_auto_avx2 = (strlen(cpu)==0);
-	cpu_max = (strcmp(cpu, "max")==0);
-	if (cpu_max) cpu_auto_avx2 = true;
 	string cpu_info;
 	bool need_aux_haplo = false;
 
@@ -1254,6 +1248,12 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 #endif
 
 #ifdef HIBAG_CPU_ARCH_X86
+
+	if (!cpu) cpu = "";
+	if (strcmp(cpu, "auto.avx2")==0) cpu = "";
+	bool cpu_auto_avx2 = (strlen(cpu)==0);
+	bool cpu_max = (strcmp(cpu, "max")==0);
+	if (cpu_max) cpu_auto_avx2 = true;
 
 #ifdef HIBAG_BUILTIN_CPU
 	__builtin_cpu_init();
