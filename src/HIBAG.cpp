@@ -1409,7 +1409,11 @@ SEXP HIBAG_Kernel_Version()
 
 	// using Intel TBB or not
 #if RCPP_PARALLEL_USE_TBB
+#if defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
+	int ntot = 1;
+#else
 	int ntot = tbb::this_task_arena::max_concurrency();
+#endif
 	SET_ELEMENT(ans, 2, ScalarInteger(ntot));
 #else
 	SET_ELEMENT(ans, 2, ScalarInteger(NA_INTEGER));

@@ -1,7 +1,9 @@
-CHANGES IN VERSION 1.38.0
+CHANGES IN VERSION 1.38.1
 -------------------------
 
     o fix a compiler warning of "unused-but-set-variable" on Apple ARM chips
+
+    o fix the failure of package loading on Apple ARM chips in the R console
 
 
 CHANGES IN VERSION 1.36.3
