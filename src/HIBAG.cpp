@@ -56,7 +56,7 @@ extern "C"
 	catch (...) { \
 		_LastError = "unknown error!"; has_error = true; \
 	} \
-	if (has_error) error(_LastError.c_str()); \
+	if (has_error) Rf_error("%s", _LastError.c_str()); \
 	return rv_ans;
 
 
@@ -459,7 +459,7 @@ static void model_free(SEXP ptr_obj)
 			} catch (...) {
 				_LastError = "unknown error!"; has_error = true;
 			}
-			if (has_error) error(_LastError.c_str());
+			if (has_error) Rf_error("%s", _LastError.c_str());
 		}
 	}
 }

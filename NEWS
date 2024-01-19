@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.38.2
+-------------------------
+
+    o fix compiler warnings: -Wformat & -Wformat-security
+
+
 CHANGES IN VERSION 1.38.1
 -------------------------
 

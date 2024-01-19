@@ -2074,10 +2074,10 @@ void CVariableSelection::Search(CBaseSampling &VarSampling,
 			if (verbose_detail)
 			{
 				Rprintf("    %2d, SNP: %d, loss: %g, oob acc: %0.2f%%, # of haplo: %d\n",
-					OutSNPIndex.size(), OutSNPIndex.back()+1,
+					(int)OutSNPIndex.size(), OutSNPIndex.back()+1,
 					Global_Min_Loss,
 					double(Global_Max_OutOfBagAcc) / NumOOB * 50,
-					OutHaplo.Num_Haplo);
+					(int)OutHaplo.Num_Haplo);
 			}
 			CheckInterrupt();
 		} else {
