@@ -822,8 +822,8 @@ hlaPredict <- function(object, snp, cl=FALSE,
 # Merge predictions by voting
 #
 
-hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
-    ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
+hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
+    ret.dosage=TRUE, ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
 {
     # check "..."
     pdlist <- list(...)
@@ -880,15 +880,24 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
             stop("Invalid 'weight'.")
         if (anyNA(weight))
             stop("'weight' should not have NA/NaN.")
-        weight <- abs(weight)
+        if (any(weight < 0))
+            stop("'weight' should not have a negative value.")
         weight <- weight / sum(weight)
     } else {
         weight <- rep(1/length(pdlist), length(pdlist))
     }
 
     # check
-    stopifnot(is.logical(ret.dosage))
-    stopifnot(is.logical(ret.postprob))
+    stopifnot(is.logical(ret.dosage), length(ret.dosage)==1L)
+    stopifnot(is.logical(ret.postprob), length(ret.postprob)==1L)
+
+    stopifnot(is.logical(use.matching), length(use.matching)==1L)
+    if (use.matching)
+    {
+        x <- vapply(pdlist, function(x) is.null(x$value$matching), TRUE)
+        if (any(x))
+            stop("The column 'matching' should be provided when use.matching=TRUE.")
+    }
 
     #############################################################
     # replace function
@@ -935,6 +944,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
     # for-loop
     for (i in seq_along(pdlist))
     {
+        w <- weight[i]
         p <- pdlist[[i]]$postprob
         h <- replace(unlist(strsplit(rownames(p), "/", fixed=TRUE)))
         h1 <- h[seq(1L, length(h), 2L)]
@@ -943,13 +953,17 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
         j2 <- match(paste(h2, h1, sep="/"), m)
         j1[is.na(j1)] <- j2[is.na(j1)]
         stopifnot(!anyNA(j1))  # check
-        p <- p * weight[i]
+        if (use.matching)
+            p <- sweep(p, 2L, pdlist[[i]]$value$matching, "*")
+        p <- p * w
         for (j in seq_along(j1))
             prob[j1[j], ] <- prob[j1[j], ] + p[j, ]
         if (is.numeric(has.matching))
-            has.matching <- has.matching + pdlist[[i]]$value$matching
+            has.matching <- has.matching + w * pdlist[[i]]$value$matching
     }
 
+    # normalize prob
+    prob <- sweep(prob, 2L, colSums(prob), "/")
     pb <- apply(prob, 2L, max)
     pt <- unlist(strsplit(m[apply(prob, 2L, which.max)], "/", fixed=TRUE))
     assembly <- pdlist[[1L]]$assembly
@@ -965,7 +979,7 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
         prob = pb, na.rm = FALSE,
         assembly = assembly)
     if (is.numeric(has.matching))
-        rv$value$matching <- has.matching / length(pdlist)
+        rv$value$matching <- has.matching
     if (isTRUE(ret.dosage))
     {
         ds <- matrix(0, nrow=length(hla.allele), ncol=n.samp)

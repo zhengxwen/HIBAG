@@ -67,25 +67,3 @@ for (hla.idx in seq_along(hla.list))
 	cat("\n\n")
 }
 
-
-
-#############################################################
-
-{
-	function.list <- readRDS(
-		system.file("Meta", "Rd.rds", package="HIBAG"))$Name
-
-	sapply(function.list, FUN = function(func.name)
-		{
-			args <- list(
-				topic   = func.name,
-				package = "HIBAG",
-				echo = FALSE,
-				verbose = FALSE,
-				ask = FALSE
-			)
-			suppressWarnings(do.call(example, args))
-			NULL
-		})
-	invisible()
-}

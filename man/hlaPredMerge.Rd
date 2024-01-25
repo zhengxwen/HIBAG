@@ -8,18 +8,22 @@
 HLA types.
 }
 \usage{
-hlaPredMerge(..., weight=NULL, equivalence=NULL, ret.dosage=TRUE,
-    ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
+hlaPredMerge(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
+    ret.dosage=TRUE, ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
 }
 \arguments{
     \item{...}{The object(s) of \code{\link{hlaAlleleClass}}, having a field
         of 'postprob', and returned by
         \code{hlaPredict(..., type="response+prob")}}
     \item{weight}{the weight used for each prediction; if \code{NULL},
-        equal weights to be used}
+        equal weights to be used; or set the weight vector to be the training
+        sample sizes}
     \item{equivalence}{a \code{data.frame} with two columns, the first column
         for new equivalent alleles, and the second for the alleles possibly
         existed in the object(s) passed to this function}
+    \item{use.matching}{if \code{TRUE}, use actual probabilities (i.e.,
+        poster prob. * matching) for merging; otherwise, use poster prob.
+        instead. \code{use.matching=TRUE} is recommended.}
     \item{ret.dosage}{if \code{TRUE}, return dosages}
     \item{ret.postprob}{if \code{TRUE}, return average posterior probabilities}
     \item{max.resolution}{"2-digit", "1-field", "4-digit", "2-field", "6-digit",
