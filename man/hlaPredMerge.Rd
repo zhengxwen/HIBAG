@@ -9,7 +9,7 @@ HLA types.
 }
 \usage{
 hlaPredMerge(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
-    ret.dosage=TRUE, ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
+    ret.dosage=TRUE, ret.postprob=FALSE, max.resolution="", rm.suffix=FALSE)
 }
 \arguments{
     \item{...}{The object(s) of \code{\link{hlaAlleleClass}}, having a field

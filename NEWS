@@ -1,10 +1,12 @@
-CHANGES IN VERSION 1.38.2
+CHANGES IN VERSION 1.38.3
 -------------------------
 
     o fix compiler warnings: -Wformat & -Wformat-security
 
     o new 'use.matching=TRUE' in `hlaPredMerge()`; to set 'use.matching=FALSE'
       for backward compatibility
+
+    o 'ret.postprob=FALSE' by default in `hlaPredMerge()`
 
 
 CHANGES IN VERSION 1.38.1

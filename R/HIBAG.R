@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2024   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -823,7 +823,7 @@ hlaPredict <- function(object, snp, cl=FALSE,
 #
 
 hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
-    ret.dosage=TRUE, ret.postprob=TRUE, max.resolution="", rm.suffix=FALSE)
+    ret.dosage=TRUE, ret.postprob=FALSE, max.resolution="", rm.suffix=FALSE)
 {
     # check "..."
     pdlist <- list(...)
