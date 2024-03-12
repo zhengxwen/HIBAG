@@ -9,7 +9,8 @@ HLA types.
 }
 \usage{
 hlaPredMerge(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
-    ret.dosage=TRUE, ret.postprob=FALSE, max.resolution="", rm.suffix=FALSE)
+    ret.dosage=TRUE, ret.postprob=FALSE, max.resolution="", rm.suffix=FALSE,
+    verbose=TRUE)
 }
 \arguments{
     \item{...}{The object(s) of \code{\link{hlaAlleleClass}}, having a field
@@ -20,7 +21,8 @@ hlaPredMerge(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
         sample sizes}
     \item{equivalence}{a \code{data.frame} with two columns, the first column
         for new equivalent alleles, and the second for the alleles possibly
-        existed in the object(s) passed to this function}
+        exist in the object(s) passed to this function; there is no replace
+        if the allele is not found in the second column}
     \item{use.matching}{if \code{TRUE}, use actual probabilities (i.e.,
         poster prob. * matching) for merging; otherwise, use poster prob.
         instead. \code{use.matching=TRUE} is recommended.}
@@ -32,6 +34,7 @@ hlaPredMerge(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
         "" for no limit on resolution}
     \item{rm.suffix}{whether remove the non-digit suffix in the last field,
         e.g., for "01:22N", "N" is a non-digit suffix}
+    \item{verbose}{if \code{TRUE}, show information}
 }
 \details{
     Calculate a new probability matrix for each pair of HLA alleles, by

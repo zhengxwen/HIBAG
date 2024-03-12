@@ -7,7 +7,8 @@ useDynLib(HIBAG,
     HIBAG_SortAlleleStr, HIBAG_Kernel_Version, HIBAG_Kernel_SetTarget,
     HIBAG_Predict_Resp, HIBAG_Predict_Dosage, HIBAG_Predict_Resp_Prob,
     HIBAG_Training, HIBAG_SeqMerge, HIBAG_SeqRmDot,
-    HIBAG_bgzip_create
+    HIBAG_bgzip_create,
+    HIBAG_SumList, HIBAG_UpdateAddProbW, HIBAG_NormalizeProb
 )
 
 # Export function names

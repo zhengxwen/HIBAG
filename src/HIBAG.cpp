@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2024   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1446,7 +1446,7 @@ SEXP HIBAG_Clear_GPU()
 
 
 /**
- *  Call by .onLoad()
+ *  Called by .onLoad()
 **/
 SEXP HIBAG_Init(SEXP data_lst)
 {
@@ -1454,6 +1454,96 @@ SEXP HIBAG_Init(SEXP data_lst)
 	hibag_clr_nm = VECTOR_ELT(data_lst, 1);
 	hibag_clr_haplo_nm = VECTOR_ELT(data_lst, 2);
 	return R_NilValue;
+}
+
+
+/**
+ *  Sum the vectors in the list with weights
+**/
+SEXP HIBAG_SumList(SEXP weight, SEXP list)
+{
+	const int n  = Rf_length(weight);
+	const int nl = Rf_length(list);
+	if (n != nl)
+		Rf_error("HIBAG_SumList error.");
+	if (n > 0)
+	{
+		const int nx = Rf_length(VECTOR_ELT(list, 0));
+		SEXP rv_ans = PROTECT(NEW_NUMERIC(nx));
+		double *pv = REAL(rv_ans);
+		memset(pv, 0, sizeof(double)*nx);  // zero fill
+		const double *pw = REAL(weight);
+		for (int i=0; i < n; i++)
+		{
+			SEXP y = VECTOR_ELT(list, i);
+			if (nx != Rf_length(y))
+				Rf_error("HIBAG_SumList, list length error.");
+			const double *py = REAL(y);
+			const double w = pw[i];
+			for (int j=0; j < nx; j++) pv[j] += w * py[j];
+		}
+		UNPROTECT(1);
+		return rv_ans;
+	} else {
+		return Rf_ScalarLogical(FALSE);
+	}
+}
+
+
+/**
+ *  Update out_prob by adding weighted in_p
+**/
+SEXP HIBAG_UpdateAddProbW(SEXP out_prob, SEXP ii, SEXP in_p, SEXP weight,
+	SEXP matching)
+{
+	// check
+	if (!Rf_isMatrix(out_prob))
+		Rf_error("HIBAG_UpdateAddProbW out_prob error.");
+	if (!Rf_isMatrix(in_p))
+		Rf_error("HIBAG_UpdateAddProbW in_p error.");
+	const int *n1 = INTEGER(GET_DIM(out_prob));
+	const int *n2 = INTEGER(GET_DIM(in_p));
+	if (n1[1] != n2[1])
+		Rf_error("HIBAG_UpdateAddProbW dim(prob) error.");
+	if (Rf_length(ii) != n2[0])
+		Rf_error("HIBAG_UpdateAddProbW ii error.");
+	if (Rf_length(matching) != n2[1])
+		Rf_error("HIBAG_UpdateAddProbW matching error.");
+	// update
+	const double w = Rf_asReal(weight);
+	const double *pm = !Rf_isNull(matching) ? REAL(matching) : NULL;
+	double *po = REAL(out_prob);
+	double *pi = REAL(in_p);
+	const int *I = INTEGER(ii);
+	for (int i=0; i < n2[1]; i++)
+	{
+		const double w2 = pm ? w * pm[i] : w;
+		for (int j=0; j < n2[0]; j++)
+			po[I[j] - 1] += pi[j] * w2;
+		po += n1[0];
+		pi += n2[0];
+	}
+	return out_prob;
+}
+
+
+/**
+ *  Normalize the prob matrix for each column
+**/
+SEXP HIBAG_NormalizeProb(SEXP prob)
+{
+	if (!Rf_isMatrix(prob))
+		Rf_error("HIBAG_NormalizeProb prob error.");
+	const int *dm = INTEGER(GET_DIM(prob));
+	double *p = REAL(prob);
+	for (int i=0; i < dm[1]; i++)
+	{
+		double sum = 0;
+		for (int j=0; j < dm[0]; j++) sum += p[j];
+		for (int j=0; j < dm[0]; j++) p[j] /= sum;
+		p += dm[0];
+	}
+	return prob;
 }
 
 
