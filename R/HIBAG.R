@@ -868,6 +868,8 @@ hlaPredMerge <- function(..., weight=NULL, equivalence=NULL, use.matching=TRUE,
     stopifnot(is.character(max.resolution), length(max.resolution)==1L)
     use_resolution <- !identical(max.resolution, "") ||
         !identical(rm.suffix, FALSE)
+    if (verbose && !identical(max.resolution, ""))
+        cat("    Resolution: ", max.resolution, "\n", sep="")
 
     # check locus and sample.id
     samp.id <- pdlist[[1L]]$value$sample.id
