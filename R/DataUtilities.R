@@ -1136,7 +1136,7 @@ hlaAlleleDigit <- function(obj, max.resolution=NA_character_, rm.suffix=FALSE)
 # Get unique HLA alleles
 #
 
-hlaUniqueAllele <- function(hla)
+hlaUniqueAllele <- function(hla, all=NA)
 {
     # check
     stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass"))
@@ -1147,7 +1147,19 @@ hlaUniqueAllele <- function(hla)
         hla <- unique(hla)
         .Call(HIBAG_SortAlleleStr, hla)
     } else {
-        hlaUniqueAllele(as.character(c(hla$value$allele1, hla$value$allele2)))
+        s <- c(hla$value$allele1, hla$value$allele2)
+        if (isTRUE(all))
+        {
+            if (!is.null(hla$dosage))
+            {
+                s <- rownames(hla$dosage)
+            } else if (!is.null(hla$postprob))
+            {
+                s <- strsplit(rownames(hla$postprob), "/", fixed=TRUE)
+                s <- unique(unlist(s))
+            }
+        }
+        hlaUniqueAllele(as.character(s))
     }
 }
 

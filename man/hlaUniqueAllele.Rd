@@ -7,11 +7,15 @@
     Get unique HLA alleles, which are in ascending order.
 }
 \usage{
-hlaUniqueAllele(hla)
+hlaUniqueAllele(hla, all=NA)
 }
 \arguments{
-    \item{hla}{character-type HLA alleles, or a
-        \code{\link{hlaAlleleClass}} object}
+    \item{hla}{character-type HLA alleles, or a \code{\link{hlaAlleleClass}}
+        object}
+    \item{all}{when \code{hla} is a \code{hlaAlleleClass} object and
+        \code{all=TRUE}, return all HLA alleles if \code{hla$dosage} or
+        \code{hla$postprob} exists; otherwise, only return the alleles in
+        \code{hla$value}}
 }
 \details{
     Each HLA allele name has a unique number corresponding to up to four sets
