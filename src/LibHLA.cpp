@@ -38,14 +38,14 @@
 
 
 #include "LibHLA.h"
+#include <mutex>
+#include <algorithm>
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
 #ifdef length
 #   undef length
 #endif
-#include <mutex>
-#include <algorithm>
 #include <RcppParallel.h>
 #include <tbb/parallel_for.h>
 

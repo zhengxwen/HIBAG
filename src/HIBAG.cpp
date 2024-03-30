@@ -17,6 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "LibHLA.h"
 #include <string>
 #include <memory>
 #include <limits>
@@ -25,7 +26,6 @@
 #include <fstream>
 #include <vector>
 
-#include "LibHLA.h"
 #include <R.h>
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
