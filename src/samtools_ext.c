@@ -44,7 +44,7 @@ static int (*bgzf_close)(BGZF *fp) = NULL;
 static ssize_t (*bgzf_write)(BGZF *fp, const void *data, ssize_t length) = NULL;
 
 
-static void init_bgzf()
+static void init_bgzf(void)
 {
 	PKG_LOAD(bgzf_open);
 	PKG_LOAD(bgzf_close);

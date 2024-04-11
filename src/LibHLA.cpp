@@ -981,11 +981,12 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 
 	// the number of in-bag samples
 	const size_t n_samp_ib = vs.idx_inbag.size();
+	vector<int> StartIdx(nhla);
+	int st = 0;
 
 	if (GPUExtProcPtr && *GPUExtProcPtr->build_haplomatch)
 	{
 		// prepare data and check
-		int StartIdx[nhla], st=0;
 		for (int i=0; i < nhla; i++)
 		{
 			if (CurHaplo.LenPerHLA[i] > 65535)
@@ -1046,7 +1047,6 @@ void CAlg_EM::PrepareHaplotypes(const CHaplotypeList &CurHaplo,
 	} else {
 
 		// prepare data
-		int StartIdx[nhla], st=0;
 		for (int i=0; i < nhla; i++)
 		{
 			StartIdx[i] = st;
@@ -2471,9 +2471,9 @@ void CAttrBag_Model::_Init_GPU_PredHLA()
 	{
 		// prepare data structure for GPU
 		const size_t n_classifier = _ClassifierList.size();
-		THaplotype* haplo[n_classifier];
-		int p_n_haplo[n_classifier];
-		int p_n_snp[n_classifier];
+		vector<THaplotype*> haplo(n_classifier);
+		vector<int> p_n_haplo(n_classifier);
+		vector<int> p_n_snp(n_classifier);
 
 		gpu_geno_buf.resize(n_classifier);
 		vector<CAttrBag_Classifier>::iterator p = _ClassifierList.begin();
@@ -2487,8 +2487,8 @@ void CAttrBag_Model::_Init_GPU_PredHLA()
 		}
 
 		// call the external function
-		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, haplo,
-			p_n_haplo, p_n_snp);
+		(*GPUExtProcPtr->predict_init)(nHLA(), n_classifier, &haplo[0],
+			&p_n_haplo[0], &p_n_snp[0]);
 	}
 }
 
