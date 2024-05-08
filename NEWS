@@ -1,3 +1,13 @@
+CHANGES IN VERSION 1.41.1
+-------------------------
+
+    o the input of `hlaUniqueAllele()` can be a hlaAttrBagClass object or
+      a hlaAttrBagObj object
+
+    o `hlaAlleleToVCF()` outputs 0 instead of NaN if the location of HLA gene
+      is unknown or unspecified
+
+
 CHANGES IN VERSION 1.40.0
 -------------------------
 
