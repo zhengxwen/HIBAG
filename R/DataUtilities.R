@@ -5,7 +5,7 @@
 #   HIBAG -- HLA Genotype Imputation with Attribute Bagging
 #
 # HIBAG R package, HLA Genotype Imputation with Attribute Bagging
-# Copyright (C) 2011-2021   Xiuwen Zheng (zhengx@u.washington.edu)
+# Copyright (C) 2011-2024   Xiuwen Zheng (zhengx@u.washington.edu)
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -1139,13 +1139,18 @@ hlaAlleleDigit <- function(obj, max.resolution=NA_character_, rm.suffix=FALSE)
 hlaUniqueAllele <- function(hla, all=NA)
 {
     # check
-    stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass"))
+    stopifnot(is.character(hla) | inherits(hla, "hlaAlleleClass") |
+        inherits(hla, "hlaAttrBagClass") | inherits(hla, "hlaAttrBagObj"))
 
     if (is.character(hla))
     {
         hla <- hla[!is.na(hla)]
         hla <- unique(hla)
         .Call(HIBAG_SortAlleleStr, hla)
+    } else if (inherits(hla, "hlaAttrBagClass") ||
+        inherits(hla, "hlaAttrBagObj"))
+    {
+        hlaUniqueAllele(hla$hla.allele)
     } else {
         s <- c(hla$value$allele1, hla$value$allele2)
         if (isTRUE(all))
@@ -2698,8 +2703,9 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         }
 
         # write to VCF for each allele
-        pos <- as.character(round(mean(c(hla$pos.start, hla$pos.end), na.rm=TRUE)))
-        if (is.na(pos)) pos <- "."
+        pos <- round(mean(c(hla$pos.start, hla$pos.end), na.rm=TRUE))
+        if (!is.finite(pos)) pos <- "0"  # unknown position
+        pos <- as.character(pos)
         hasDS <- DS && !is.null(hla$dosage)
         if (hasDS)
             ii <- match(hla$value$sample.id, colnames(hla$dosage))
