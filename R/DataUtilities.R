@@ -788,7 +788,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
     assembly="auto", verbose=TRUE)
 {
     # check library
-    if (!requireNamespace("gdsfmt"))
+    if (!requireNamespace("gdsfmt", quietly=TRUE))
         stop("The gdsfmt package should be installed.")
 
     # check
@@ -813,7 +813,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
     if (snp_fmt)
     {
         # load SNPRelate
-        if (!requireNamespace("SNPRelate"))
+        if (!requireNamespace("SNPRelate", quietly=TRUE))
             stop("The SNPRelate package should be installed.")
 
         # SNPRelate GDS file
@@ -852,7 +852,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
             assembly = assembly)
     } else {
         # load SeqArray
-        if (!requireNamespace("SeqArray"))
+        if (!requireNamespace("SeqArray", quietly=TRUE))
             stop("The SeqArray package should be installed.")
 
         # SeqArray GDS file
