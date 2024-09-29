@@ -333,9 +333,9 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 			out_flag[i] = switch_flag;
 		}
 
-		SET_ELEMENT(rv_ans, 1, ScalarInteger(out_n_stand_amb));
-		SET_ELEMENT(rv_ans, 2, ScalarInteger(out_n_mismatch));
-		SET_ELEMENT(rv_ans, 3, ScalarInteger(out_n_swap_stand));
+		SET_ELEMENT(rv_ans, 1, Rf_ScalarInteger(out_n_stand_amb));
+		SET_ELEMENT(rv_ans, 2, Rf_ScalarInteger(out_n_mismatch));
+		SET_ELEMENT(rv_ans, 3, Rf_ScalarInteger(out_n_swap_stand));
 		UNPROTECT(2);
 
 	CORE_CATCH
@@ -345,7 +345,7 @@ SEXP HIBAG_AlleleStrand(SEXP allele1, SEXP afreq1, SEXP I1,
 SEXP HIBAG_AlleleStrand2(SEXP allele1, SEXP allele2)
 {
 	if (XLENGTH(allele1) != XLENGTH(allele2))
-		error("'allele1' and 'allele2' should have the same length.");
+		Rf_error("'allele1' and 'allele2' should have the same length.");
 
 	CORE_TRY
 		// initialize: A-T pair, C-G pair
@@ -466,10 +466,10 @@ static void model_free(SEXP ptr_obj)
 
 static SEXP new_model_id(int id, CAttrBag_Model *mod_ptr)
 {
-	SEXP ans = PROTECT(ScalarInteger(id));
+	SEXP ans = PROTECT(Rf_ScalarInteger(id));
 	SEXP ptr = PROTECT(R_MakeExternalPtr(mod_ptr, R_NilValue, R_NilValue));
 	R_RegisterCFinalizerEx(ptr, model_free, (Rboolean)TRUE);
-	Rf_setAttrib(ans, install("handle_ptr"), ptr);
+	Rf_setAttrib(ans, Rf_install("handle_ptr"), ptr);
 	UNPROTECT(2);
 	return ans;
 }
@@ -487,13 +487,13 @@ SEXP HIBAG_New(SEXP nSamp, SEXP nSNP, SEXP nHLA)
 {
 	int n_samp = Rf_asInteger(nSamp);
 	if (n_samp <= 0)
-		error("Invalid number of samples: %d.", n_samp);
+		Rf_error("Invalid number of samples: %d.", n_samp);
 	int n_snp  = Rf_asInteger(nSNP);
 	if (n_snp <= 0)
-		error("Invalid number of SNPs: %d.", n_snp);
+		Rf_error("Invalid number of SNPs: %d.", n_snp);
 	int n_hla  = Rf_asInteger(nHLA);
 	if (n_hla <= 0)
-		error("Invalid number of unique HLA alleles: %d.", n_hla);
+		Rf_error("Invalid number of unique HLA alleles: %d.", n_hla);
 	CORE_TRY
 		int id = _Need_New_HIBAG_Model();
 		CAttrBag_Model *obj = _HIBAG_MODELS_[id] = new CAttrBag_Model;
@@ -519,13 +519,13 @@ SEXP HIBAG_Training(SEXP nSNP, SEXP nSamp, SEXP snp_geno, SEXP nHLA,
 {
 	int n_samp = Rf_asInteger(nSamp);
 	if (n_samp <= 0)
-		error("Invalid number of samples: %d.", n_samp);
+		Rf_error("Invalid number of samples: %d.", n_samp);
 	int n_snp  = Rf_asInteger(nSNP);
 	if (n_snp <= 0)
-		error("Invalid number of SNPs: %d.", n_snp);
+		Rf_error("Invalid number of SNPs: %d.", n_snp);
 	int n_hla  = Rf_asInteger(nHLA);
 	if (n_hla <= 0)
-		error("Invalid number of unique HLA alleles: %d.", n_hla);
+		Rf_error("Invalid number of unique HLA alleles: %d.", n_hla);
 	CORE_TRY
 		int id = _Need_New_HIBAG_Model();
 		CAttrBag_Model *obj = _HIBAG_MODELS_[id] = new CAttrBag_Model;
@@ -820,9 +820,9 @@ SEXP HIBAG_NewClassifierHaplo(SEXP model, SEXP snpidx,
 	int midx = Rf_asInteger(model);
 	int nHaplo = Rf_length(freq);
 	if (nHaplo != Rf_length(hla))
-		error("Invalid length of 'hla'.");
+		Rf_error("Invalid length of 'hla'.");
 	if (nHaplo != Rf_length(haplo))
-		error("Invalid length of 'haplo'.");
+		Rf_error("Invalid length of 'haplo'.");
 	double Acc = Rf_isNull(acc) ? 0.0 : Rf_asReal(acc);
 
 	CORE_TRY
@@ -867,7 +867,7 @@ SEXP HIBAG_GetNumClassifiers(SEXP model)
 	int midx = Rf_asInteger(model);
 	CORE_TRY
 		_Check_HIBAG_Model(midx);
-		rv_ans = ScalarInteger(_HIBAG_MODELS_[midx]->ClassifierList().size());
+		rv_ans = Rf_ScalarInteger(_HIBAG_MODELS_[midx]->ClassifierList().size());
 	CORE_CATCH
 }
 
@@ -930,7 +930,7 @@ SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 				for (size_t i=0; i < nHaplo; i++)
 				{
 					SET_STRING_ELT(haplo, i,
-						mkChar(Haplo.List[i].HaploToStr(nsnp).c_str()));
+						Rf_mkChar(Haplo.List[i].HaploToStr(nsnp).c_str()));
 				}
 
 				// convert to data.frame
@@ -949,7 +949,7 @@ SEXP HIBAG_GetClassifierList(SEXP model, SEXP hla_str)
 				for (size_t i=0; i < I.size(); i++) p[i] = I[i] + 1;
 			}
 			{ // outofbag.acc
-				SET_ELEMENT(lst, 3, ScalarReal(M.OutOfBag_Accuracy()));
+				SET_ELEMENT(lst, 3, Rf_ScalarReal(M.OutOfBag_Accuracy()));
 			}
 		}
 		UNPROTECT(1);
@@ -1076,7 +1076,7 @@ SEXP HIBAG_BEDFlag(SEXP bedfn)
 		file.read(prefix, 3);
 		if ((prefix[0] != 0x6C) || (prefix[1] != 0x1B))
 			throw ErrHLA("Invalid prefix in the PLINK BED file.");
-		rv_ans = ScalarInteger((unsigned char)prefix[2]);
+		rv_ans = Rf_ScalarInteger((unsigned char)prefix[2]);
 	CORE_CATCH
 }
 
@@ -1200,7 +1200,7 @@ SEXP HIBAG_SeqMerge(SEXP seq)
 	{
 		const int len = XLENGTH(seq);
 		if (len <= 0)
-			error("Internal error in 'HIBAG_SeqMerge()'.");
+			Rf_error("Internal error in 'HIBAG_SeqMerge()'.");
 		// get the maximum length
 		int nmax = -1;
 		for (int i=0; i < len; i++)
@@ -1226,7 +1226,7 @@ SEXP HIBAG_SeqMerge(SEXP seq)
 			for (; j < nmax; j++) ss[j] = '*';
 		}
 		// output
-		return mkString(ss.c_str());
+		return Rf_mkString(ss.c_str());
 	} else
 		return Rf_ScalarString(NA_STRING);
 }
@@ -1267,10 +1267,10 @@ SEXP HIBAG_SeqRmDot(SEXP ref, SEXP seq)
 				if (*s != '.')
 					ss.push_back(*p);
 			}
-			SET_STRING_ELT(seq, i, mkChar(ss.c_str()));
+			SET_STRING_ELT(seq, i, Rf_mkChar(ss.c_str()));
 		}
 		// set
-		SET_STRING_ELT(ref, 0, mkChar(ref_str.c_str()));
+		SET_STRING_ELT(ref, 0, Rf_mkChar(ref_str.c_str()));
 		UNPROTECT(2);
 	}
 
@@ -1364,7 +1364,7 @@ SEXP HIBAG_Kernel_Version()
 	// CPU information
 	SEXP info = NEW_CHARACTER(3);
 	SET_ELEMENT(ans, 1, info);
-	SET_STRING_ELT(info, 0, mkChar(CPU_Info()));
+	SET_STRING_ELT(info, 0, Rf_mkChar(CPU_Info()));
 	// compiler information
 #ifdef __VERSION__
 	string version = __VERSION__;
@@ -1395,7 +1395,7 @@ SEXP HIBAG_Kernel_Version()
 		else
 			s = "Unknown compiler";
 	}
-	SET_STRING_ELT(info, 1, mkChar(s.c_str()));
+	SET_STRING_ELT(info, 1, Rf_mkChar(s.c_str()));
 	// supported implementation
 	s = "Algorithm SIMD:";
 	target_add(s, "SSE2", HIBAG_ALGORITHM_SSE2);
@@ -1405,7 +1405,7 @@ SEXP HIBAG_Kernel_Version()
 	target_add(s, "AVX512F", HIBAG_ALGORITHM_AVX512F);
 	target_add(s, "AVX512BW", HIBAG_ALGORITHM_AVX512BW);
 	target_add(s, "AVX512VPOPCNTDQ", HIBAG_ALGORITHM_AVX512VPOPCNTDQ);
-	SET_STRING_ELT(info, 2, mkChar(s.c_str()));
+	SET_STRING_ELT(info, 2, Rf_mkChar(s.c_str()));
 
 	// using Intel TBB or not
 #if RCPP_PARALLEL_USE_TBB
@@ -1414,9 +1414,9 @@ SEXP HIBAG_Kernel_Version()
 #else
 	int ntot = tbb::this_task_arena::max_concurrency();
 #endif
-	SET_ELEMENT(ans, 2, ScalarInteger(ntot));
+	SET_ELEMENT(ans, 2, Rf_ScalarInteger(ntot));
 #else
-	SET_ELEMENT(ans, 2, ScalarInteger(NA_INTEGER));
+	SET_ELEMENT(ans, 2, Rf_ScalarInteger(NA_INTEGER));
 #endif
 	// output
 	UNPROTECT(1);
