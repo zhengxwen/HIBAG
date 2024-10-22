@@ -1,4 +1,4 @@
-CHANGES IN VERSION 1.41.2
+CHANGES IN VERSION 1.42.0
 -------------------------
 
     o the input of `hlaUniqueAllele()` can be a hlaAttrBagClass object or
