@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2024   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1345,7 +1345,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	if (strcmp(cpu, "avx512vpopcnt")==0 || (cpu_max && has_avx512vpopcnt))
 	{
 		if (!has_avx512vpopcnt)
-			error("Not support AVX512VPOPCNTDQ.");
+			Rf_error("Not support AVX512VPOPCNTDQ.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512vpopcnt;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512vpopcnt;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512vpopcnt;
@@ -1355,7 +1355,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	} else if (strcmp(cpu, "avx512bw")==0 || (cpu_max && has_avx512bw))
 	{
 		if (!has_avx512bw)
-			error("Not support AVX512BW.");
+			Rf_error("Not support AVX512BW.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512bw;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512bw;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512bw;
@@ -1365,7 +1365,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	} else if (strcmp(cpu, "avx512f")==0 || (cpu_max && has_avx512f))
 	{
 		if (!has_avx512f)
-			error("Not support AVX512F.");
+			Rf_error("Not support AVX512F.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx512f;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx512f;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx512f;
@@ -1384,7 +1384,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	} else if (strcmp(cpu, "avx2")==0 || (cpu_auto_avx2 && has_avx2))
 	{
 		if (!has_avx2)
-			error("Not support AVX2.");
+			Rf_error("Not support AVX2.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx2;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx2;
@@ -1394,7 +1394,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	} else if (strcmp(cpu, "avx")==0 || (cpu_auto_avx2 && has_avx))
 	{
 		if (!has_avx)
-			error("Not support AVX.");
+			Rf_error("Not support AVX.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_avx;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_avx;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_avx;
@@ -1404,7 +1404,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	} else if (strcmp(cpu, "sse4")==0 || (cpu_auto_avx2 && has_sse4))
 	{
 		if (!has_sse4)
-			error("Not support SSE4.2.");
+			Rf_error("Not support SSE4.2.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_sse4_2;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse4_2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse4_2;
@@ -1414,7 +1414,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	} else if (strcmp(cpu, "sse2")==0 || (cpu_auto_avx2 && has_sse2))
 	{
 		if (!has_sse2)
-			error("Not support SSE2.");
+			Rf_error("Not support SSE2.");
 		fc_PrepHaploMatch = &CAlg_Prediction::_PrepHaploMatch_sse2;
 		fc_BestGuess = &CAlg_Prediction::_BestGuess_sse2;
 		fc_PostProb  = &CAlg_Prediction::_PostProb_sse2;
