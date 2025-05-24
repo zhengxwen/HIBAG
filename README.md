@@ -53,6 +53,7 @@ Dr. Xiuwen Zheng
 
 * [https://hibag.s3.amazonaws.com/index.html](https://hibag.s3.amazonaws.com/index.html)
 * Platform-specific HLARES models: [https://hibag.s3.amazonaws.com/hlares_index.html](https://hibag.s3.amazonaws.com/hlares_index.html)
+* A backup webpage: https://zhengxwen.github.io/HIBAG/
 
 
 ## Citation
