@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.48.0
+-------------------------
+
+    o remove "System requirements specified C++11" in DESCRIPTION
+
+
 CHANGES IN VERSION 1.42.0
 -------------------------
 
