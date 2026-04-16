@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2011-2024   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2011-2026   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -53,6 +53,9 @@
 #ifdef HIBAG_CPU_ARCH_X86
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
+#endif
+#ifdef HIBAG_CPU_ARCH64
+#   include <arm_neon.h>   // ARM NEON
 #endif
 
 
@@ -744,12 +747,12 @@ static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
 static ALWAYS_INLINE int hamm_d(size_t Length, const TGenotype &G,
 	const THaplotype &H1, const THaplotype &H2)
 {
+#if defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__)
+	// here, UTYPE = int64_t
 	const UTYPE *h1 = (const UTYPE*)H1.PackedHaplo;
 	const UTYPE *h2 = (const UTYPE*)H2.PackedHaplo;
 	const UTYPE *s1 = (const UTYPE*)G.PackedSNP1;
 	const UTYPE *s2 = (const UTYPE*)G.PackedSNP2;
-#if defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__)
-	// here, UTYPE = int64_t
 	if (Length <= 64)
 	{
 		__m128i H  = { h1[0], h2[0] };  // two haplotypes
@@ -775,7 +778,31 @@ static ALWAYS_INLINE int hamm_d(size_t Length, const TGenotype &G,
 		return U_POPCOUNT(va[0]) + U_POPCOUNT(va[1]) +
 			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
 	}
+#elif defined(HIBAG_CPU_ARCH64)
+	// ARM NEON with hardware popcount, branchless (always process 128 bits;
+	// unused bits are masked out by the missing flag)
+	uint8x16_t H1v = vld1q_u8((const uint8_t*)H1.PackedHaplo);
+	uint8x16_t H2v = vld1q_u8((const uint8_t*)H2.PackedHaplo);
+	uint8x16_t S1v = vld1q_u8((const uint8_t*)G.PackedSNP1);
+	uint8x16_t S2v = vld1q_u8((const uint8_t*)G.PackedSNP2);
+	// missing value: M = S2 & ~S1 (1 is missing)
+	uint8x16_t M = vbicq_u8(S2v, S1v);
+	// MASK = ((H1 ^ S2) | (H2 ^ S1)) & ~M
+	uint8x16_t MASK = vbicq_u8(vorrq_u8(veorq_u8(H1v, S2v), veorq_u8(H2v, S1v)), M);
+	// hamming distances: (H1 ^ S1) & MASK, (H2 ^ S2) & MASK
+	uint8x16_t va = vandq_u8(veorq_u8(H1v, S1v), MASK);
+	uint8x16_t vb = vandq_u8(veorq_u8(H2v, S2v), MASK);
+	// vectorized popcount per byte and horizontal sum
+	uint8x16_t cnt = vaddq_u8(vcntq_u8(va), vcntq_u8(vb));
+	uint16x8_t s16 = vpaddlq_u8(cnt);
+	uint32x4_t s32 = vpaddlq_u16(s16);
+	uint64x2_t s64 = vpaddlq_u32(s32);
+	return (int)(vgetq_lane_u64(s64, 0) + vgetq_lane_u64(s64, 1));
 #else
+	const UTYPE *h1 = (const UTYPE*)H1.PackedHaplo;
+	const UTYPE *h2 = (const UTYPE*)H2.PackedHaplo;
+	const UTYPE *s1 = (const UTYPE*)G.PackedSNP1;
+	const UTYPE *s2 = (const UTYPE*)G.PackedSNP2;
 	size_t ans = 0;
 	for (ssize_t n=Length; n > 0; n -= UTYPE_BIT_NUM)
 	{

@@ -3,6 +3,8 @@ CHANGES IN VERSION 1.48.0
 
     o remove "System requirements specified C++11" in DESCRIPTION
 
+    o New optimized C codes for AArch64 (ARM 64-bit) architecture
+
 
 CHANGES IN VERSION 1.42.0
 -------------------------

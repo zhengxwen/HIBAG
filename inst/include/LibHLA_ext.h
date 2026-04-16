@@ -1,7 +1,7 @@
 // ===============================================================
 //
 // HIBAG R package (HLA Genotype Imputation with Attribute Bagging)
-// Copyright (C) 2020-2022   Xiuwen Zheng (zhengx@u.washington.edu)
+// Copyright (C) 2020-2026   Xiuwen Zheng (zhengx@u.washington.edu)
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -32,6 +32,11 @@
 // Detect whether x86 microprocessor architecture or not
 #if defined(__i386__) || defined(__X86__) || defined(_M_IX86) || defined(__I86__) || defined(__INTEL__) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64)
 #   define HIBAG_CPU_ARCH_X86
+#endif
+
+// Detect whether AArch64 (ARM 64-bit) architecture or not
+#if defined(__aarch64__)
+#   define HIBAG_CPU_ARCH64
 #endif
 
 
