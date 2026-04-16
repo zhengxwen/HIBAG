@@ -1550,6 +1550,8 @@ SEXP HIBAG_NormalizeProb(SEXP prob)
 // -----------------------------------------------------------------------
 // -----------------------------------------------------------------------
 
+extern SEXP HIBAG_bgzip_create(SEXP filename);
+
 /// Initialize the package
 void R_init_HIBAG(DllInfo *info)
 {
@@ -1579,10 +1581,18 @@ void R_init_HIBAG(DllInfo *info)
 		CALL(HIBAG_SeqMerge, 1),
 		CALL(HIBAG_SeqRmDot, 2),
 		CALL(HIBAG_Clear_GPU, 0),
+		CALL(HIBAG_ClearClassifier, 1),
+		CALL(HIBAG_GetLastClassifierInfo, 1),
+		CALL(HIBAG_Kernel_SetTarget, 1),
+		CALL(HIBAG_SumList, 2),
+		CALL(HIBAG_UpdateAddProbW, 5),
+		CALL(HIBAG_NormalizeProb, 1),
+		CALL(HIBAG_bgzip_create, 1),
 		{ NULL, NULL, 0 }
 	};
 
 	R_registerRoutines(info, NULL, callMethods, NULL, NULL);
+	R_useDynamicSymbols(info, FALSE);
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
 }
 
