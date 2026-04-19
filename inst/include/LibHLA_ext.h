@@ -36,7 +36,7 @@
 
 // Detect whether AArch64 (ARM 64-bit) architecture or not
 #if defined(__aarch64__)
-#   define HIBAG_CPU_ARCH64
+#   define HIBAG_CPU_AARCH64
 #endif
 
 

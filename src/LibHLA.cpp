@@ -54,7 +54,7 @@
 #   include <xmmintrin.h>  // SSE
 #   include <emmintrin.h>  // SSE2
 #endif
-#ifdef HIBAG_CPU_ARCH64
+#ifdef HIBAG_CPU_AARCH64
 #   include <arm_neon.h>   // ARM NEON
 #endif
 
@@ -778,7 +778,7 @@ static ALWAYS_INLINE int hamm_d(size_t Length, const TGenotype &G,
 		return U_POPCOUNT(va[0]) + U_POPCOUNT(va[1]) +
 			U_POPCOUNT(vb[0]) + U_POPCOUNT(vb[1]);
 	}
-#elif defined(HIBAG_CPU_ARCH64)
+#elif defined(HIBAG_CPU_AARCH64)
 	// ARM NEON with hardware popcount, branchless (always process 128 bits;
 	// unused bits are masked out by the missing flag)
 	uint8x16_t H1v = vld1q_u8((const uint8_t*)H1.PackedHaplo);
