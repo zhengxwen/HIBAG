@@ -5,6 +5,11 @@ CHANGES IN VERSION 1.48.0
 
     o New optimized C codes for AArch64 (ARM 64-bit) architecture
 
+    o improve Makevars.win: replace `-ffixed-xmm16..31` with
+      `-fno-asynchronous-unwind-tables` for AVX-512 compilation on Windows,
+      allowing the GCC compiler to use all 32 XMM/ZMM registers for better
+      performance
+
 
 CHANGES IN VERSION 1.42.0
 -------------------------

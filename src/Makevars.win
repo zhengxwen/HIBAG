@@ -6,13 +6,9 @@
 CXX_STD = CXX11
 
 # need to fix "invalid register for .seh_savexmm" for avx512
-# assume using gcc
-FIXED_REG = -ffixed-xmm16 -ffixed-xmm17 -ffixed-xmm18 -ffixed-xmm19 \
-	-ffixed-xmm20 -ffixed-xmm21 -ffixed-xmm22 -ffixed-xmm23 \
-	-ffixed-xmm24 -ffixed-xmm25 -ffixed-xmm26 -ffixed-xmm27 \
-	-ffixed-xmm28 -ffixed-xmm29 -ffixed-xmm30 -ffixed-xmm31
-FIXED_REG_64 = $(if $(filter ${R_ARCH_BIN},/x64),${FIXED_REG})
-
+# suppress SEH unwind tables to allow full use of xmm16-xmm31 registers
+AVX512_FIX = -fno-asynchronous-unwind-tables
+AVX512_FIX_64 = $(if $(filter ${R_ARCH_BIN},/x64),${AVX512_FIX})
 
 # additional preprocessor options
 PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1 -I../inst/include
@@ -25,13 +21,13 @@ PKG_LIBS = \
 all: $(SHLIB)
 
 LibHLA_ext_avx512f.o:
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512f.cpp -c -o $@
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(AVX512_FIX_64) LibHLA_ext_avx512f.cpp -c -o $@
 
 LibHLA_ext_avx512bw.o:
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512bw.cpp -c -o $@
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(AVX512_FIX_64) LibHLA_ext_avx512bw.cpp -c -o $@
 
 LibHLA_ext_avx512vpopcnt.o:
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(FIXED_REG_64) LibHLA_ext_avx512vpopcnt.cpp -c -o $@
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(AVX512_FIX_64) LibHLA_ext_avx512vpopcnt.cpp -c -o $@
 
 
 clean:
