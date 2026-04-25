@@ -1288,7 +1288,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel AVX512VPOPCNTDQ  ========
 #if defined(__AVX512F__) && defined(__AVX512VPOPCNTDQ__)
-	const bool has_avx512vpopcnt = true;
+	const bool has_avx512vpopcnt = HIBAG_ALGORITHM_AVX512VPOPCNTDQ;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ)
 #if defined(__ICC) && defined(_FEATURE_AVX512F) && defined(_FEATURE_AVX512VL) && defined(_FEATURE_AVX512_VPOPCNTDQ)
 	// since __builtin_cpu_supports("avx512vpopcntdq") in ICC always return 0
@@ -1306,7 +1306,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel AVX512BW  ========
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-	const bool has_avx512bw = true;
+	const bool has_avx512bw = HIBAG_ALGORITHM_AVX512BW;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512BW)
 #if defined(__ICC) && defined(_FEATURE_AVX512F) && defined(_FEATURE_AVX512BW)
 	// since __builtin_cpu_supports("avx512bw") in ICC always return 0
@@ -1322,7 +1322,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel AVX512F  ========
 #if defined(__AVX512F__)
-	const bool has_avx512f = true;
+	const bool has_avx512f = HIBAG_ALGORITHM_AVX512F;
 #elif defined(HIBAG_BUILTIN_CPU_AVX512F)
 	const bool has_avx512f = __builtin_cpu_supports("avx512f") &&
 		HIBAG_ALGORITHM_AVX512F;
@@ -1332,7 +1332,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel AVX2  ========
 #if defined(__AVX2__)
-	const bool has_avx2 = true;
+	const bool has_avx2 = HIBAG_ALGORITHM_AVX2;
 #elif defined(HIBAG_BUILTIN_CPU_AVX2)
 	const bool has_avx2 = __builtin_cpu_supports("avx2") && HIBAG_ALGORITHM_AVX2;
 #else
@@ -1341,7 +1341,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel AVX  ========
 #if defined(__AVX__)
-	const bool has_avx = true;
+	const bool has_avx = HIBAG_ALGORITHM_AVX;
 #elif defined(HIBAG_BUILTIN_CPU_AVX)
 	const bool has_avx  = __builtin_cpu_supports("avx") && HIBAG_ALGORITHM_AVX;
 #else
@@ -1350,7 +1350,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel SSE4.2 & POPCNT  ========
 #if defined(__SSE4_2__)
-	const bool has_sse4 = true;
+	const bool has_sse4 = HIBAG_ALGORITHM_SSE4_2;
 #elif defined(HIBAG_BUILTIN_CPU) && defined(HIBAG_CPU_ARCH_X86_SSE4_2)
 	const bool has_sse4 = __builtin_cpu_supports("sse4.2") &&
 		__builtin_cpu_supports("popcnt") && HIBAG_ALGORITHM_SSE4_2;
@@ -1360,7 +1360,7 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 
 // ========  Intel SSE2  ========
 #if defined(__SSE2__)
-	const bool has_sse2 = true;
+	const bool has_sse2 = HIBAG_ALGORITHM_SSE2;
 #elif defined(HIBAG_BUILTIN_CPU_SSE2)
 	const bool has_sse2 = __builtin_cpu_supports("sse2") && HIBAG_ALGORITHM_SSE2;
 #else
@@ -1465,6 +1465,9 @@ void CAlg_Prediction::Init_Target_IFunc(const char *cpu)
 	fc_BestGuess = &CAlg_Prediction::_BestGuess_def;
 	fc_PostProb  = &CAlg_Prediction::_PostProb_def;
 	fc_PostProb2 = &CAlg_Prediction::_PostProb2_def;
+#ifdef HIBAG_CPU_AARCH64
+	cpu_info.append(", NEON");
+#endif
 #endif
 
 	HIBAG_CPU_Info = cpu_info;

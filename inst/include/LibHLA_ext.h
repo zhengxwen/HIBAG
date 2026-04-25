@@ -149,7 +149,7 @@
 #   endif
 #   if defined(__GNUC__) && (__GNUC__>=6)
 #       define HIBAG_BUILTIN_CPU_AVX512F
-#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#   elif defined(__clang_major__) && (__clang_major__>=5)
 #       define HIBAG_BUILTIN_CPU_AVX512F
 #   elif defined(__ICC)
 #       define HIBAG_BUILTIN_CPU_AVX512F
@@ -169,7 +169,7 @@
 #   endif
 #   if defined(__GNUC__) && (__GNUC__>=6)
 #       define HIBAG_BUILTIN_CPU_AVX512BW
-#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#   elif defined(__clang_major__) && (__clang_major__>=5)
 #       define HIBAG_BUILTIN_CPU_AVX512BW
 #   elif defined(__ICC)
 #       define HIBAG_BUILTIN_CPU_AVX512BW
@@ -189,7 +189,7 @@
 #   endif
 #   if defined(__GNUC__) && (__GNUC__>=8)
 #       define HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ
-#   elif defined(__clang_major__) && defined(__clang_minor__) && ((__clang_major__>3) || (__clang_major__==3 && __clang_minor__>=9))
+#   elif defined(__clang_major__) && (__clang_major__>=7)
 #       define HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ
 #   elif defined(__ICC)
 #       define HIBAG_BUILTIN_CPU_AVX512VPOPCNTDQ
