@@ -124,7 +124,7 @@ public:
 		p_H_0 = p_H_1 = NULL; p_Freq = NULL;
 	}
 
-
+private:
 #ifndef __ICC
 	TARGET_AVX
 #endif
