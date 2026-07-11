@@ -613,8 +613,8 @@ SEXP HIBAG_NewClassifiers(SEXP model, SEXP NClassifier, SEXP MTry,
 		GetRNGstate();
 		set_gpu_ptr set(proc_ptr);
 
-	#if RCPP_PARALLEL_USE_TBB
 		const int nthread = Rf_asInteger(NThread);
+	#if RCPP_PARALLEL_USE_TBB
 		tbb::task_arena arena(abs(nthread));
 		// tbb::task_scheduler_init init(abs(nthread)); deprecated!
 		arena.execute([&]{
@@ -1592,7 +1592,7 @@ void R_init_HIBAG(DllInfo *info)
 	};
 
 	R_registerRoutines(info, NULL, callMethods, NULL, NULL);
-	R_useDynamicSymbols(info, FALSE);
+	R_useDynamicSymbols(info, (Rboolean)FALSE);
 	memset((void*)_HIBAG_MODELS_, 0, sizeof(_HIBAG_MODELS_));
 }
 
