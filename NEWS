@@ -1,3 +1,9 @@
+CHANGES IN VERSION 1.48.1
+-------------------------
+
+    o fix when "RCPP_PARALLEL_USE_TBB=0"
+
+
 CHANGES IN VERSION 1.48.0
 -------------------------
 
