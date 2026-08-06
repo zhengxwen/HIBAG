@@ -1,3 +1,14 @@
+CHANGES IN VERSION 1.48.2
+-------------------------
+
+    o fix NaN propagation in `hlaPredict()` when a classifier produces zero
+      posterior probabilities (e.g., due to large Hamming distances from
+      allele/strand mismatch), which caused all predictions to fail
+
+    o fix segfault from calling R API (Rprintf, R_CheckUserInterrupt) on TBB
+      worker threads during parallel prediction
+
+
 CHANGES IN VERSION 1.48.1
 -------------------------
 

@@ -247,9 +247,12 @@ bool CdProgression::Forward(INT64 step, bool Show)
 		clock_t Now = clock();
 		if (((Now - OldTime) >= TimeInterval) || (p == TotalPercent))
 		{
-			fPercent = p;
-			if (Show) ShowProgress();
-			OldTime = Now;
+			if (Show)
+			{
+				fPercent = p;
+				OldTime = Now;
+				ShowProgress();
+			}
 			progress_add.unlock();
 			return true;
 		}
@@ -720,11 +723,11 @@ void TGenotype::IntToSNP(size_t Length, const int GenoBase[], const int Index[])
 	#endif
 #endif
 
-#if !(defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__))
+#if !(defined(HIBAG_CPU_ARCH_X86) && defined(__SSE2__)) && !defined(HIBAG_CPU_AARCH64)
 static const ssize_t UTYPE_BIT_NUM = sizeof(UTYPE)*8;
 #endif
 
-#ifndef U_POPCOUNT
+#if !defined(U_POPCOUNT) && !defined(HIBAG_CPU_AARCH64)
 #   define U_POPCOUNT  u_popcount
 #   ifdef HIBAG_CPU_LP64
 	static ALWAYS_INLINE int u_popcount(uint64_t v)
@@ -2405,10 +2408,13 @@ void CAttrBag_Model::PredictHLA(const int *genomat, int n_samp, int vote_method,
 			memcpy(OutProbArray+i*nn, &pred._SumPostProb[0], sizeof(double)*nn);
 		}
 
-		Progress.Forward(1, verbose);
-		if (th_idx == 0) CheckInterrupt();  // run on the baseline thread
+		// only call R API (Rprintf, R_CheckUserInterrupt) from the main thread
+		Progress.Forward(1, verbose && (th_idx == 0));
+		if (th_idx == 0) CheckInterrupt();
 	}
 	PARALLEL_END
+	if (verbose && Progress.Percent() < CdProgression::TotalPercent)
+		Progress.Forward(0, true);
 }
 
 void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
@@ -2454,6 +2460,8 @@ void CAttrBag_Model::_PredictHLA(CAlg_Prediction &pred, const int geno[],
 			// predict
 			double pm;
 			pred.PredictPostProb(p->_Haplo, Geno, pm);
+			// skip if sum of prob is zero (avoid NaN from 0/0 normalization)
+			if (pm <= 0) continue;
 			// add matching probability
 			sum_matching += pm * c_weight[w_i];
 			num_matching += c_weight[w_i];
