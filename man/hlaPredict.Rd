@@ -12,12 +12,12 @@ hlaPredict(object, snp, cl=FALSE,
     type=c("response+dosage", "response", "prob", "response+prob"),
     vote=c("prob", "majority"), allele.check=TRUE,
     match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
+    nthread=1L, same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
 \method{predict}{hlaAttrBagClass}(object, snp, cl=FALSE,
     type=c("response+dosage", "response", "prob", "response+prob"),
     vote=c("prob", "majority"), allele.check=TRUE,
     match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
+    nthread=1L, same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
 }
 \arguments{
     \item{object}{a model of \code{\link{hlaAttrBagClass}}}
@@ -41,6 +41,12 @@ hlaPredict(object, snp, cl=FALSE,
     \item{match.type}{\code{"Position"} -- use positions only (by default);
         \code{"RefSNP+Position"} -- use both of SNP IDs and positions;
         \code{"RefSNP"} -- using SNP IDs only}
+    \item{nthread}{a user-friendly alias of \code{cl} for multi-threading:
+        \code{1L} for the serial implementation (by default); \code{TRUE} for
+        the number of threads returned from
+        \code{RcppParallel::defaultNumThreads()} (i.e., all threads); or an
+        integer for the number of threads. It cannot be used together with
+        \code{cl}}
     \item{same.strand}{\code{TRUE} assuming alleles are on the same strand
         (e.g., forward strand); otherwise, \code{FALSE} not assuming whether
         on the same strand or not}
@@ -118,6 +124,9 @@ summary(model)
 # validation
 pred <- hlaPredict(model, test.geno, type="response+dosage")
 pred
+
+# or, use two threads for prediction
+pred <- hlaPredict(model, test.geno, type="response+dosage", nthread=2L)
 
 head(pred$value)
 pred$dosage[, 1:4]  # a dosage matrix

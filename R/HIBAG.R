@@ -471,18 +471,18 @@ predict.hlaAttrBagClass <- function(object, snp, cl=FALSE,
     type=c("response+dosage", "response", "prob", "response+prob"),
     vote=c("prob", "majority"), allele.check=TRUE,
     match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
+    nthread=1L, same.strand=FALSE, verbose=TRUE, verbose.match=TRUE, ...)
 {
     stopifnot(inherits(object, "hlaAttrBagClass"))
     hlaPredict(object, snp, cl, type, vote, allele.check, match.type,
-        same.strand, verbose, verbose.match)
+        nthread, same.strand, verbose, verbose.match)
 }
 
 hlaPredict <- function(object, snp, cl=FALSE,
     type=c("response+dosage", "response", "prob", "response+prob"),
     vote=c("prob", "majority"), allele.check=TRUE,
     match.type=c("Position", "Pos+Allele", "RefSNP+Position", "RefSNP"),
-    same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
+    nthread=1L, same.strand=FALSE, verbose=TRUE, verbose.match=TRUE)
 {
     # check
     stopifnot(inherits(object, "hlaAttrBagClass"))
@@ -491,10 +491,20 @@ hlaPredict <- function(object, snp, cl=FALSE,
     stopifnot(is.logical(same.strand), length(same.strand)==1L)
     stopifnot(is.logical(verbose), length(verbose)==1L)
     stopifnot(is.logical(verbose.match), length(verbose.match)==1L)
+    stopifnot(is.logical(nthread) | is.numeric(nthread), length(nthread)==1L,
+        !is.na(nthread))
     type <- match.arg(type)
     vote <- match.arg(vote)
     match.type <- match.arg(match.type)
     vote_method <- match(vote, c("prob", "majority"))
+
+    # 'nthread' is a user-friendly alias of 'cl' for multithreading
+    if (!identical(nthread, FALSE) && !identical(as.integer(nthread), 1L))
+    {
+        if (!identical(cl, FALSE))
+            stop("'nthread' and 'cl' cannot be used at the same time.")
+        cl <- nthread
+    }
 
     if (inherits(cl, "cluster"))
     {
@@ -702,6 +712,8 @@ hlaPredict <- function(object, snp, cl=FALSE,
         if (isTRUE(cl)) nthread <- as.integer(defaultNumThreads())
         if (is.numeric(cl)) nthread <- cl[1L]
         if (is.na(nthread) || nthread<1L) nthread <- 1L
+        if (verbose && nthread>1L)
+            cat("# of threads: ", nthread, "\n", sep="")
 
         # pointer to functions for an extensible component
         pm <- attr(cl, "proc_ptr")

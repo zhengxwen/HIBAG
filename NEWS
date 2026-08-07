@@ -1,6 +1,9 @@
 CHANGES IN VERSION 1.48.2
 -------------------------
 
+    o new argument 'nthread' in `hlaPredict()` and `predict()` for specifying
+      the number of threads, as a more intuitive alias of the argument 'cl'
+
     o fix NaN propagation in `hlaPredict()` when a classifier produces zero
       posterior probabilities (e.g., due to large Hamming distances from
       allele/strand mismatch), which caused all predictions to fail
