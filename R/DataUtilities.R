@@ -643,8 +643,10 @@ hlaGeno2PED <- function(geno, out.fn)
     v
 }
 
-.snp_selection <- function(assembly, import.chr, chr, snp.pos, verbose)
+.snp_selection <- function(assembly, import.chr, chr, snp.pos, verbose,
+    position=NULL)
 {
+    msg <- ""
     if (length(import.chr) == 1L)
     {
         if (import.chr == "xMHC")
@@ -668,33 +670,32 @@ hlaGeno2PED <- function(geno, out.fn)
                     ((chr==6L) & (st<=snp.pos) & (snp.pos<=ed))
             }
 
-            n.snp <- as.integer(sum(snp.flag))
-            if (verbose)
-            {
-                cat(sprintf(
-                    "Import %d SNP%s within the xMHC region on chromosome 6\n",
-                    n.snp, .plural(n.snp)))
-            }
+            msg <- " within the xMHC region on chromosome 6"
             import.chr <- NULL
         } else if (import.chr == "")
         {
-            n.snp <- length(snp.pos)
-            snp.flag <- rep(TRUE, n.snp)
-            if (verbose)
-                cat(sprintf("Import %d SNP%s\n", n.snp, .plural(n.snp)))
+            snp.flag <- rep(TRUE, length(snp.pos))
             import.chr <- NULL
         }
     }
     if (!is.null(import.chr))
     {
         snp.flag <- (chr %in% import.chr) & (snp.pos>0L)
-        n.snp <- sum(snp.flag)
-        if (verbose)
-        {
-            cat(sprintf("Import %d SNP%s from chromosome %s\n", n.snp,
-                .plural(n.snp), paste(import.chr, collapse=",")))
-        }
+        msg <- paste(" from chromosome", paste(import.chr, collapse=","))
     }
+
+    # restrict to the specified SNP positions
+    if (!is.null(position))
+    {
+        snp.flag <- snp.flag & (snp.pos %in% position)
+        msg <- sprintf("%s%s at %d specified position%s", msg,
+            if (nzchar(msg)) "," else "", length(position),
+            .plural(length(position)))
+    }
+
+    n.snp <- as.integer(sum(snp.flag))
+    if (verbose)
+        cat(sprintf("Import %d SNP%s%s\n", n.snp, .plural(n.snp), msg))
     if (n.snp <= 0L)
         stop("There is no SNP imported.")
     snp.flag
@@ -785,7 +786,7 @@ hlaBED2Geno <- function(bed.fn, fam.fn, bim.fn, rm.invalid.allele=FALSE,
 #
 
 hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
-    assembly="auto", verbose=TRUE)
+    position=NULL, assembly="auto", verbose=TRUE)
 {
     # check library
     if (!requireNamespace("gdsfmt", quietly=TRUE))
@@ -796,6 +797,7 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
     stopifnot(is.logical(rm.invalid.allele), length(rm.invalid.allele)==1L)
     stopifnot(is.character(import.chr))
     stopifnot(is.logical(verbose), length(verbose)==1L)
+    stopifnot(is.null(position) || is.numeric(position))
 
     assembly <- .hla_assembly(assembly)
 
@@ -838,7 +840,8 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
         snp.pos[!is.finite(snp.pos)] <- 0L
 
         # SNP selection
-        snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose)
+        snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose,
+            position)
 
         # output
         geno <- list(
@@ -868,29 +871,36 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
         snp.pos[!is.finite(snp.pos)] <- 0L
 
         # SNP selection
-        snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose)
+        snp.flag <- .snp_selection(assembly, import.chr, chr, snp.pos, verbose,
+            position)
         n.snp <- sum(snp.flag)
         SeqArray::seqSetFilter(f, variant.sel=snp.flag, verbose=FALSE)
 
-        # snp.id
+        # snp.id, use the variant ID if the RS id is not available
         snp.id <- SeqArray::seqGetData(f, "variant.id")
-        rs.id <- SeqArray::seqGetData(f, "annotation/id")
-        m <- sum(is.na(rs.id) | rs.id=="")
-        if (m < n.snp) snp.id <- rs.id
+        rs.id <- NULL
+        if (!is.null(gdsfmt::index.gdsn(f, "annotation/id", silent=TRUE)))
+            rs.id <- SeqArray::seqGetData(f, "annotation/id")
+        if (!is.null(rs.id))
+        {
+            i <- which(!is.na(rs.id) & (rs.id!="") & (rs.id!="."))
+            if (length(i) > 0L)
+            {
+                snp.id <- as.character(snp.id)
+                snp.id[i] <- rs.id[i]
+            }
+        }
 
-        # allele, alt / ref allele
-        ss <- strsplit(SeqArray::seqGetData(f, "allele"), ",", fixed=TRUE)
-        a1 <- vapply(ss, `[`, "", i=1L)
-        a2 <- vapply(ss, `[`, "", i=2L)
-        a1[is.na(a1)] <- "0"
-        a2[is.na(a2)] <- "0"
+        # allele, A allele (the alternative) / B allele (the reference)
+        a1 <- SeqArray::seqGetData(f, "$ref")
+        a2 <- SeqArray::seqGetData(f, "$alt")
+        a1[is.na(a1) | nchar(a1)==0L] <- "0"    # no reference allele
+        # "0" for no alternative allele, or multiple alternative alleles
+        a2[is.na(a2) | nchar(a2)==0L | grepl(",", a2, fixed=TRUE)] <- "0"
         allele <- paste(a2, a1, sep="/")
 
-        # genotype, only use the first alternative allele
-        g <- SeqArray::seqApply(f, "genotype", function(x) (x[1L,]==1L) + (x[2L,]==1L),
-            as.is="list", .progress=verbose)
-        g <- matrix(unlist(g), ncol=n.snp)
-        g <- t(g)
+        # genotype, the number of A alleles (the alternative allele)
+        g <- unname(t(SeqArray::seqGetData(f, "$dosage_alt")))
 
         # output
         geno <- list(

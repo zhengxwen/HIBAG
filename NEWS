@@ -4,6 +4,17 @@ CHANGES IN VERSION 1.48.2
     o new argument 'nthread' in `hlaPredict()` and `predict()` for specifying
       the number of threads, as a more intuitive alias of the argument 'cl'
 
+    o new argument 'position' in `hlaGDS2Geno()` for importing the SNPs at the
+      specified base positions only
+
+    o fix `hlaGDS2Geno()` with a SeqArray GDS file: "0" is used for the A
+      allele at a multi-allelic site (e.g., "0/G"), instead of a list of the
+      alternative alleles (e.g., "A,C/G"); the variant ID is used when the RS
+      id is not available (e.g., "." in a VCF file), instead of an empty SNP
+      ID; it works when there is no "annotation/id" node in the GDS file
+
+    o require SeqArray (>= 1.20.0)
+
     o fix NaN propagation in `hlaPredict()` when a classifier produces zero
       posterior probabilities (e.g., due to large Hamming distances from
       allele/strand mismatch), which caused all predictions to fail

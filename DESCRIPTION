@@ -5,8 +5,8 @@ Version: 1.48.2
 Date: 2026-08-06
 Depends: R (>= 3.2.0)
 Imports: methods, RcppParallel
-Suggests: parallel, ggplot2, reshape2, gdsfmt, SNPRelate, SeqArray, knitr,
-    markdown, rmarkdown, Rsamtools
+Suggests: parallel, ggplot2, reshape2, gdsfmt, SNPRelate, SeqArray (>= 1.20.0),
+    knitr, markdown, rmarkdown, Rsamtools
 LinkingTo: RcppParallel (>= 5.0.0)
 Authors@R: c(person("Xiuwen", "Zheng", role=c("aut", "cre", "cph"),
     email="zhengx@u.washington.edu", comment=c(ORCID="0000-0002-1390-0708")),
