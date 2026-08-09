@@ -14,7 +14,9 @@ hlaGDS2Geno(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC", position=NULL,
     \item{gds.fn}{a file name for the GDS file defined in the SNPRelate or SeqArray
         package}
     \item{rm.invalid.allele}{if TRUE, remove SNPs with non-standard alleles
-        (except A,G,C,T)}
+        (except A,G,C,T); FALSE is suggested (by default), since the A allele
+        is set to be "0" at a multi-allelic site in a SeqArray GDS file (e.g.,
+        "0/G"), and such a SNP would be removed if TRUE}
     \item{import.chr}{the chromosome, "1" .. "22", "X", "Y", "XY", "MT",
         "xMHC", or "", where "xMHC" implies the extended MHC on chromosome 6,
         and "" for all SNPs}
@@ -39,7 +41,7 @@ hlaGDS2Geno(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC", position=NULL,
 # Import a SNP GDS file
 fn <- system.file("extdata", "HapMap_CEU_Chr6.gds", package="HIBAG")
 
-geno <- hlaGDS2Geno(fn, assembly="hg18", rm.invalid.allele=TRUE)
+geno <- hlaGDS2Geno(fn, assembly="hg18")
 
 summary(geno)
 

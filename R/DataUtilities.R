@@ -824,13 +824,20 @@ hlaGDS2Geno <- function(gds.fn, rm.invalid.allele=FALSE, import.chr="xMHC",
         f <- SNPRelate::snpgdsOpen(gds.fn)
         on.exit(SNPRelate::snpgdsClose(f))
 
-        # snp.id
+        # snp.id, use the SNP ID if the RS id is not available
         snp.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "snp.id"))
+        snp.rsid <- snp.id
         v <- gdsfmt::index.gdsn(f, "snp.rs.id", silent=TRUE)
         if (!is.null(v))
-            snp.rsid <- gdsfmt::read.gdsn(v)
-        else
-            snp.rsid <- snp.id
+        {
+            rs.id <- gdsfmt::read.gdsn(v)
+            i <- which(!is.na(rs.id) & (rs.id!="") & (rs.id!="."))
+            if (length(i) > 0L)
+            {
+                snp.rsid <- as.character(snp.rsid)
+                snp.rsid[i] <- rs.id[i]
+            }
+        }
 
         # chromosome
         chr <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "snp.chromosome"))

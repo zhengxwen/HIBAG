@@ -9,9 +9,12 @@ CHANGES IN VERSION 1.48.2
 
     o fix `hlaGDS2Geno()` with a SeqArray GDS file: "0" is used for the A
       allele at a multi-allelic site (e.g., "0/G"), instead of a list of the
-      alternative alleles (e.g., "A,C/G"); the variant ID is used when the RS
-      id is not available (e.g., "." in a VCF file), instead of an empty SNP
-      ID; it works when there is no "annotation/id" node in the GDS file
+      alternative alleles (e.g., "A,C/G"); it works when there is no
+      "annotation/id" node in the GDS file
+
+    o `hlaGDS2Geno()` uses the variant ID (SeqArray) or the SNP ID (SNPRelate)
+      when the RS id is not available (i.e., NA, "" or "."), instead of an
+      invalid SNP ID
 
     o require SeqArray (>= 1.20.0)
 
