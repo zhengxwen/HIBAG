@@ -16,8 +16,6 @@ CHANGES IN VERSION 1.48.2
       when the RS id is not available (i.e., NA, "" or "."), instead of an
       invalid SNP ID
 
-    o require SeqArray (>= 1.20.0)
-
     o fix NaN propagation in `hlaPredict()` when a classifier produces zero
       posterior probabilities (e.g., due to large Hamming distances from
       allele/strand mismatch), which caused all predictions to fail
