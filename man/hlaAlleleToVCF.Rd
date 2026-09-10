@@ -22,14 +22,14 @@ hlaAlleleToVCF(hla, outfn, DS=TRUE, PP=FALSE, allele.list=FALSE,
         posterior probability of the imputed HLA genotype (a pair of alleles)
         per sample per HLA gene, not per allele, i.e., for the same sample and
         the same HLA gene, PP is identical across all the allele records
-        (variants) in the VCF file}
+        (variants) in the VCF file; PP is not affected by \code{prob.cutoff}}
     \item{allele.list}{a logical value or a character vector for a list of
         alleles; when it is a logical value, if \code{TRUE} and dosage is
         available, use all possible alleles in the dosages; otherwise, use the
         alleles predicted at least once}
     \item{prob.cutoff}{a probability threshold for setting the output alleles
-        and dosages to missing; the output VCF file contains all samples in
-        \code{hla} ignoring \code{prob.cutoff}}
+        and dosages to missing (the PP field is not affected); the output VCF
+        file contains all samples in \code{hla} ignoring \code{prob.cutoff}}
     \item{verbose}{if \code{TRUE}, show information}
 }
 \value{

@@ -2735,9 +2735,9 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, PP=FALSE, allele.list=FALSE,
         hasPP <- PP && !is.null(hla$value$prob)
         if (hasPP)
         {
-            # posterior probability of the best-guess genotype (per sample)
+            # posterior probability of the best-guess genotype (per sample),
+            # not affected by prob.cutoff
             pp <- hla$value$prob
-            pp[na_sel] <- NaN
             x <- is.na(pp)
             pp <- sprintf("%.5g", pp)
             if (any(x)) pp[x] <- "."
