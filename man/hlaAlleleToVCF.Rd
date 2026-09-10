@@ -7,8 +7,8 @@
     To convert the HLA allele data to a VCF file.
 }
 \usage{
-hlaAlleleToVCF(hla, outfn, DS=TRUE, allele.list=FALSE, prob.cutoff=NaN,
-    verbose=TRUE)
+hlaAlleleToVCF(hla, outfn, DS=TRUE, PP=TRUE, allele.list=FALSE,
+    prob.cutoff=NaN, verbose=TRUE)
 }
 \arguments{
     \item{hla}{an object of \code{\link{hlaAlleleClass}} for HLA alleles, or
@@ -17,6 +17,8 @@ hlaAlleleToVCF(hla, outfn, DS=TRUE, allele.list=FALSE, prob.cutoff=NaN,
         with ".gz" or ".xz", \code{gzfile} or \code{xzfile} will be used to
         compress the output file}
     \item{DS}{if TRUE, output dosages in the DS field}
+    \item{PP}{if TRUE, output the posterior probabilities of the HLA genotypes
+        (\code{hla$value$prob}) in the PP field; the value is per sample}
     \item{allele.list}{a logical value or a character vector for a list of
         alleles; when it is a logical value, if \code{TRUE} and dosage is
         available, use all possible alleles in the dosages; otherwise, use the
@@ -65,8 +67,11 @@ pred <- hlaPredict(model, HapMap_CEU_Geno)
 summary(pred)
 
 
-# output to standard output with dosages
+# output to standard output with dosages and posterior probabilities
 hlaAlleleToVCF(hlaAlleleSubset(pred, 1:4), stdout())
+
+# output without posterior probabilities
+hlaAlleleToVCF(hlaAlleleSubset(pred, 1:4), stdout(), PP=FALSE)
 }
 
 \keyword{HLA}

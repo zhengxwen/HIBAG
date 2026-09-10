@@ -2595,7 +2595,7 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
 # Convert HLA alleles to a VCF file for dosages
 #
 
-hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
+hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, PP=TRUE, allele.list=FALSE,
     prob.cutoff=NaN, verbose=TRUE)
 {
     # check
@@ -2619,6 +2619,7 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
     if (!inherits(outfn, "connection"))
         stopifnot(is.character(outfn), length(outfn)==1L, !is.na(outfn))
     stopifnot(is.logical(DS), length(DS)==1L, !is.na(DS))
+    stopifnot(is.logical(PP), length(PP)==1L, !is.na(PP))
     stopifnot(is.logical(verbose), length(verbose)==1L, !is.na(verbose))
     stopifnot(is.logical(allele.list) || is.character(allele.list))
     if (isTRUE(prob.cutoff)) prob.cutoff <- 0.5
@@ -2660,7 +2661,8 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
     }
 
     # write to VCF header
-    hasDS <- any(vapply(hla_lst, function(h) !is.null(h$dosage), TRUE))
+    hasDS <- DS && any(vapply(hla_lst, function(h) !is.null(h$dosage), TRUE))
+    hasPP <- PP && any(vapply(hla_lst, function(h) !is.null(h$value$prob), TRUE))
     ss <- c(
         '##fileformat=VCFv4.0',
         paste0("##fileDate=", format(Sys.time(), "%Y%m%d")),
@@ -2674,6 +2676,10 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
         if (hasDS)
             '##FORMAT=<ID=DS,Number=1,Type=Float,Description="Dosage of HLA allele">'
+        else
+            NULL,
+        if (hasPP)
+            '##FORMAT=<ID=PP,Number=1,Type=Float,Description="Posterior probability of the HLA genotype">'
         else
             NULL,
         paste(c("#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT",
@@ -2726,11 +2732,22 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
         hasDS <- DS && !is.null(hla$dosage)
         if (hasDS)
             ii <- match(hla$value$sample.id, colnames(hla$dosage))
+        hasPP <- PP && !is.null(hla$value$prob)
+        if (hasPP)
+        {
+            # posterior probability of the best-guess genotype (per sample)
+            pp <- hla$value$prob
+            pp[na_sel] <- NaN
+            x <- is.na(pp)
+            pp <- sprintf("%.5g", pp)
+            if (any(x)) pp[x] <- "."
+        }
+        fmt <- paste(c("GT", if (hasDS) "DS", if (hasPP) "PP"), collapse=":")
         for (h in hs)
         {
             ss <- c("6", pos, paste0(.hla_gene_name_string(hla$locus), "*", h),
                 "A", paste0("P_", gsub("[^a-zA-Z0-9]", "", h)), ".", "PASS",
-                ".", ifelse(hasDS, "GT:DS", "GT"))
+                ".", fmt)
             h1 <- as.integer(hla$value["allele1"]==h)
             if (anyNA(h1)) h1[is.na(h1)] <- "."
             h2 <- as.integer(hla$value["allele2"]==h)
@@ -2752,6 +2769,8 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, allele.list=FALSE,
                 }
                 s <- paste(s, ds, sep=":")
             }
+            if (hasPP)
+                s <- paste(s, pp, sep=":")
             ss <- c(ss, s)
             writeLines(paste(ss, collapse="\t"), outfn)
         }

@@ -23,6 +23,10 @@ CHANGES IN VERSION 1.48.2
     o fix segfault from calling R API (Rprintf, R_CheckUserInterrupt) on TBB
       worker threads during parallel prediction
 
+    o new argument 'PP' (TRUE by default) in `hlaAlleleToVCF()` for outputting
+      the posterior probabilities of the HLA genotypes (`hla$value$prob`) in
+      the PP field
+
 
 CHANGES IN VERSION 1.48.1
 -------------------------
