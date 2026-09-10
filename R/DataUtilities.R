@@ -2595,7 +2595,7 @@ hlaReportPlot <- function(PredHLA=NULL, TrueHLA=NULL, model=NULL,
 # Convert HLA alleles to a VCF file for dosages
 #
 
-hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, PP=TRUE, allele.list=FALSE,
+hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, PP=FALSE, allele.list=FALSE,
     prob.cutoff=NaN, verbose=TRUE)
 {
     # check
@@ -2679,7 +2679,7 @@ hlaAlleleToVCF <- function(hla, outfn, DS=TRUE, PP=TRUE, allele.list=FALSE,
         else
             NULL,
         if (hasPP)
-            '##FORMAT=<ID=PP,Number=1,Type=Float,Description="Posterior probability of the HLA genotype">'
+            '##FORMAT=<ID=PP,Number=1,Type=Float,Description="Posterior probability of the best-guess HLA genotype (two alleles) per sample per HLA gene, not per allele: for the same sample and the same HLA gene, PP is identical across all allele records (variants)">'
         else
             NULL,
         paste(c("#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT",

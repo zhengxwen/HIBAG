@@ -7,7 +7,7 @@
     To convert the HLA allele data to a VCF file.
 }
 \usage{
-hlaAlleleToVCF(hla, outfn, DS=TRUE, PP=TRUE, allele.list=FALSE,
+hlaAlleleToVCF(hla, outfn, DS=TRUE, PP=FALSE, allele.list=FALSE,
     prob.cutoff=NaN, verbose=TRUE)
 }
 \arguments{
@@ -17,8 +17,12 @@ hlaAlleleToVCF(hla, outfn, DS=TRUE, PP=TRUE, allele.list=FALSE,
         with ".gz" or ".xz", \code{gzfile} or \code{xzfile} will be used to
         compress the output file}
     \item{DS}{if TRUE, output dosages in the DS field}
-    \item{PP}{if TRUE, output the posterior probabilities of the HLA genotypes
-        (\code{hla$value$prob}) in the PP field; the value is per sample}
+    \item{PP}{if TRUE, output the posterior probabilities of the best-guess
+        HLA genotypes (\code{hla$value$prob}) in the PP field; PP is the
+        posterior probability of the imputed HLA genotype (a pair of alleles)
+        per sample per HLA gene, not per allele, i.e., for the same sample and
+        the same HLA gene, PP is identical across all the allele records
+        (variants) in the VCF file}
     \item{allele.list}{a logical value or a character vector for a list of
         alleles; when it is a logical value, if \code{TRUE} and dosage is
         available, use all possible alleles in the dosages; otherwise, use the
@@ -67,11 +71,11 @@ pred <- hlaPredict(model, HapMap_CEU_Geno)
 summary(pred)
 
 
-# output to standard output with dosages and posterior probabilities
+# output to standard output with dosages
 hlaAlleleToVCF(hlaAlleleSubset(pred, 1:4), stdout())
 
-# output without posterior probabilities
-hlaAlleleToVCF(hlaAlleleSubset(pred, 1:4), stdout(), PP=FALSE)
+# output with dosages and posterior probabilities
+hlaAlleleToVCF(hlaAlleleSubset(pred, 1:4), stdout(), PP=TRUE)
 }
 
 \keyword{HLA}
