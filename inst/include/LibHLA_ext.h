@@ -244,15 +244,16 @@ namespace HLA_LIB
 	//
 	// TGenotype: packed SNP genotype (little endianness):
 	//     array_1 = (s1_8 s1_7 s1_6 s1_5 s1_4 s1_3 s1_2 s1_1),
-	//     array_2 = (s2_8 s2_7 s2_6 s2_5 s2_4 s2_3 s2_2 s2_1),
-	//     array_3 = (s3_8 s3_7 s3_6 s3_5 s3_4 s3_3 s3_2 s3_1)
-	//     the 1st genotype: (s1_1 s2_1 s3_1),
-	//     the 2nd genotype: (s1_1 s2_1 s3_1), ...
-	//     SNP genotype: 0 (BB) -- (s1_1=0 s2_1=0 s3_1=1),
-	//                   1 (AB) -- (s1_1=1 s2_1=0 s3_1=1),
-	//                   2 (AA) -- (s1_1=1 s2_1=1 s3_1=1),
+	//     array_2 = (s2_8 s2_7 s2_6 s2_5 s2_4 s2_3 s2_2 s2_1)
+	//     the 1st genotype: (s1_1 s2_1), the 2nd genotype: (s1_2 s2_2), ...
+	//     SNP genotype: 0 (BB) -- (s1_1=0 s2_1=0),
+	//                   1 (AB) -- (s1_1=1 s2_1=0),
+	//                   2 (AA) -- (s1_1=1 s2_1=1),
 	//                   -1 or other value (missing)
-	//                          -- (s1_1=0 s2_1=1 s3_1=0)
+	//                          -- (s1_1=0 s2_1=1)
+	//     the four states are distinguished by (s1,s2) alone, so no third
+	//         array is needed; (s1=0, s2=1) serves as the missing flag and is
+	//         tested as (array_2 & ~array_1)
 	//
 	// ========                                                     ========
 	// ===================================================================== //
@@ -315,6 +316,10 @@ namespace HLA_LIB
 		friend class CAlg_EM;
 		friend class CAlg_Prediction;
 
+		// the two arrays form parallel bit planes giving 2 bits per locus; see
+		//   the encoding table above. A missing genotype is (0,1), which is not
+		//   a valid A/B allele pair, so "allele 1/2" applies to non-missing
+		//   genotypes only.
 		/// packed SNP genotypes, allele 1
 		INT64 PackedSNP1[HIBAG_PACKED_INT64_MAXNUM];
 		/// packed SNP genotypes, allele 2
